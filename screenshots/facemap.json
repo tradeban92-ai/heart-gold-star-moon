@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/map",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Altyeva",
+      "hasCanvas": false,
+      "bodyTextLen": 443,
+      "bodyTextHash": "3a5f59ebd36a8943d4811f67b3aea0ae7b6e39de196a2b44ca3cea0e419338d5",
+      "bodyTextPrefix": "ПОДБОР ПРОЦЕДУРЫ Карта лица Нажмите зону или номер — подскажу пр",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/facemap.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Altyeva",
+      "hasCanvas": false,
+      "bodyTextLen": 443,
+      "bodyTextHash": "3a5f59ebd36a8943d4811f67b3aea0ae7b6e39de196a2b44ca3cea0e419338d5",
+      "bodyTextPrefix": "ПОДБОР ПРОЦЕДУРЫ Карта лица Нажмите зону или номер — подскажу пр",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/facemap-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/facemap.json"
+}
