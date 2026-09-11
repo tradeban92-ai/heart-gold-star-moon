@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-11-1418 cta-after-chips -->
+<!-- altyeva-build 2026-09-11-1420 zone-chip -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -490,7 +490,6 @@ nc+OGWNM52HJLG7QLbDYrlcy0QyttCTxLWvYHGwzmiPEs0KM2wVMtOOMpwhRTnh65H+9OAACQAAB
   </div>
   <div class="chips" id="chips"></div>
   <div id="catDropdown" class="cat-dropdown"></div>
-  <p class="map-cta">Не уверены, с чего начать? <button type="button" data-go="page-facemap">Откройте карту лица</button></p>
   <div class="list" id="list"></div>
   <div id="svcDetail"></div>
 </div>
@@ -1522,7 +1521,8 @@ function initChips(){
   const SUBCATS=CATEGORIES.filter(c=>c.key!=='consultation');
   const bCons=document.createElement('button'); bCons.className='chip active'; bCons.textContent='Консультация';
   const bProc=document.createElement('button'); bProc.className='chip'; bProc.textContent='Процедуры';
-  top.appendChild(bCons); top.appendChild(bProc);
+  const bMap=document.createElement('button'); bMap.className='chip'; bMap.textContent='Подбор по зонам';
+  top.appendChild(bCons); top.appendChild(bProc); top.appendChild(bMap);
 
   // dropdown с категориями
   const sel=document.createElement('select'); sel.className='cat-select';
@@ -1532,6 +1532,7 @@ function initChips(){
 
   bProc.onclick=()=>{ bProc.classList.add('active'); bCons.classList.remove('active'); dd.classList.add('show'); render(sel.value); };
   bCons.onclick=()=>{ bCons.classList.add('active'); bProc.classList.remove('active'); dd.classList.remove('show'); render('consultation'); };
+  bMap.onclick=()=>goPage('page-facemap');
   // старт: консультация
   render('consultation');
 }
