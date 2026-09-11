@@ -2197,7 +2197,6 @@ function selectZone(key){
     box.appendChild(d);
   });
   renderFace();
-  box.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 function fShowDetail(zoneTitle,it){
@@ -2213,7 +2212,6 @@ function fShowDetail(zoneTitle,it){
       <a class="fdetail-book" href="${it.url}" target="_blank">Записаться</a>
     </div>`;
   document.getElementById('fBackBtn').onclick=()=>{ det.innerHTML=''; };
-  det.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function initFaceMap(){
