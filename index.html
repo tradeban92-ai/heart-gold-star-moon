@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-11-1307 map-cta -->
+<!-- altyeva-build 2026-09-11-1310 cta-and-4tabs -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -347,6 +347,8 @@
   .more-link .mt{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--steel-dk);display:block;}
   .more-link .ms{font-size:12px;color:var(--muted);}
   .more-link .ma{margin-left:auto;color:var(--steel);font-size:18px;}
+  .map-cta{text-align:center;font-size:12px;color:var(--muted);padding:6px 20px 18px;margin:0;}
+  .map-cta button{background:none;border:none;padding:0;font:inherit;font-weight:700;color:var(--steel-dk);cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
 </style>
 </head>
 <body>
@@ -1309,6 +1311,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
 
 <div class="page" id="page-loyalty">
   <div class="simple-page">
+    <button class="back" type="button" data-back="page-more">← Назад</button>
     <div class="loyalty-card">
       <div class="loyalty-top">
         <div>
@@ -1339,6 +1342,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
 
 <div class="page" id="page-care">
   <div class="simple-page">
+    <button class="back" type="button" data-back="page-more">← Назад</button>
     <p class="eyebrow">После процедуры</p>
     <h2 id="careTitle">Памятка по уходу</h2>
     <p class="intro" id="careSub">Выберите процедуру, которую вы сделали — покажу, как ухаживать за собой после.</p>
@@ -1347,25 +1351,39 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
   </div>
 </div>
 
+<div class="page" id="page-more">
+  <div class="simple-page">
+    <p class="eyebrow">Ещё</p>
+    <h2>Кабинет</h2>
+    <p class="intro">Лояльность и уход — всё, что нужно между визитами.</p>
+    <button class="more-link" type="button" data-go="page-loyalty">
+      <span class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M16 15h2"/></svg></span>
+      <span><span class="mt">Карта лояльности</span><span class="ms">Уровень, скидка и история визитов</span></span>
+      <span class="ma">›</span>
+    </button>
+    <button class="more-link" type="button" data-go="page-care">
+      <span class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M12 3s-6 6.2-6 10.2A6 6 0 0 0 12 19a6 6 0 0 0 6-5.8C18 9.2 12 3 12 3z"/><path d="M12 10v5M9.5 12.5h5" stroke-linecap="round"/></svg></span>
+      <span><span class="mt">Уход после процедуры</span><span class="ms">Памятка: что можно и чего избегать</span></span>
+      <span class="ma">›</span>
+    </button>
+  </div>
+</div>
 <div style="text-align:center;padding:16px 20px 8px;">
   <a href="https://bitter-meadow-80cd.tradeban92.workers.dev/privacy.html" target="_blank" style="font-size:10px;color:rgba(43,54,66,0.28);text-decoration:none;">Политика обработки данных</a>
 </div>
 <div class="tabbar">
   <button class="tab active" data-page="page-services">
-    <svg class="tab-svg" viewBox="0 0 24 24" fill="none"><path d="M12 3 C12.6 8, 16 11.4, 21 12 C16 12.6, 12.6 16, 12 21 C11.4 16, 8 12.6, 3 12 C8 11.4, 11.4 8, 12 3 Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+    <span class="tab-ico"><svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M12 3 C12.6 8, 16 11.4, 21 12 C16 12.6, 12.6 16, 12 21 C11.4 16, 8 12.6, 3 12 C8 11.4, 11.4 8, 12 3 Z"/></svg></span>
     Услуги</button>
   <button class="tab" data-page="page-facemap">
-    <svg class="tab-svg" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M4 20 C4 15.5, 8 14, 12 14 C16 14, 20 15.5, 20 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-    Подбор</button>
+    <span class="tab-ico"><svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="8.5" cy="10.5" r="0.9" fill="currentColor"/><circle cx="15.5" cy="10.5" r="0.9" fill="currentColor"/><path d="M9.2 15.2c.9 1.1 2.2 1.7 3.8 1.7s2.9-.6 3.8-1.7"/></svg></span>
+    Лицо</button>
   <button class="tab" data-page="page-booking">
-    <svg class="tab-svg" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 9 H20.5" stroke="currentColor" stroke-width="1.6"/><path d="M8 3 V6 M16 3 V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-    Мои записи</button>
-  <button class="tab" data-page="page-loyalty">
-    <svg class="tab-svg" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="12" rx="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M3 10 H21" stroke="currentColor" stroke-width="1.6"/><path d="M14.5 14.2 l1 1.9 l2.1 .3 l-1.5 1.5 l.35 2.1 l-1.9 -1 l-1.9 1 l.35 -2.1 l-1.5 -1.5 l2.1 -.3 Z" fill="currentColor" opacity="0.85"/></svg>
-    Карта</button>
-  <button class="tab" data-page="page-care">
-    <svg class="tab-svg" viewBox="0 0 24 24" fill="none"><path d="M12 3.5 C12 3.5, 6 10, 6 14.5 C6 18, 8.7 20.5, 12 20.5 C15.3 20.5, 18 18, 18 14.5 C18 10, 12 3.5, 12 3.5 Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 11 V16 M9.5 13.5 H14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    Уход</button>
+    <span class="tab-ico"><svg class="tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5 H20.5"/><path d="M8 3 V6.5 M16 3 V6.5"/><path d="M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01"/></svg></span>
+    Запись</button>
+  <button class="tab" data-page="page-more">
+    <span class="tab-ico"><svg class="tab-svg" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18" cy="12" r="1.7"/></svg></span>
+    Ещё</button>
 </div>
 <script>
 const CATEGORIES = [
@@ -1521,14 +1539,25 @@ function initChips(){
   render('consultation');
 }
 
+function goPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const page=document.getElementById(id);
+  if(page) page.classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>{
+    const moreOn = t.dataset.page==='page-more' && (id==='page-more'||id==='page-loyalty'||id==='page-care');
+    t.classList.toggle('active', t.dataset.page===id || moreOn);
+  });
+  window.scrollTo(0,0);
+}
 function initTabs(){
   document.querySelectorAll('.tab').forEach(tab=>{
-    tab.onclick=()=>{
-      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); tab.classList.add('active');
-      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-      document.getElementById(tab.dataset.page).classList.add('active');
-      window.scrollTo(0,0);
-    };
+    tab.onclick=()=>goPage(tab.dataset.page);
+  });
+  document.querySelectorAll('[data-go]').forEach(b=>{
+    b.onclick=()=>goPage(b.getAttribute('data-go'));
+  });
+  document.querySelectorAll('[data-back]').forEach(b=>{
+    b.onclick=()=>goPage(b.getAttribute('data-back'));
   });
 }
 
