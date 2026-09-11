@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-11-1352 compact-map-header -->
+<!-- altyeva-build 2026-09-11-1418 cta-after-chips -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -344,7 +344,7 @@
   .more-link .mt{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--steel-dk);display:block;}
   .more-link .ms{font-size:12px;color:var(--muted);}
   .more-link .ma{margin-left:auto;color:var(--steel);font-size:18px;}
-  .map-cta{text-align:center;font-size:12px;color:var(--muted);padding:6px 20px 18px;margin:0;}
+  .map-cta{text-align:center;font-size:13.5px;color:var(--muted);padding:4px 20px 14px;margin:0;}
   .map-cta button{background:none;border:none;padding:0;font:inherit;font-weight:700;color:var(--steel-dk);cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
   #fdetail{scroll-margin-top:12px;}
 </style>
@@ -490,8 +490,8 @@ nc+OGWNM52HJLG7QLbDYrlcy0QyttCTxLWvYHGwzmiPEs0KM2wVMtOOMpwhRTnh65H+9OAACQAAB
   </div>
   <div class="chips" id="chips"></div>
   <div id="catDropdown" class="cat-dropdown"></div>
-  <div class="list" id="list"></div>
   <p class="map-cta">Не уверены, с чего начать? <button type="button" data-go="page-facemap">Откройте карту лица</button></p>
+  <div class="list" id="list"></div>
   <div id="svcDetail"></div>
 </div>
 
@@ -1490,6 +1490,7 @@ function svcPrice(s){
 function showServiceDetail(v, cat, groupName){
   document.getElementById('list').style.display='none';
   document.getElementById('chips').style.display='none';
+  document.querySelectorAll('.map-cta').forEach(el=>el.style.display='none');
   const dd=document.getElementById('catDropdown'); if(dd) dd.style.display='none';
   const det=document.getElementById('svcDetail');
   det.innerHTML=`
@@ -1510,6 +1511,7 @@ function closeServiceDetail(){
   document.getElementById('svcDetail').innerHTML='';
   document.getElementById('list').style.display='flex';
   document.getElementById('chips').style.display='flex';
+  document.querySelectorAll('.map-cta').forEach(el=>el.style.display='block');
   const dd=document.getElementById('catDropdown'); if(dd && dd.classList.contains('show')) dd.style.display='block';
   window.scrollTo(0,0);
 }
