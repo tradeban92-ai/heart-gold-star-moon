@@ -29,7 +29,7 @@ export type FaceZone = {
 export type ZoneShape = {
   key: ZoneKey;
   paths: string[];
-  badges: { x: number; y: number }[];
+  badges: { x: number; y: number; r?: number }[];
 };
 
 export const FACE_ZONES: FaceZone[] = [
@@ -245,20 +245,17 @@ export const FACE_ZONES: FaceZone[] = [
 export const FRONT_SHAPES: ZoneShape[] = [
   {
     key: "forehead",
-    badges: [{ x: 50, y: 26.5 }],
+    badges: [{ x: 37.6, y: 25.2, r: 2.9 }],
     paths: ["M34.5 26.5a15.5 7.2 0 1 0 31 0a15.5 7.2 0 1 0 -31 0"],
   },
   {
     key: "glabella",
-    badges: [{ x: 50, y: 35.2 }],
+    badges: [{ x: 50.6, y: 45.8, r: 1.7 }],
     paths: ["M44.8 35.2a5.2 3 0 1 0 10.4 0a5.2 3 0 1 0 -10.4 0"],
   },
   {
     key: "eyes",
-    badges: [
-      { x: 36.5, y: 39.8 },
-      { x: 63.5, y: 39.8 },
-    ],
+    badges: [{ x: 67.7, y: 42.7, r: 2.2 }],
     paths: [
       "M31.3 39.8a8.2 3.4 0 1 0 16.4 0a8.2 3.4 0 1 0 -16.4 0",
       "M52.3 39.8a8.2 3.4 0 1 0 16.4 0a8.2 3.4 0 1 0 -16.4 0",
@@ -266,10 +263,7 @@ export const FRONT_SHAPES: ZoneShape[] = [
   },
   {
     key: "cheeks",
-    badges: [
-      { x: 38, y: 50.5 },
-      { x: 62, y: 50.5 },
-    ],
+    badges: [{ x: 38.5, y: 55.4, r: 2.9 }],
     paths: [
       "M30.2 50.5a7.8 8.8 0 1 0 15.6 0a7.8 8.8 0 1 0 -15.6 0",
       "M54.2 50.5a7.8 8.8 0 1 0 15.6 0a7.8 8.8 0 1 0 -15.6 0",
@@ -277,10 +271,7 @@ export const FRONT_SHAPES: ZoneShape[] = [
   },
   {
     key: "nasolabial",
-    badges: [
-      { x: 44.8, y: 53.8 },
-      { x: 55.2, y: 53.8 },
-    ],
+    badges: [{ x: 56.8, y: 58.8, r: 1.8 }],
     paths: [
       "M41.2 53.8a3.6 5.2 0 1 0 7.2 0a3.6 5.2 0 1 0 -7.2 0",
       "M51.6 53.8a3.6 5.2 0 1 0 7.2 0a3.6 5.2 0 1 0 -7.2 0",
@@ -288,20 +279,17 @@ export const FRONT_SHAPES: ZoneShape[] = [
   },
   {
     key: "lips",
-    badges: [{ x: 50, y: 57.2 }],
+    badges: [{ x: 59.0, y: 64.8, r: 2.9 }],
     paths: ["M41.6 57.2a8.4 3.4 0 1 0 16.8 0a8.4 3.4 0 1 0 -16.8 0"],
   },
   {
     key: "chin",
-    badges: [{ x: 50, y: 66.4 }],
+    badges: [{ x: 56.5, y: 75.5, r: 2.9 }],
     paths: ["M41.8 66.4a8.2 5 0 1 0 16.4 0a8.2 5 0 1 0 -16.4 0"],
   },
   {
     key: "jawline",
-    badges: [
-      { x: 35.8, y: 61.5 },
-      { x: 64.2, y: 61.5 },
-    ],
+    badges: [{ x: 36.5, y: 68.5, r: 2.9 }],
     paths: [
       "M31.2 61.5a4.6 8 0 1 0 9.2 0a4.6 8 0 1 0 -9.2 0",
       "M59.6 61.5a4.6 8 0 1 0 9.2 0a4.6 8 0 1 0 -9.2 0",
@@ -309,10 +297,7 @@ export const FRONT_SHAPES: ZoneShape[] = [
   },
   {
     key: "neck",
-    badges: [
-      { x: 44.8, y: 82 },
-      { x: 55.2, y: 82 },
-    ],
+    badges: [{ x: 61.2, y: 91.3, r: 2.9 }],
     paths: [
       "M40.4 82a4.4 11.5 0 1 0 8.8 0a4.4 11.5 0 1 0 -8.8 0",
       "M50.8 82a4.4 11.5 0 1 0 8.8 0a4.4 11.5 0 1 0 -8.8 0",
@@ -320,7 +305,7 @@ export const FRONT_SHAPES: ZoneShape[] = [
   },
   {
     key: "decollete",
-    badges: [{ x: 50, y: 110 }],
+    badges: [{ x: 63.7, y: 106.2, r: 2.9 }],
     paths: ["M18 110a32 8.5 0 1 0 64 0a32 8.5 0 1 0 -64 0"],
   },
 ];

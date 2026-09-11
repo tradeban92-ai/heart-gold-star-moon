@@ -106,31 +106,49 @@
 .zone-hit {
   fill: transparent;
   stroke: transparent;
-  stroke-width: 1;
+  stroke-width: 8;
   cursor: pointer;
+}
+
+.badge-circle {
+  fill: rgba(247, 249, 251, 0.88);
+  stroke: rgba(74, 163, 212, 0.7);
+  stroke-width: 0.35;
+  transition: fill 0.15s, stroke 0.15s;
+}
+
+.badge-num {
+  fill: rgba(61, 146, 194, 0.95);
+  pointer-events: none;
+  transition: fill 0.15s;
+}
+
+.badge-g {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.15s;
+}
+
+.zone-g:hover .badge-circle,
+.zone-g.is-on .badge-circle {
+  fill: #4a5a6e;
+  stroke: #4a5a6e;
+}
+
+.zone-g:hover .badge-num,
+.zone-g.is-on .badge-num {
+  fill: #fff;
+}
+
+.zone-g:hover .badge-g,
+.zone-g.is-on .badge-g {
+  transform: scale(1.18);
 }
 
 .zone-path {
   fill: transparent;
   stroke: transparent;
-  stroke-width: 0.55;
-  stroke-dasharray: 1.7 1.15;
   pointer-events: none;
-}
-
-.zone-path.is-hover {
-  fill: rgba(74, 163, 212, 0.12);
-  stroke: #4aa3d4;
-}
-
-.zone-path.is-active {
-  fill: rgba(74, 163, 212, 0.18);
-  stroke: #3d92c2;
-  stroke-width: 0.7;
-}
-
-.zone-path.is-dim {
-  opacity: 0;
 }
 
 .field-input {

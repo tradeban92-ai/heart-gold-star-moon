@@ -17,7 +17,6 @@ type Detail = { zone: FaceZone; item: ZoneItem };
 
 export function FaceModel() {
   const [active, setActive] = useState<ZoneKey | null>(null);
-  const [hover, setHover] = useState<ZoneKey | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
 
   const zone = useMemo(
@@ -76,67 +75,44 @@ export function FaceModel() {
             aria-label="Карта зон лица"
           >
             {FRONT_SHAPES.map((shape) => {
-              const isActive = active === shape.key;
-              const isHover = hover === shape.key;
-              const dim = Boolean(active) && !isActive && !isHover;
+              const meta = FACE_ZONES.find((z) => z.key === shape.key);
+              if (!meta) return null;
+              const on = active === shape.key;
               return (
                 <g
                   key={shape.key}
+                  className={cn("zone-g cursor-pointer", on && "is-on")}
                   onClick={() => select(shape.key)}
-                  onPointerEnter={() => setHover(shape.key)}
-                  onPointerLeave={() => setHover((h) => (h === shape.key ? null : h))}
-                  className="cursor-pointer"
                 >
                   {shape.paths.map((d) => (
                     <path key={`hit-${d}`} d={d} className="zone-hit" />
                   ))}
-                  {shape.paths.map((d) => (
-                    <path
-                      key={d}
-                      d={d}
-                      className={cn(
-                        "zone-path",
-                        isActive && "is-active",
-                        isHover && !isActive && "is-hover",
-                        dim && "is-dim",
-                      )}
-                    />
-                  ))}
+                  {shape.badges.map((badge, i) => {
+                    const r = badge.r ?? 2.9;
+                    return (
+                      <g key={`badge-${shape.key}-${i}`} className="badge-g">
+                        <circle
+                          className="badge-circle"
+                          cx={badge.x}
+                          cy={badge.y}
+                          r={r}
+                        />
+                        <text
+                          className="badge-num"
+                          x={badge.x}
+                          y={badge.y + r * 0.35}
+                          textAnchor="middle"
+                          fontSize={r * 1.05}
+                          fontWeight="600"
+                          fontFamily="Manrope, sans-serif"
+                        >
+                          {meta.n}
+                        </text>
+                      </g>
+                    );
+                  })}
                 </g>
               );
-            })}
-
-            {FRONT_SHAPES.map((shape) => {
-              const meta = FACE_ZONES.find((z) => z.key === shape.key);
-              if (!meta) return null;
-              const isActive = active === shape.key;
-              return shape.badges.map((badge, i) => (
-                <g
-                  key={`badge-${shape.key}-${i}`}
-                  onClick={() => select(shape.key)}
-                  className="cursor-pointer"
-                >
-                  <circle
-                    cx={badge.x}
-                    cy={badge.y}
-                    r={isActive ? 3.2 : 2.9}
-                    fill={isActive ? "rgba(74,163,212,0.92)" : "rgba(247,249,251,0.85)"}
-                    stroke={isActive ? "rgba(61,146,194,0.95)" : "rgba(74,163,212,0.7)"}
-                    strokeWidth={0.35}
-                  />
-                  <text
-                    x={badge.x}
-                    y={badge.y + 1.0}
-                    textAnchor="middle"
-                    fontSize="3"
-                    fontWeight="600"
-                    fontFamily="Manrope, sans-serif"
-                    fill={isActive ? "#fff" : "rgba(61,146,194,0.95)"}
-                  >
-                    {meta.n}
-                  </text>
-                </g>
-              ));
             })}
           </svg>
         </div>
