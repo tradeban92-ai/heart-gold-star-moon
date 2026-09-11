@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-11-1345 detail-scroll -->
+<!-- altyeva-build 2026-09-11-1352 compact-map-header -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -496,14 +496,12 @@ nc+OGWNM52HJLG7QLbDYrlcy0QyttCTxLWvYHGwzmiPEs0KM2wVMtOOMpwhRTnh65H+9OAACQAAB
 </div>
 
 <div class="page" id="page-facemap">
-  <div class="hero" style="padding-bottom:6px;">
-    <p class="eyebrow">Подбор процедуры</p>
-    <h1 style="font-size:26px;">Карта лица</h1>
-    <p style="margin:2px 0 0;font-size:13px;color:var(--muted);">Нажмите на зону — покажу процедуры</p>
+  <div class="hero" style="padding:14px 18px 8px;">
+    <h1 style="font-size:20px;margin:0;">Карта лица</h1>
   </div>
   
-  <div class="fmap-toolbar">
-    <p class="fhint" id="fhint">Нажмите зону на схеме или номер.</p>
+  <div class="fmap-toolbar" id="fmapToolbar" style="display:none;">
+    <p class="fhint" id="fhint"></p>
   </div>
   <div class="zone-chips" id="zoneChips"></div>
   <div class="face-stage">
@@ -1821,9 +1819,11 @@ function renderFace(){
     b.classList.toggle('on', b.dataset.zone===faceActive);
   });
   const hint = document.getElementById('fhint');
+  const bar = document.getElementById('fmapToolbar');
   if (hint) {
     const zd = FACE_ZONES.find(z=>z.key===faceActive);
-    hint.textContent = zd ? (zd.n + ' · ' + zd.title + ' — ' + zd.hint) : 'Нажмите зону на схеме или номер.';
+    hint.textContent = zd ? (zd.n + ' · ' + zd.title) : '';
+    if (bar) bar.style.display = zd ? 'flex' : 'none';
   }
 }
 
