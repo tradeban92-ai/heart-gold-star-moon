@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-11-1420 zone-chip -->
+<!-- altyeva-build 2026-09-11-1425 palette-lock -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -11,15 +11,15 @@
 <style>
   :root {
     --bg: #E8EDF1;
-    --bg2: #DDE4EA;
-    --panel: rgba(255,255,255,0.62);
-    --panel-hi: rgba(255,255,255,0.85);
-    --line: rgba(90,110,130,0.18);
+    --bg2: #F2F5F8;
+    --panel: #ffffff;
+    --panel-hi: #F7F9FB;
+    --line: #C5D0DA;
     --steel: #6E8299;
     --steel-dk: #4A5A6E;
     --ink: #2B3642;
-    --muted: rgba(43,54,66,0.55);
-    --accent: #8CA3B8;
+    --muted: #6B7A8A;
+    --accent: #5B7390;
     --gold: #4A5A6E;
   }
   * { box-sizing: border-box; }
@@ -176,7 +176,7 @@
   .block p { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0 0 16px; }
   .btn-primary {
     display: block; width: 100%; padding: 15px; border: none; border-radius: 12px;
-    background: var(--steel); color: #ffffff; font-family: 'Manrope',sans-serif;
+    background: var(--steel-dk); color: #ffffff; font-family: 'Manrope',sans-serif;
     font-weight: 700; font-size: 15px; text-align: center; text-decoration: none; cursor: pointer;
   }
   .field { margin-bottom: 14px; }
@@ -193,17 +193,17 @@
   .loyalty-card {
     position: relative; border-radius: 18px; padding: 24px 22px;
     background: linear-gradient(135deg, #EEF2F5 0%, #DCE3E9 100%);
-    border: 1px solid rgba(201,169,106,0.25); overflow: hidden; margin-bottom: 16px;
+    border: 1px solid rgba(74,90,110,0.25); overflow: hidden; margin-bottom: 16px;
   }
   .loyalty-card::after {
     content:''; position:absolute; inset:0;
-    background: radial-gradient(circle at 88% 12%, rgba(201,169,106,0.22), transparent 55%);
+    background: radial-gradient(circle at 88% 12%, rgba(74,90,110,0.22), transparent 55%);
   }
   .loyalty-top { display:flex; justify-content:space-between; align-items:flex-start; position:relative; }
   .loyalty-eyebrow { font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin:0 0 6px; }
   .loyalty-level { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; margin:0; color:var(--steel-dk); }
   .loyalty-sub { font-size:13px; color:var(--muted); margin:2px 0 0; }
-  .loyalty-badge { font-size:11px; font-weight:700; padding:5px 12px; border-radius:100px; background:rgba(201,169,106,0.2); color:var(--gold); white-space:nowrap; }
+  .loyalty-badge { font-size:11px; font-weight:700; padding:5px 12px; border-radius:100px; background:rgba(74,90,110,0.2); color:var(--gold); white-space:nowrap; }
   .loyalty-discount { position:relative; margin-top:16px; font-size:14px; color:var(--gold); font-weight:700; }
   .loyalty-progress { font-size:12px; color:var(--muted); margin:18px 0 8px; position:relative; }
   .loyalty-bar { height:6px; border-radius:100px; background:rgba(237,238,240,0.12); overflow:hidden; position:relative; }
@@ -221,7 +221,7 @@
   .find-phone { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:16px; }
   .find-phone .row { display:flex; gap:8px; }
   .find-phone input { flex:1; padding:11px 13px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--ink); font-size:14px; font-family:'Manrope',sans-serif; }
-  .find-phone button { padding:11px 18px; border:none; border-radius:10px; background:var(--steel); color:#ffffff; font-weight:700; font-size:13px; cursor:pointer; }
+  .find-phone button { padding:11px 18px; border:none; border-radius:10px; background:var(--steel-dk); color:#ffffff; font-weight:700; font-size:13px; cursor:pointer; }
 
   .history-title { font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:600; margin:22px 2px 6px; color:var(--steel-dk); }
   .history-note { font-size:12px; color:var(--muted); margin:0 2px 12px; line-height:1.4; }
@@ -264,15 +264,15 @@
   .facewrap{position:relative;width:100%;max-width:520px;margin:0 auto;}
   .facewrap img{width:100%;display:block;}
   .facewrap svg{position:absolute;inset:0;width:100%;height:100%;}
-  .fzone{fill:rgba(169,139,84,0);stroke:transparent;stroke-width:2;cursor:pointer;transition:fill .2s,stroke .2s;}
-  .fzone:hover{fill:rgba(169,139,84,0.2);stroke:var(--gold);}
-  .fzone.active{fill:rgba(169,139,84,0.3);stroke:var(--gold);}
+  .fzone{fill:rgba(74,90,110,0);stroke:transparent;stroke-width:2;cursor:pointer;transition:fill .2s,stroke .2s;}
+  .fzone:hover{fill:rgba(74,90,110,0.2);stroke:var(--gold);}
+  .fzone.active{fill:rgba(74,90,110,0.3);stroke:var(--gold);}
   .fhint{text-align:center;font-size:12px;color:var(--muted);padding:10px 24px 0;}
   .fpanel{display:none;margin:12px 18px 0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;}
   .fpanel-title{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--steel-dk);margin:0 0 12px;}
   .fopt{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
   .fopt-name{font-weight:600;font-size:14px;} .fopt-sub{font-size:11.5px;color:var(--gold);font-weight:600;}
-  .fopt-btn{flex:none;background:var(--steel);color:#fff;border:none;border-radius:9px;padding:8px 15px;font-size:12.5px;font-weight:600;font-family:'Manrope';cursor:pointer;}
+  .fopt-btn{flex:none;background:var(--steel-dk);color:#fff;border:none;border-radius:9px;padding:8px 15px;font-size:12.5px;font-weight:600;font-family:'Manrope';cursor:pointer;}
   .fdetail{margin:12px 18px 0;}
   .fback{background:none;border:none;color:var(--steel);font-size:13px;font-weight:600;padding:0 0 12px;cursor:pointer;font-family:'Manrope';}
   .fdetail-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;}
@@ -281,7 +281,7 @@
   .fdetail-drug{font-size:13px;color:var(--gold);font-weight:600;margin:2px 0 12px;}
   .fdetail-price{font-size:26px;font-weight:700;color:var(--ink);margin-bottom:12px;}
   .fdetail-desc{font-size:14px;line-height:1.5;color:rgba(58,50,38,0.75);margin:0 0 20px;}
-  .fdetail-book{display:block;width:100%;padding:15px;border:none;border-radius:12px;background:var(--steel);color:#fff;font-weight:700;font-size:15px;text-align:center;text-decoration:none;}
+  .fdetail-book{display:block;width:100%;padding:15px;border:none;border-radius:12px;background:var(--steel-dk);color:#fff;font-weight:700;font-size:15px;text-align:center;text-decoration:none;}
 
   .tab{font-weight:700;font-size:11.5px;color:rgba(58,50,38,0.5);}
   .tab.active{color:var(--gold);}
@@ -347,6 +347,40 @@
   .map-cta{text-align:center;font-size:13.5px;color:var(--muted);padding:4px 20px 14px;margin:0;}
   .map-cta button{background:none;border:none;padding:0;font:inherit;font-weight:700;color:var(--steel-dk);cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
   #fdetail{scroll-margin-top:12px;}
+
+  /* palette lock to React preview */
+  :root{
+    --bg:#E8EDF1; --bg2:#F2F5F8; --panel:#ffffff; --panel-hi:#F7F9FB;
+    --line:#C5D0DA; --steel:#6E8299; --steel-dk:#4A5A6E; --ink:#2B3642;
+    --muted:#6B7A8A; --accent:#5B7390; --gold:#4A5A6E;
+  }
+  .hero-decor{display:none !important;}
+  .card, .block, .find-phone, .history-item, .proc-btn, .fempty, .more-link{
+    background:#fff;
+  }
+  .btn-primary, .fopt-btn, .fdetail-book, .find-phone button{
+    background:var(--steel-dk) !important; color:#fff;
+  }
+  .chip.active{background:var(--steel); border-color:var(--steel); color:#fff;}
+  .card-book{background:#F7F9FB; border:1px solid var(--line); color:var(--steel-dk);}
+  .card-special{background:#fff; border:1px solid var(--steel);}
+  .card-special::before{background:var(--steel-dk);}
+  .loyalty-card{
+    background:var(--steel-dk) !important;
+    border:none !important;
+    color:#fff;
+  }
+  .loyalty-card::after{
+    background:radial-gradient(circle at 88% 12%, rgba(255,255,255,0.12), transparent 55%) !important;
+  }
+  .loyalty-eyebrow, .loyalty-sub, .loyalty-progress, .loyalty-last{color:rgba(255,255,255,0.55) !important;}
+  .loyalty-level{color:#fff !important;}
+  .loyalty-badge{background:rgba(255,255,255,0.12) !important; color:#fff !important;}
+  .loyalty-discount{color:#fff !important;}
+  .loyalty-bar{background:rgba(255,255,255,0.15) !important;}
+  .loyalty-fill{background:#fff !important;}
+  .fzone:hover, .fzone.active{fill:rgba(74,90,110,0.22); stroke:var(--steel);}
+  .tab.active{color:var(--steel-dk) !important;}
 </style>
 </head>
 <body>
@@ -358,14 +392,14 @@
     <line x1="122" y1="42" x2="132" y2="42" transform="rotate(35 127 42)"/>
     <line x1="122" y1="52" x2="132" y2="52" transform="rotate(35 127 52)"/>
   </g>
-  <g stroke="#A98B54" stroke-width="1" opacity="0.35">
+  <g stroke="#4A5A6E" stroke-width="1" opacity="0.35">
     <path d="M40 130 C40 130, 30 145, 30 153 C30 160, 35 165, 40 165 C45 165, 50 160, 50 153 C50 145, 40 130, 40 130 Z"/>
   </g>
 </svg></div>
     <svg width="46" height="46" viewBox="0 0 60 60" style="display:block;margin-bottom:12px;" xmlns="http://www.w3.org/2000/svg">
       <g transform="translate(30,30)">
         <path d="M0 -25 C1.7 -10, 8 -3.3, 23 -1.7 C8 0, 1.7 6.5, 0 21 C-1.7 6.5, -8 0, -23 -1.7 C-8 -3.3, -1.7 -10, 0 -25 Z" fill="none" stroke="#4A5A6E" stroke-width="1.8" stroke-linejoin="round"/>
-        <path d="M0 -11 C0.8 -5.5, 4 -2.5, 10 -1.7 C4 -0.8, 0.8 2.5, 0 8 C-0.8 2.5, -4 -0.8, -10 -1.7 C-4 -2.5, -0.8 -5.5, 0 -11 Z" fill="#A98B54" opacity="0.55"/>
+        <path d="M0 -11 C0.8 -5.5, 4 -2.5, 10 -1.7 C4 -0.8, 0.8 2.5, 0 8 C-0.8 2.5, -4 -0.8, -10 -1.7 C-4 -2.5, -0.8 -5.5, 0 -11 Z" fill="#4A5A6E" opacity="0.55"/>
       </g>
     </svg>
     <div class="hero-row">
