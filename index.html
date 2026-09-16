@@ -1341,7 +1341,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
       <h3>Нет подходящего времени</h3>
       <p>Если в календаре нет удобного слота — оставьте заявку. Екатерина напишет и подберёт другое время.</p>
       <div class="field"><label>Имя</label><input id="rtName" type="text" placeholder="Анна"></div>
-      <div class="field"><label>Телефон</label><input id="rtPhone" type="tel" placeholder="+7 999 000-00-00"></div>
+      <div class="field"><label>Телефон</label><input id="rtPhone" type="tel" placeholder="+7 999 000-00-00"><p style="font-size:11px;color:var(--muted);margin-top:5px;">Подставили номер, который вы оставляли в боте. Можно изменить.</p></div>
       <div class="field"><label>Процедура</label><select id="rtService"></select></div>
       <div class="field"><label>Желаемые дата и время</label><input id="rtWhen" type="text" placeholder="Например, 12 сентября после 16:00"></div>
       <button class="btn-primary" id="rtSubmit">Оставить заявку</button>
@@ -1643,6 +1643,33 @@ function initRequestForm(){
 
 // ===== Карта лояльности =====
 const LOYALTY_API='https://unikon777.app.n8n.cloud/webhook/loyalty-status';
+
+// ===== Автоподстановка имени и телефона в форму заявки =====
+// Телефон Telegram мини-аппам не отдаёт, поэтому берём его из нашей
+// таблицы через тот же API, что и карту лояльности.
+async function prefillContacts(){
+  const tg = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  const nameEl  = document.getElementById('rtName');
+  const phoneEl = document.getElementById('rtPhone');
+  if(!nameEl || !phoneEl) return;
+
+  // Имя знаем сразу из Telegram
+  if(tg && !nameEl.value){
+    nameEl.value = [tg.first_name, tg.last_name].filter(Boolean).join(' ');
+  }
+  if(!tg?.id) return;
+
+  try{
+    const r = await fetch(`${LOYALTY_API}?user_id=${tg.id}`);
+    const d = await r.json();
+    if(d.phone && !phoneEl.value){
+      phoneEl.value = d.phone;
+      phoneEl.dataset.autofilled = '1';
+    }
+    if(d.user_name && !nameEl.value) nameEl.value = d.user_name;
+  }catch(e){ /* не получилось — клиент впишет сам */ }
+}
+
 const TIERS=[
   {name:'Новый клиент',req:0,perk:'без скидки'},
   {name:'Серебро',req:3,perk:'скидка 3%'},
@@ -1700,7 +1727,7 @@ async function loadLoyalty(manualPhone){
 }
 
 
-initChips(); initTabs(); try{initServiceSelect()}catch(e){}; try{initRequestForm()}catch(e){}; try{loadLoyalty()}catch(e){};
+initChips(); initTabs(); try{initServiceSelect()}catch(e){}; try{initRequestForm()}catch(e){}; try{loadLoyalty()}catch(e){}; try{prefillContacts()}catch(e){};
 if(window.Telegram && window.Telegram.WebApp){ const tg=window.Telegram.WebApp; tg.ready(); tg.expand(); }
 
 // ===== Памятки по уходу (вкладка Уход) =====
