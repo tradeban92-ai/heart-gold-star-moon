@@ -386,6 +386,15 @@
   .loyalty-fill{background:#fff !important;}
   .fzone:hover, .fzone.active{fill:rgba(74,90,110,0.22); stroke:var(--steel);}
   .tab.active{color:var(--steel-dk) !important;}
+
+  /* Второстепенная кнопка: светлая, с контуром. !important нужен,
+     чтобы перебить общее правило .btn-primary{background:...!important} ниже */
+  .btn-ghost{
+    background:#ffffff !important;
+    color:var(--steel-dk) !important;
+    border:1px solid var(--line) !important;
+    font-weight:600;
+  }
 </style>
 </head>
 <body>
@@ -1324,7 +1333,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
       <h3>Календарь DIKIDI</h3>
       <p>Актуальные свободные окна, выбор процедуры и подтверждение записи.</p>
       <a class="btn-primary" href="https://dikidi.net/ru/profile/katya_1788592" target="_blank">Записаться на DIKIDI</a>
-      <a class="btn-primary" style="background:transparent;border:1px solid var(--line);color:var(--steel-dk);margin-top:10px;" href="https://dikidi.net/ru/recording/" target="_blank">Посмотреть мои записи</a>
+      <button class="btn-primary btn-ghost" style="margin-top:10px;" type="button" data-go="page-loyalty">Мои визиты и скидка</button>
     </div>
 
     <div class="block">
