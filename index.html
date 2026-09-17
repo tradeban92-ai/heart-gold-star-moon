@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-17-0805 prefill-fix -->
+<!-- altyeva-build 2026-09-17-1249 consult-ping -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -1412,7 +1412,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
 </div>
 <div style="text-align:center;padding:16px 20px 8px;">
   <a href="https://tradeban92-ai.github.io/heart-gold-star-moon/privacy.html" target="_blank" style="font-size:10px;color:rgba(43,54,66,0.28);text-decoration:none;">Политика обработки данных</a>
-  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-17-0805</div>
+  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-17-1249</div>
 </div>
 <div class="tabbar">
   <button class="tab active" data-page="page-services">
@@ -1514,7 +1514,26 @@ function render(cat){
       <div class="card-btns"></div>`;
     const bwrap=card.querySelector('.card-btns');
     if(s.special){
-      const a=document.createElement('a'); a.className='card-book'; a.href='https://t.me/Altyevabot'; a.target='_blank'; a.textContent='Написать Екатерине';
+      // Консультация: зовём клиента в чат. Мини-апп не может написать
+      // от его имени, поэтому просим бота начать разговор первым,
+      // а затем закрываемся — человек попадает в диалог с готовым вопросом.
+      const a=document.createElement('button');
+      a.className='card-book';
+      a.type='button';
+      a.textContent='Задать вопрос Екатерине';
+      a.onclick=async ()=>{
+        a.disabled=true; a.textContent='Открываем чат…';
+        const tg=window.Telegram?.WebApp;
+        const u=tg?.initDataUnsafe?.user;
+        try{
+          if(u?.id){
+            await fetch(CONSULT_PING_API,{method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({user_id:u.id, chat_id:u.id, user_name:u.first_name||''})});
+          }
+        }catch(e){ /* не дошло — всё равно уводим в чат */ }
+        if(tg?.close) tg.close();
+        else window.open('https://t.me/Altyevabot','_blank');
+      };
       bwrap.appendChild(a);
     } else {
       const box=document.createElement('div'); box.className=multi?'card-variants':'';
@@ -1620,6 +1639,7 @@ function initServiceSelect(){
 
 // ===== Форма "нет подходящего времени" =====
 const PREFERRED_TIME_API = 'https://unikon777.app.n8n.cloud/webhook/preferred-time';
+const CONSULT_PING_API  = 'https://unikon777.app.n8n.cloud/webhook/consult-ping';
 function initRequestForm(){
   document.getElementById('rtSubmit').onclick=async ()=>{
     const name=document.getElementById('rtName').value.trim();
