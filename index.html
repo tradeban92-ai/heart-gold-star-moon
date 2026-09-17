@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-16-1503 btn-ghost+memory -->
+<!-- altyeva-build 2026-09-17-0805 prefill-fix -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -1341,7 +1341,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
       <h3>Нет подходящего времени</h3>
       <p>Если в календаре нет удобного слота — оставьте заявку. Екатерина напишет и подберёт другое время.</p>
       <div class="field"><label>Имя</label><input id="rtName" type="text" placeholder="Анна"></div>
-      <div class="field"><label>Телефон</label><input id="rtPhone" type="tel" placeholder="+7 999 000-00-00"><p style="font-size:11px;color:var(--muted);margin-top:5px;">Подставили номер, который вы оставляли в боте. Можно изменить.</p></div>
+      <div class="field"><label>Телефон</label><input id="rtPhone" type="tel" placeholder="+7 999 000-00-00"><p id="rtPhoneHint" style="font-size:11px;color:var(--muted);margin-top:5px;display:none;">Подставили номер, который вы оставляли в боте. Можно изменить.</p></div>
       <div class="field"><label>Процедура</label><select id="rtService"></select></div>
       <div class="field"><label>Желаемые дата и время</label><input id="rtWhen" type="text" placeholder="Например, 12 сентября после 16:00"></div>
       <button class="btn-primary" id="rtSubmit">Оставить заявку</button>
@@ -1412,7 +1412,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
 </div>
 <div style="text-align:center;padding:16px 20px 8px;">
   <a href="https://tradeban92-ai.github.io/heart-gold-star-moon/privacy.html" target="_blank" style="font-size:10px;color:rgba(43,54,66,0.28);text-decoration:none;">Политика обработки данных</a>
-  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-16-1503</div>
+  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-17-0805</div>
 </div>
 <div class="tabbar">
   <button class="tab active" data-page="page-services">
@@ -1661,10 +1661,15 @@ async function prefillContacts(){
 
   try{
     const r = await fetch(`${LOYALTY_API}?user_id=${tg.id}`);
-    const d = await r.json();
-    if(d.phone && !phoneEl.value){
-      phoneEl.value = d.phone;
-      phoneEl.dataset.autofilled = '1';
+    const raw = await r.json();
+    const d = Array.isArray(raw) ? (raw[0] || {}) : raw;
+
+    // поле может называться по-разному в зависимости от версии API
+    const found = d.phone || d.phone_number || d.user_phone || d.telefon || '';
+    if(found && !phoneEl.value){
+      phoneEl.value = String(found);
+      const hint = document.getElementById('rtPhoneHint');
+      if(hint) hint.style.display = 'block';
     }
     if(d.user_name && !nameEl.value) nameEl.value = d.user_name;
   }catch(e){ /* не получилось — клиент впишет сам */ }
