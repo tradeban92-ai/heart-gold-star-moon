@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-21-0940 upcoming -->
+<!-- altyeva-build 2026-09-21-1015 manage-btn -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -410,6 +410,10 @@
   .up-sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
   .up-soon{display:inline-block;font-size:11px;font-weight:700;color:#5B8A6B;background:#EAF2EC;
     border-radius:6px;padding:2px 7px;margin-left:6px;vertical-align:1px;}
+  .up-manage{flex:none;align-self:center;font-size:13px;font-weight:700;color:var(--steel-dk);
+    text-decoration:none;border:1px solid var(--line);border-radius:9px;padding:8px 11px;background:#fff;}
+  .up-manage:active{background:#F2F5F8;}
+  .up-hint{font-size:12px;color:var(--muted);line-height:1.45;margin:2px 4px 16px;}
   .up-empty{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:14px 16px;
     font-size:13.5px;color:var(--muted);margin-bottom:8px;}
   .up-empty a{color:var(--steel-dk);font-weight:700;text-decoration:none;}
@@ -1439,7 +1443,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
 </div>
 <div style="text-align:center;padding:16px 20px 8px;">
   <a href="https://tradeban92-ai.github.io/heart-gold-star-moon/privacy.html" target="_blank" style="font-size:10px;color:rgba(43,54,66,0.28);text-decoration:none;">Политика обработки данных</a>
-  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-21-0940</div>
+  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-21-1015</div>
 </div>
 <div class="tabbar">
   <button class="tab active" data-page="page-services">
@@ -1801,6 +1805,7 @@ function renderTiers(level){
   });
 }
 // ===== Предстоящие визиты (из писем DIKIDI) =====
+const DIKIDI_MANAGE = 'https://dikidi.ru/ru/recording';
 const MON_SHORT = {'января':'янв','февраля':'фев','марта':'мар','апреля':'апр','мая':'мая','июня':'июн',
   'июля':'июл','августа':'авг','сентября':'сен','октября':'окт','ноября':'ноя','декабря':'дек'};
 function renderUpcoming(list){
@@ -1828,8 +1833,11 @@ function renderUpcoming(list){
         <div class="up-when">${u.day} ${u.month}${wd} в ${u.time}${soon}</div>
         <div class="up-sub">${u.duration_min ? u.duration_min + ' мин · ' : ''}Лисичанская 6</div>
       </div>
+      <a class="up-manage" href="${DIKIDI_MANAGE}" target="_blank"
+         onclick="try{track('dikidi_manage','${u.day} ${u.month} ${u.time}')}catch(e){}">Изменить</a>
     </div>`;
-  }).join('');
+  }).join('')
+  + `<p class="up-hint">Перенести или отменить можно в DIKIDI — войдите по номеру телефона, на который записывались.</p>`;
 
   // Плашка на вкладке «Запись» — только ближайшая
   if (ban){
