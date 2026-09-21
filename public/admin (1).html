@@ -73,6 +73,8 @@
   .toast.bad{display:block;background:var(--no-bg);color:#7A4526;}
   .hidden{display:none!important;}
 
+  .head-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;}
+  .as-client{font-size:12.5px;font-weight:600;color:var(--steel);text-decoration:none;white-space:nowrap;}
   .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 16px 6px;padding:4px;
         background:#DCE3E9;border-radius:12px;}
   .tabs button{height:38px;border:none;border-radius:9px;background:transparent;color:var(--steel-dk);
@@ -140,7 +142,10 @@
 </head>
 <body>
 <header>
-  <p class="eyebrow" id="today"></p>
+  <div class="head-row">
+    <p class="eyebrow" id="today"></p>
+    <a class="as-client" href="index.html">Как видит клиент →</a>
+  </div>
   <h1 id="pageTitle">Отметка визитов</h1>
 </header>
 
