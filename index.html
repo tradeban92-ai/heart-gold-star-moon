@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-17-1249 consult-ping -->
+<!-- altyeva-build 2026-09-21-0926 personal-price -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -395,6 +395,10 @@
     border:1px solid var(--line) !important;
     font-weight:600;
   }
+  .fdetail-price .p-old{font-size:18px;font-weight:500;color:var(--muted);
+    text-decoration:line-through;text-decoration-thickness:1.5px;margin-right:10px;}
+  .fdetail-price .p-new{color:var(--ink);}
+  .fdetail-price .p-note{font-size:12.5px;font-weight:500;color:#5B8A6B;margin-top:5px;line-height:1.4;}
 </style>
 </head>
 <body>
@@ -1332,7 +1336,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
       <div class="block-icon">📅</div>
       <h3>Календарь DIKIDI</h3>
       <p>Актуальные свободные окна, выбор процедуры и подтверждение записи.</p>
-      <a class="btn-primary" href="https://dikidi.net/ru/profile/katya_1788592" target="_blank">Записаться на DIKIDI</a>
+      <a class="btn-primary" href="https://dikidi.net/ru/profile/katya_1788592" target="_blank" onclick="track('dikidi_click','кнопка на странице записи')">Записаться на DIKIDI</a>
       <button class="btn-primary btn-ghost" style="margin-top:10px;" type="button" data-go="page-loyalty">Мои визиты и скидка</button>
     </div>
 
@@ -1412,7 +1416,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
 </div>
 <div style="text-align:center;padding:16px 20px 8px;">
   <a href="https://tradeban92-ai.github.io/heart-gold-star-moon/privacy.html" target="_blank" style="font-size:10px;color:rgba(43,54,66,0.28);text-decoration:none;">Политика обработки данных</a>
-  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-17-1249</div>
+  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-21-0926</div>
 </div>
 <div class="tabbar">
   <button class="tab active" data-page="page-services">
@@ -1523,6 +1527,7 @@ function render(cat){
       a.textContent='Задать вопрос Екатерине';
       a.onclick=async ()=>{
         a.disabled=true; a.textContent='Открываем чат…';
+        track('consult_click','консультация');
         const tg=window.Telegram?.WebApp;
         const u=tg?.initDataUnsafe?.user;
         try{
@@ -1566,10 +1571,10 @@ function showServiceDetail(v, cat, groupName){
       <div class="fdetail-card">
         <div class="fdetail-name">${groupName}</div>
         ${v.drug?`<div class="fdetail-drug">${v.drug}</div>`:''}
-        <div class="fdetail-price">${svcPrice(v)}</div>
+        <div class="fdetail-price" ${(typeof v.price==='number' && !v.rawprice) ? `data-base="${v.price}"` : ''}>${priceHTML(v.price, !!v.rawprice)}</div>
         <div class="fdetail-zone" style="margin:0 0 12px;">${v.duration}</div>
         <p class="fdetail-desc">${v.desc}</p>
-        <a class="fdetail-book" href="${v.url}" target="_blank">Записаться</a>
+        <a class="fdetail-book" href="${v.url}" target="_blank" onclick="track('book_click','${groupName} · ${v.drug||''}')">Записаться</a>
       </div>
     </div>`;
   window.scrollTo(0,0);
@@ -1640,6 +1645,29 @@ function initServiceSelect(){
 // ===== Форма "нет подходящего времени" =====
 const PREFERRED_TIME_API = 'https://unikon777.app.n8n.cloud/webhook/preferred-time';
 const CONSULT_PING_API  = 'https://unikon777.app.n8n.cloud/webhook/consult-ping';
+const EVENTS_API        = 'https://unikon777.app.n8n.cloud/webhook/app-event';
+
+// ===== Счётчик действий =====
+// Пишем событие в таблицу. Ошибки глушим: статистика не должна
+// мешать человеку пользоваться приложением.
+function track(event, label){
+  try{
+    const u = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    const payload = JSON.stringify({
+      event: event,
+      label: label || '',
+      user_id: u?.id || '',
+      user_name: [u?.first_name, u?.last_name].filter(Boolean).join(' ')
+    });
+    // keepalive — чтобы запрос дошёл, даже если приложение закрывается
+    fetch(EVENTS_API, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: payload,
+      keepalive: true
+    }).catch(()=>{});
+  }catch(e){}
+}
 function initRequestForm(){
   document.getElementById('rtSubmit').onclick=async ()=>{
     const name=document.getElementById('rtName').value.trim();
@@ -1656,6 +1684,7 @@ function initRequestForm(){
         body:JSON.stringify({ user_id:tg?.id||'', user_name:name, username:tg?.username||'',
           phone, service, desired_time:when, comment })});
       st.textContent='✅ Спасибо! Екатерина свяжется с вами и подберёт время.';
+      track('request_sent', service || '');
       document.getElementById('rtWhen').value=''; 
     }catch(e){ st.textContent='Не удалось отправить. Попробуйте ещё раз.'; }
   };
@@ -1667,6 +1696,45 @@ const LOYALTY_API='https://unikon777.app.n8n.cloud/webhook/loyalty-status';
 // ===== Автоподстановка имени и телефона в форму заявки =====
 // Телефон Telegram мини-аппам не отдаёт, поэтому берём его из нашей
 // таблицы через тот же API, что и карту лояльности.
+// ===== Персональная цена по карте лояльности =====
+// Скидку знаем из уровня клиента. Один запрос на всё приложение:
+// им пользуются и карта лояльности, и форма заявки, и цены.
+const DISCOUNT_BY_LEVEL = { 'Серебро':3, 'Золото':5, 'Платина':7 };
+let MY_DISCOUNT = 0, MY_LEVEL = '';
+let _loyaltyPromise = null;
+function getMyLoyalty(){
+  if (_loyaltyPromise) return _loyaltyPromise;
+  const u = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  if (!u?.id) return (_loyaltyPromise = Promise.resolve(null));
+  _loyaltyPromise = fetch(`${LOYALTY_API}?user_id=${u.id}`)
+    .then(r => r.json())
+    .then(raw => {
+      const d = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
+      MY_LEVEL = d.level || '';
+      MY_DISCOUNT = DISCOUNT_BY_LEVEL[MY_LEVEL] || 0;
+      refreshPrices();
+      return d;
+    })
+    .catch(() => null);
+  return _loyaltyPromise;
+}
+// Округляем вниз до 10 ₽ — в пользу клиента
+function personalPrice(p){ return Math.floor(p * (100 - MY_DISCOUNT) / 100 / 10) * 10; }
+function priceHTML(p, isRaw){
+  if (p === 0) return 'Бесплатно';
+  if (isRaw || typeof p !== 'number' || !isFinite(p)) return p + ' ₽';
+  const f = n => n.toLocaleString('ru-RU') + ' ₽';
+  if (!MY_DISCOUNT) return f(p);
+  return `<span class="p-old">${f(p)}</span><span class="p-new">${f(personalPrice(p))}</span>`
+       + `<div class="p-note">Ваша скидка ${MY_DISCOUNT}% · ${MY_LEVEL}. Учтётся при оплате на приёме</div>`;
+}
+// Пересчитать цены на открытом экране, когда пришла скидка
+function refreshPrices(){
+  document.querySelectorAll('.fdetail-price[data-base]').forEach(el => {
+    el.innerHTML = priceHTML(+el.dataset.base);
+  });
+}
+
 async function prefillContacts(){
   const tg = window.Telegram?.WebApp?.initDataUnsafe?.user;
   const nameEl  = document.getElementById('rtName');
@@ -1680,9 +1748,7 @@ async function prefillContacts(){
   if(!tg?.id) return;
 
   try{
-    const r = await fetch(`${LOYALTY_API}?user_id=${tg.id}`);
-    const raw = await r.json();
-    const d = Array.isArray(raw) ? (raw[0] || {}) : raw;
+    const d = (await getMyLoyalty()) || {};
 
     // поле может называться по-разному в зависимости от версии API
     const found = d.phone || d.phone_number || d.user_phone || d.telefon || '';
@@ -1726,7 +1792,9 @@ async function loadLoyalty(manualPhone){
   }
   lv.textContent='Загрузка…'; note.textContent='';
   try{
-    const r=await fetch(url); const d=await r.json();
+    let d;
+    if (manualPhone) { d = await (await fetch(url)).json(); }
+    else { d = await getMyLoyalty(); if (!d) throw new Error('no data'); }
     const level=d.level||'Новый клиент'; const visits=d.totalVisits??0;
     lv.textContent=level; nm.textContent=d.user_name||'';
     vs.textContent=`${visits} ${pluralVisit(visits)}`;
@@ -1752,8 +1820,9 @@ async function loadLoyalty(manualPhone){
 }
 
 
-initChips(); initTabs(); try{initServiceSelect()}catch(e){}; try{initRequestForm()}catch(e){}; try{loadLoyalty()}catch(e){}; try{prefillContacts()}catch(e){};
+initChips(); initTabs(); try{initServiceSelect()}catch(e){}; try{initRequestForm()}catch(e){}; try{getMyLoyalty()}catch(e){}; try{loadLoyalty()}catch(e){}; try{prefillContacts()}catch(e){};
 if(window.Telegram && window.Telegram.WebApp){ const tg=window.Telegram.WebApp; tg.ready(); tg.expand(); }
+try{ track('app_open',''); }catch(e){}
 
 // ===== Памятки по уходу (вкладка Уход) =====
 const CARE = [
@@ -1933,6 +2002,7 @@ function renderFace(){
 
 function selectZone(key){
   const e=document.getElementById('fempty'); if(e) e.style.display='none';
+  try{ track('face_zone', key); }catch(err){}
   faceActive = key;
   document.getElementById('fdetail').innerHTML = '';
   const zd = FACE_ZONES.find(z=>z.key===key);
@@ -1958,9 +2028,9 @@ function fShowDetail(zoneTitle,it){
       <div class="fdetail-zone">${zoneTitle}</div>
       <h3 class="fdetail-name">${it.name}</h3>
       <div class="fdetail-drug">${it.drug}</div>
-      <div class="fdetail-price">${fmtP(it.price)}</div>
+      <div class="fdetail-price" data-base="${it.price}">${priceHTML(it.price)}</div>
       <p class="fdetail-desc">${it.desc}</p>
-      <a class="fdetail-book" href="${it.url}" target="_blank">Записаться</a>
+      <a class="fdetail-book" href="${it.url}" target="_blank" onclick="track('book_click_face','${zoneTitle} · ${it.drug||''}')">Записаться</a>
     </div>`;
   document.getElementById('fBackBtn').onclick=()=>{
     det.innerHTML='';
