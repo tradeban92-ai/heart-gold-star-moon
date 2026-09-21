@@ -125,7 +125,8 @@
   .tag.warn{color:var(--no);background:var(--no-bg);border-color:transparent;}
   .tag.ok{color:#2F5A3D;background:var(--ok-bg);border-color:transparent;}
   .tag.muted{color:var(--muted);}
-  .sh-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+  .sh-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px;}
+  .sh-note{font-size:11.5px;color:var(--muted);line-height:1.4;margin:0 4px 14px;}
   .sh-actions a{height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:#fff;
       border:1px solid var(--line);color:var(--steel-dk);font-weight:700;font-size:14px;text-decoration:none;}
   .sh-block{background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px;margin-bottom:10px;}
@@ -607,8 +608,10 @@ function openClient(key){
   if (c.phone){
     html += `<div class="sh-actions">
       <a href="tel:+${esc(c.phone)}">Позвонить</a>
+      <a href="https://t.me/+${esc(c.phone)}" data-tg="1">Telegram</a>
       <a href="https://wa.me/${esc(c.phone)}" data-ext="1">WhatsApp</a>
-    </div>`;
+    </div>
+    <p class="sh-note">Telegram откроется, если клиент не закрыл поиск по номеру в настройках приватности.</p>`;
   }
 
   if (c.upcoming.length){
@@ -640,6 +643,11 @@ function openClient(key){
   sheet.querySelector('.sh-x').onclick = closeClient;
   sheet.querySelectorAll('a[data-ext]').forEach(a => a.onclick = (e) => {
     if (tg?.openLink){ e.preventDefault(); tg.openLink(a.href); }
+  });
+  // Ссылки t.me открываем средствами Telegram — так чат откроется
+  // прямо в приложении, а не во внешнем браузере
+  sheet.querySelectorAll('a[data-tg]').forEach(a => a.onclick = (e) => {
+    if (tg?.openTelegramLink){ e.preventDefault(); tg.openTelegramLink(a.href); }
   });
 }
 function closeClient(){ document.getElementById('sheetBg').classList.add('hidden'); }
