@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex,nofollow">
+<title>Отметка визитов</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#E8EDF1; --panel:#fff; --line:#C5D0DA; --line-soft:#DCE3E9;
+    --steel:#6E8299; --steel-dk:#4A5A6E; --ink:#2B3642; --muted:#6B7A8A;
+    --ok:#5B8A6B; --ok-bg:#EAF2EC; --no:#B5734A; --no-bg:#F7EDE6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Manrope',system-ui,sans-serif;
+       -webkit-font-smoothing:antialiased;padding-bottom:calc(96px + env(safe-area-inset-bottom));}
+  header{padding:26px 20px 14px;}
+  .eyebrow{font-size:13px;color:var(--muted);margin:0 0 4px;}
+  h1{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;line-height:1.1;margin:0;color:var(--steel-dk);}
+
+  .wrap{padding:0 16px;}
+  .day{font-size:13px;font-weight:700;color:var(--steel-dk);margin:18px 4px 8px;}
+  .day .past{color:var(--no);font-weight:600;}
+
+  .card{background:var(--panel);border:1px solid var(--line-soft);border-radius:14px;padding:14px 14px 12px;margin-bottom:10px;
+        transition:border-color .15s, background .15s;}
+  .card.is-came{border-color:var(--ok);}
+  .card.is-no{background:#FBF8F6;border-color:var(--no-bg);}
+  .card.is-no .name{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(107,122,138,.4);}
+  .meta{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .name{font-size:17px;font-weight:600;margin:3px 0 1px;}
+  .phone{font-size:14px;color:var(--steel);text-decoration:none;font-variant-numeric:tabular-nums;}
+
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+  .seg button{height:44px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--steel-dk);
+              font:600 15px 'Manrope',sans-serif;cursor:pointer;}
+  .seg button.on-came{background:var(--ok);border-color:var(--ok);color:#fff;}
+  .seg button.on-no{background:var(--no-bg);border-color:var(--no);color:var(--no);}
+
+  label.f{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 5px;}
+  select,input{width:100%;height:46px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff;
+               color:var(--ink);font:500 15px 'Manrope',sans-serif;-webkit-appearance:none;appearance:none;}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236E8299' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");
+         background-repeat:no-repeat;background-position:right 14px center;padding-right:34px;}
+  .invalid{border-color:var(--no)!important;box-shadow:0 0 0 3px var(--no-bg);}
+  .err{font-size:12px;color:var(--no);margin-top:5px;display:none;}
+  .err.show{display:block;}
+
+  .section{font-size:13px;font-weight:700;color:var(--steel-dk);margin:24px 4px 8px;}
+  .add{width:100%;height:50px;border:1.5px dashed var(--line);border-radius:14px;background:transparent;
+       color:var(--steel-dk);font:600 15px 'Manrope',sans-serif;cursor:pointer;}
+  .walk{position:relative;padding-top:40px;}
+  .walk .wtitle{position:absolute;top:14px;left:14px;font-size:13px;font-weight:700;color:var(--steel-dk);}
+  .walk .x{position:absolute;top:8px;right:8px;width:34px;height:34px;border:none;background:none;color:var(--muted);
+           font-size:22px;line-height:1;cursor:pointer;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  .state{text-align:center;padding:40px 24px;color:var(--muted);font-size:15px;line-height:1.5;}
+  .state b{display:block;font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--steel-dk);margin-bottom:6px;font-weight:600;}
+
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(242,245,248,.96);backdrop-filter:blur(8px);
+       border-top:1px solid var(--line-soft);padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+       display:flex;align-items:center;gap:12px;}
+  .bar .count{flex:1;font-size:13px;color:var(--muted);line-height:1.3;}
+  .bar .count b{color:var(--ink);font-size:15px;}
+  .save{height:50px;padding:0 26px;border:none;border-radius:12px;background:var(--steel-dk);color:#fff;
+        font:700 16px 'Manrope',sans-serif;cursor:pointer;}
+  .save:disabled{opacity:.45;}
+  .toast{margin:0 16px 12px;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;display:none;}
+  .toast.ok{display:block;background:var(--ok-bg);color:#2F5A3D;}
+  .toast.bad{display:block;background:var(--no-bg);color:#7A4526;}
+  .hidden{display:none!important;}
+
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 16px 6px;padding:4px;
+        background:#DCE3E9;border-radius:12px;}
+  .tabs button{height:38px;border:none;border-radius:9px;background:transparent;color:var(--steel-dk);
+        font:600 14px 'Manrope',sans-serif;cursor:pointer;}
+  .tabs button.on{background:#fff;box-shadow:0 1px 3px rgba(43,54,66,.12);}
+
+  .sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px;}
+  .sum-card{background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px;
+        text-align:left;font-family:'Manrope',sans-serif;cursor:pointer;}
+  .sum-card b{display:block;font-size:26px;font-weight:700;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;}
+  .sum-card span{font-size:12.5px;color:var(--muted);}
+  .sum-card.warn b{color:var(--no);}
+
+  .segs{display:flex;gap:6px;overflow-x:auto;margin:12px -16px 10px;padding:0 16px;scrollbar-width:none;}
+  .segs::-webkit-scrollbar{display:none;}
+  .seg-chip{flex:none;height:36px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:#fff;
+        color:var(--steel-dk);font:600 13px 'Manrope',sans-serif;cursor:pointer;white-space:nowrap;}
+  .seg-chip i{font-style:normal;color:var(--muted);font-weight:500;margin-left:4px;}
+  .seg-chip.on{background:var(--steel-dk);border-color:var(--steel-dk);color:#fff;}
+  .seg-chip.on i{color:rgba(255,255,255,.7);}
+
+  .ctools{display:grid;grid-template-columns:1fr auto;gap:8px;}
+  .ctools input{height:42px;}
+  .ctools select{height:42px;width:auto;font-size:13.5px;}
+  .cfound{font-size:12.5px;color:var(--muted);margin:10px 4px 6px;}
+
+  .cl{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid var(--line-soft);
+      border-radius:14px;padding:12px 14px;margin-bottom:8px;font-family:'Manrope',sans-serif;color:var(--ink);cursor:pointer;}
+  .cl-main{flex:1;min-width:0;}
+  .cl-name{font-size:15.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cl-name .tg{font-size:11px;color:var(--steel);margin-left:5px;font-weight:700;}
+  .cl-sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .cl-sub.warn{color:var(--no);}
+  .cl-next{font-size:12px;font-weight:700;color:#2F5A3D;background:var(--ok-bg);display:inline-block;
+      border-radius:6px;padding:2px 7px;margin-top:5px;}
+  .cl-count{flex:none;text-align:center;min-width:52px;}
+  .cl-count b{display:block;font-size:20px;font-weight:700;color:var(--steel-dk);line-height:1;}
+  .cl-count span{font-size:11px;color:var(--muted);}
+
+  .sheet-bg{position:fixed;inset:0;background:rgba(43,54,66,.4);z-index:50;display:flex;align-items:flex-end;}
+  .sheet{background:var(--bg);width:100%;max-height:88vh;overflow-y:auto;border-radius:18px 18px 0 0;
+      padding:18px 16px calc(24px + env(safe-area-inset-bottom));}
+  .sh-head{display:flex;align-items:flex-start;gap:10px;}
+  .sh-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--steel-dk);line-height:1.15;}
+  .sh-phone{font-size:14px;color:var(--steel);margin-top:2px;font-variant-numeric:tabular-nums;}
+  .sh-x{margin-left:auto;flex:none;width:38px;height:38px;border:none;border-radius:10px;background:#fff;
+      font-size:22px;color:var(--muted);cursor:pointer;}
+  .sh-tags{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0;}
+  .tag{font-size:12px;font-weight:700;padding:4px 9px;border-radius:7px;background:#fff;color:var(--steel-dk);border:1px solid var(--line-soft);}
+  .tag.warn{color:var(--no);background:var(--no-bg);border-color:transparent;}
+  .tag.ok{color:#2F5A3D;background:var(--ok-bg);border-color:transparent;}
+  .tag.muted{color:var(--muted);}
+  .sh-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+  .sh-actions a{height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:#fff;
+      border:1px solid var(--line);color:var(--steel-dk);font-weight:700;font-size:14px;text-decoration:none;}
+  .sh-block{background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px;margin-bottom:10px;}
+  .sh-block h4{margin:0 0 8px;font-size:12px;font-weight:700;color:var(--muted);text-transform:none;}
+  .sh-row{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:6px 0;border-top:1px solid #EEF2F5;}
+  .sh-row:first-of-type{border-top:none;}
+  .sh-row span:first-child{white-space:nowrap;}
+  .sh-row span:last-child{color:var(--muted);text-align:right;}
+  .sh-mem{font-size:13.5px;line-height:1.5;color:var(--ink);}
+</style>
+</head>
+<body>
+<header>
+  <p class="eyebrow" id="today"></p>
+  <h1 id="pageTitle">Отметка визитов</h1>
+</header>
+
+<nav class="tabs">
+  <button type="button" data-tab="visits" class="on">Визиты</button>
+  <button type="button" data-tab="clients">Клиенты</button>
+</nav>
+
+<div id="tabVisits">
+<div class="toast" id="toast"></div>
+
+<div id="stateBox" class="state"><b>Загружаю…</b></div>
+
+<div class="wrap hidden" id="main">
+  <div id="list"></div>
+  <p class="section">Без записи в DIKIDI</p>
+  <div id="walkins"></div>
+  <button class="add" id="addWalk" type="button">+ Был ещё кто-то</button>
+</div>
+
+<div class="bar hidden" id="bar">
+  <div class="count" id="count"></div>
+  <button class="save" id="saveBtn" type="button">Сохранить</button>
+</div>
+</div><!-- /tabVisits -->
+
+<div id="tabClients" class="hidden">
+  <div id="cState" class="state"><b>Загружаю…</b></div>
+  <div id="cMain" class="wrap hidden">
+    <div class="sum" id="cSum"></div>
+    <div class="segs" id="cSegs"></div>
+    <div class="ctools">
+      <input id="cSearch" type="search" inputmode="search" placeholder="Имя или телефон">
+      <select id="cSort" aria-label="Сортировка">
+        <option value="last">Недавние</option>
+        <option value="count">Больше визитов</option>
+        <option value="name">По имени</option>
+      </select>
+    </div>
+    <p class="cfound" id="cFound"></p>
+    <div id="cList"></div>
+  </div>
+</div>
+
+<div class="sheet-bg hidden" id="sheetBg"><div class="sheet" id="sheet"></div></div>
+
+<script>
+const API = 'https://unikon777.app.n8n.cloud/webhook';
+const SERVICES = [{"l": "Ботулинотерапия Rentox — Лоб+Межбровье+Глаза", "d": 20}, {"l": "Ботулинотерапия Релатокс — Лоб+Межбровье+Глаза", "d": 20}, {"l": "Ботулинотерапия Rentox — Лоб+Межбровье", "d": 20}, {"l": "Ботулинотерапия Релатокс — Лоб+Межбровье", "d": 20}, {"l": "Ботулинотерапия Rentox — Зона Межбровья", "d": 15}, {"l": "Ботулинотерапия Релатокс — Зона Межбровья", "d": 15}, {"l": "Ботулинотерапия Rentox — Зона Глаз", "d": 15}, {"l": "Ботулинотерапия Релатокс — Зона Глаз", "d": 15}, {"l": "Ботулинотерапия Rentox — Гипертонус подбородка", "d": 15}, {"l": "Ботулинотерапия Rentox — Коррекция десневой улыбки", "d": 15}, {"l": "Ботулинотерапия — Лечение гипергидроза \"Сухие подмышки\"", "d": 45}, {"l": "Ботулинотерапия — Нижняя треть лица (платизма шеи)", "d": 30}, {"l": "Ботулинотерапия — Гипертонус жевательных мышц", "d": 30}, {"l": "Ботулинотерапия — Коррекция прошлых процедур", "d": 10}, {"l": "Бланширование — Белатеро софт", "d": 60}, {"l": "Коллагенотерапия — Коллост микро", "d": 60}, {"l": "Коллагенотерапия — Коллост 7%", "d": 60}, {"l": "Коллагенотерапия — Коллост 15%", "d": 60}, {"l": "Липолитики — Липолитик Lipolong", "d": 30}, {"l": "Биоревитализация — Мезо волос", "d": 30}, {"l": "Биоревитализация — Пентакле", "d": 60}, {"l": "Биоревитализация — Реви Стронг/Силк 1 мл", "d": 60}, {"l": "Биоревитализация — Мезовартон", "d": 60}, {"l": "Филлер — Губы. Южная Корея Eptg 300", "d": 60}, {"l": "Филлер — Губы. Франция Stylage M,L", "d": 60}, {"l": "Филлер — Скулы Tesoro sab", "d": 60}, {"l": "Филлер — Скулы Stylage L", "d": 60}, {"l": "Филлер — Подбородок Tesoro sab", "d": 45}, {"l": "Филлер — Подбородок Stylage L", "d": 45}, {"l": "Филлер — Углы НЧ 3 мл", "d": 60}, {"l": "Филлер — Выведение геля", "d": 45}, {"l": "Филлер — Заполнение носогубных складок", "d": 60}, {"l": "Филлер — Коррекция губ", "d": 10}, {"l": "Чистка лица — Комбинированная чистка", "d": 90}, {"l": "Чистка лица+пилинг — Комбинированная чистка+пилинг", "d": 100}, {"l": "Пилинг — Пилинг Джесснера", "d": 30}, {"l": "Пилинг — Пилинг Bio Re Pill", "d": 30}, {"l": "Пилинг — Пилинг Peach Peel", "d": 30}, {"l": "Консультация — Консультация косметолога", "d": 20}];
+
+const tg = window.Telegram?.WebApp;
+const initData = tg?.initData || '';
+const tgUser = tg?.initDataUnsafe?.user || null;
+try{ tg?.ready(); tg?.expand(); }catch(e){}
+
+const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const WEEK   = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+const pad = n => String(n).padStart(2,'0');
+const todayISO = () => { const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+
+(function(){ const d=new Date(); const t=`${WEEK[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  document.getElementById('today').textContent = t[0].toUpperCase()+t.slice(1); })();
+
+function parseDMY(s){ const m=String(s).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
+function dayTitle(s){
+  const d=parseDMY(s); if(!d) return s;
+  const t=new Date(); t.setHours(0,0,0,0);
+  const diff=Math.round((t-d)/86400000);
+  const base=`${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  if(diff===0) return `Сегодня, ${base}`;
+  if(diff===1) return `Вчера, ${base} <span class="past">· не отмечено</span>`;
+  return `${base}, ${WEEK[d.getDay()]} <span class="past">· не отмечено</span>`;
+}
+function fmtPhone(p){ p=String(p||''); return p.length===11?`+${p[0]} ${p.slice(1,4)} ${p.slice(4,7)}-${p.slice(7,9)}-${p.slice(9)}`:p; }
+function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// Выпадающий список процедур: подходящие по длительности — наверху
+function serviceSelect(duration){
+  const match = duration ? SERVICES.filter(s=>s.d===duration) : [];
+  const rest  = SERVICES.filter(s=>!match.includes(s));
+  let h = '<option value="">Выберите процедуру</option>';
+  if(match.length){
+    h += `<optgroup label="Подходит по времени · ${duration} мин">` + match.map(s=>`<option>${esc(s.l)}</option>`).join('') + '</optgroup>';
+    h += '<optgroup label="Все процедуры">' + rest.map(s=>`<option>${esc(s.l)}</option>`).join('') + '</optgroup>';
+  } else {
+    h += rest.map(s=>`<option>${esc(s.l)}</option>`).join('');
+  }
+  return `<select class="svc">${h}</select>`;
+}
+
+let BOOKINGS = [];
+const marks = {};      // row_number -> {came:true|false, service}
+
+function showState(title, text){
+  document.getElementById('stateBox').innerHTML = `<b>${title}</b>${text||''}`;
+  document.getElementById('stateBox').classList.remove('hidden');
+}
+
+async function load(){
+  if(!tgUser){ showState('Откройте через бота','Эта страница работает только внутри Telegram.'); return; }
+  let r, txt;
+  try{
+    const url = `${API}/admin-pending?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`;
+    r = await fetch(url);
+    txt = await r.text();
+  }catch(e){
+    // Сюда попадаем, если сервер не ответил вовсе или браузер заблокировал
+    // ответ. Обычно это значит, что воркфлоу выключен или упал.
+    showState('Нет связи с сервисом',
+      'Скорее всего, воркфлоу <b style="display:inline;font:inherit;color:inherit">Admin Visits API</b> в n8n выключен или упал с ошибкой.<br><br><small style="opacity:.7">' + esc(String(e && e.message || e)) + '</small>');
+    return;
+  }
+  let raw;
+  try{ raw = JSON.parse(txt); }
+  catch(e){
+    showState('Сервис ответил с ошибкой', `Код ${r.status}.<br><br><small style="opacity:.7">${esc(String(txt).slice(0,160))}</small>`);
+    return;
+  }
+  const d = Array.isArray(raw) ? raw[0] : raw;
+  if(r.status === 404 || d?.code === 404){
+    showState('Сервис выключен','Включите воркфлоу Admin Visits API в n8n (тумблер Active).');
+    return;
+  }
+  if(!d || d.ok === false){
+    const why = d?.mode ? `<br><br><small style="opacity:.7">${esc(d.mode)}</small>` : '';
+    showState('Нет доступа','Страница только для администратора.' + why);
+    return;
+  }
+  BOOKINGS = d.items || [];
+  render();
+}
+
+function render(){
+  document.getElementById('stateBox').classList.add('hidden');
+  document.getElementById('main').classList.remove('hidden');
+  document.getElementById('bar').classList.remove('hidden');
+
+  const list = document.getElementById('list');
+  if(!BOOKINGS.length){
+    list.innerHTML = '<div class="state" style="padding:24px 8px 8px"><b>Всё отмечено</b>Неотмеченных записей нет. Если кто-то приходил без записи — добавьте ниже.</div>';
+  } else {
+    let html=''; let last='';
+    BOOKINGS.forEach(b=>{
+      if(b.date!==last){ html += `<p class="day">${dayTitle(b.date)}</p>`; last=b.date; }
+      html += `
+      <div class="card" data-row="${b.row_number}">
+        <div class="meta">${esc(b.time)}${b.duration_min?` · ${b.duration_min} мин`:''}</div>
+        <div class="name">${esc(b.client_name||'Без имени')}</div>
+        ${b.phone?`<a class="phone" href="tel:+${esc(b.phone)}">${esc(fmtPhone(b.phone))}</a>`:''}
+        <div class="seg">
+          <button type="button" data-act="came">Была</button>
+          <button type="button" data-act="no">Не пришла</button>
+        </div>
+        <div class="svcbox hidden">
+          <label class="f">Процедура</label>
+          ${serviceSelect(b.duration_min)}
+          <div class="err">Выберите процедуру</div>
+        </div>
+      </div>`;
+    });
+    list.innerHTML = html;
+  }
+
+  list.querySelectorAll('.card[data-row]').forEach(card=>{
+    const row = card.dataset.row;
+    card.querySelectorAll('.seg button').forEach(btn=>{
+      btn.onclick = ()=>{
+        const act = btn.dataset.act;
+        const cur = marks[row]?.came;
+        const next = act==='came' ? (cur===true?undefined:true) : (cur===false?undefined:false);
+        if(next===undefined) delete marks[row]; else marks[row] = { ...(marks[row]||{}), came:next };
+        paintCard(card);
+        updateCount();
+      };
+    });
+    card.querySelector('.svc').onchange = e=>{
+      marks[row] = { ...(marks[row]||{}), service:e.target.value };
+      e.target.classList.remove('invalid'); card.querySelector('.err').classList.remove('show');
+    };
+  });
+  updateCount();
+}
+
+function paintCard(card){
+  const m = marks[card.dataset.row];
+  const [bCame,bNo] = card.querySelectorAll('.seg button');
+  bCame.className = m?.came===true ? 'on-came' : '';
+  bNo.className   = m?.came===false ? 'on-no' : '';
+  card.classList.toggle('is-came', m?.came===true);
+  card.classList.toggle('is-no',   m?.came===false);
+  card.querySelector('.svcbox').classList.toggle('hidden', m?.came!==true);
+}
+
+// ----- Клиенты без записи -----
+let walkSeq = 0;
+function addWalk(){
+  const id = ++walkSeq;
+  const el = document.createElement('div');
+  el.className='card walk'; el.dataset.walk=id;
+  el.innerHTML = `
+    <span class="wtitle">Клиент без записи</span><button class="x" type="button" aria-label="Убрать">×</button>
+    <div class="row2">
+      <div><label class="f" style="margin-top:0">Телефон</label><input class="w-phone" type="tel" inputmode="tel" placeholder="+7 900 000-00-00"></div>
+      <div><label class="f" style="margin-top:0">Имя</label><input class="w-name" type="text" placeholder="Имя"></div>
+    </div>
+    <label class="f">Процедура</label>
+    ${serviceSelect(0)}
+    <label class="f">Дата визита</label>
+    <input class="w-date" type="date" value="${todayISO()}" max="${todayISO()}">
+    <div class="err">Нужны телефон и процедура</div>`;
+  el.querySelector('.x').onclick = ()=>{ el.remove(); updateCount(); };
+  el.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',()=>{
+    i.classList.remove('invalid'); el.querySelector('.err').classList.remove('show'); updateCount();
+  }));
+  document.getElementById('walkins').appendChild(el);
+  el.querySelector('.w-phone').focus();
+  updateCount();
+}
+document.getElementById('addWalk').onclick = addWalk;
+
+function collectWalkins(){
+  return [...document.querySelectorAll('[data-walk]')].map(el=>({
+    el,
+    phone: el.querySelector('.w-phone').value.trim(),
+    name:  el.querySelector('.w-name').value.trim(),
+    service: el.querySelector('.svc').value,
+    date:  el.querySelector('.w-date').value || todayISO()
+  }));
+}
+
+function plural(n,a,b,c){ const x=n%10,y=n%100; return x===1&&y!==11?a:(x>=2&&x<=4&&(y<12||y>14))?b:c; }
+function updateCount(){
+  const marked = Object.values(marks).filter(m=>m.came!==undefined).length;
+  const walks  = document.querySelectorAll('[data-walk]').length;
+  const total  = BOOKINGS.length;
+  const parts=[];
+  if(total) parts.push(`<b>${marked} из ${total}</b> отмечено`);
+  if(walks) parts.push(`${walks} без записи`);
+  document.getElementById('count').innerHTML = parts.join('<br>') || 'Нечего сохранять';
+  document.getElementById('saveBtn').disabled = marked===0 && walks===0;
+}
+
+function toast(kind, text){
+  const t=document.getElementById('toast'); t.className='toast '+kind; t.textContent=text;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+document.getElementById('saveBtn').onclick = async ()=>{
+  // проверка: «Была» без процедуры и незаполненные формы
+  let ok = true, firstBad = null;
+  document.querySelectorAll('.card[data-row]').forEach(card=>{
+    const m = marks[card.dataset.row];
+    if(m?.came===true && !m.service){
+      ok=false; const s=card.querySelector('.svc'); s.classList.add('invalid');
+      card.querySelector('.err').classList.add('show'); firstBad = firstBad || card;
+    }
+  });
+  const walks = collectWalkins();
+  walks.forEach(w=>{
+    const digits = w.phone.replace(/\D/g,'');
+    if(digits.length<10 || !w.service){
+      ok=false;
+      if(digits.length<10) w.el.querySelector('.w-phone').classList.add('invalid');
+      if(!w.service) w.el.querySelector('.svc').classList.add('invalid');
+      w.el.querySelector('.err').classList.add('show'); firstBad = firstBad || w.el;
+    }
+  });
+  if(!ok){ firstBad?.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
+  const bookings = BOOKINGS
+    .filter(b=>marks[b.row_number] && marks[b.row_number].came!==undefined)
+    .map(b=>({ row_number:b.row_number, date:b.date, time:b.time, client_name:b.client_name, phone:b.phone,
+               came:marks[b.row_number].came, service:marks[b.row_number].service||'' }));
+  const walkins = walks.map(w=>({ phone:w.phone, name:w.name, service:w.service, date:w.date }));
+
+  const btn=document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='Сохраняю…';
+  try{
+    const r = await fetch(`${API}/admin-save`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ init_data:initData, user_id:tgUser?.id, bookings, walkins })});
+    const raw = await r.json(); const d = Array.isArray(raw)?raw[0]:raw;
+    if(!d || d.ok===false) throw new Error('forbidden');
+
+    const bits=[];
+    if(d.came)    bits.push(`${d.came} ${plural(d.came,'визит','визита','визитов')}`);
+    if(d.no_show) bits.push(`${d.no_show} ${plural(d.no_show,'неявка','неявки','неявок')}`);
+    if(d.walkins) bits.push(`${d.walkins} без записи`);
+    toast('ok', '✅ Сохранено: ' + (bits.join(', ')||'изменений нет'));
+    try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+
+    Object.keys(marks).forEach(k=>delete marks[k]);
+    document.getElementById('walkins').innerHTML='';
+    await load();
+  }catch(e){
+    toast('bad','Не удалось сохранить. Ничего не потерялось — попробуйте ещё раз.');
+  }finally{
+    btn.textContent='Сохранить'; updateCount();
+  }
+};
+
+load();
+
+// ============================================================
+// ВКЛАДКИ
+// ============================================================
+function showTab(t){
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.getElementById('tabVisits').classList.toggle('hidden', t !== 'visits');
+  document.getElementById('tabClients').classList.toggle('hidden', t !== 'clients');
+  document.getElementById('pageTitle').textContent = t === 'clients' ? 'Клиенты' : 'Отметка визитов';
+  if (t === 'clients' && !CLIENTS) loadClients();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+// ============================================================
+// КЛИЕНТЫ
+// ============================================================
+let CLIENTS = null, SUMMARY = null, SLEEP_DAYS = 130;
+let SEG = 'all', QUERY = '', SORT = 'last';
+
+const SEGS = [
+  { k:'all',      l:'Все' },
+  { k:'booked',   l:'Записаны' },
+  { k:'none',     l:'Без визитов' },
+  { k:'active',   l:'1–2 визита' },
+  { k:'regular',  l:'Постоянные' },
+  { k:'sleeping', l:'Давно не были' },
+];
+const shownName = c => c.name || (c.phone ? fmtPhone(c.phone) : 'Без имени');
+const inSeg = (c, k) => k === 'all' ? true : k === 'booked' ? c.upcoming.length > 0 : c.segment === k;
+
+function cState(title, text){
+  const s = document.getElementById('cState');
+  s.innerHTML = `<b>${title}</b>${text || ''}`;
+  s.classList.remove('hidden');
+  document.getElementById('cMain').classList.add('hidden');
+}
+
+async function loadClients(){
+  if (!tgUser){ cState('Откройте через бота','Раздел работает только внутри Telegram.'); return; }
+  cState('Загружаю…');
+  let r, txt;
+  try{
+    r = await fetch(`${API}/admin-clients?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`);
+    txt = await r.text();
+  }catch(e){
+    cState('Нет связи с сервисом','Скорее всего, воркфлоу <b style="display:inline;font:inherit;color:inherit">Admin Clients API</b> в n8n выключен или упал с ошибкой.');
+    return;
+  }
+  let d;
+  try { const raw = JSON.parse(txt); d = Array.isArray(raw) ? raw[0] : raw; }
+  catch(e){ cState('Сервис ответил с ошибкой', `Код ${r.status}.<br><br><small style="opacity:.7">${esc(String(txt).slice(0,160))}</small>`); return; }
+  if (r.status === 404 || d?.code === 404){ cState('Сервис выключен','Включите воркфлоу Admin Clients API в n8n.'); return; }
+  if (!d || d.ok === false){ cState('Нет доступа', 'Раздел только для администратора.' + (d?.mode ? `<br><br><small style="opacity:.7">${esc(d.mode)}</small>` : '')); return; }
+
+  CLIENTS = d.clients || []; SUMMARY = d.summary || {}; SLEEP_DAYS = d.sleeping_after || 130;
+  document.getElementById('cState').classList.add('hidden');
+  document.getElementById('cMain').classList.remove('hidden');
+  renderSummary(); renderSegs(); renderClients();
+}
+
+function renderSummary(){
+  const s = SUMMARY;
+  const card = (n, label, seg, warn) =>
+    `<button type="button" class="sum-card${warn ? ' warn' : ''}" data-seg="${seg}"><b>${n ?? 0}</b><span>${label}</span></button>`;
+  document.getElementById('cSum').innerHTML =
+      card(s.total, `${plural(s.total||0,'клиент','клиента','клиентов')} всего`, 'all')
+    + card(s.visits_30, `${plural(s.visits_30||0,'визит','визита','визитов')} за 30 дней`, 'all')
+    + card(s.upcoming_7, `${plural(s.upcoming_7||0,'запись','записи','записей')} на неделю`, 'booked')
+    + card(s.sleeping, `не ${(s.sleeping||0)===1?'был':'были'} ${SLEEP_DAYS}+ дней`, 'sleeping', s.sleeping > 0);
+  document.querySelectorAll('.sum-card').forEach(b => b.onclick = () => { SEG = b.dataset.seg; renderSegs(); renderClients(); });
+}
+
+function renderSegs(){
+  document.getElementById('cSegs').innerHTML = SEGS.map(s => {
+    const n = CLIENTS.filter(c => inSeg(c, s.k)).length;
+    return `<button type="button" class="seg-chip${SEG === s.k ? ' on' : ''}" data-k="${s.k}">${s.l}<i>${n}</i></button>`;
+  }).join('');
+  document.querySelectorAll('.seg-chip').forEach(b => b.onclick = () => { SEG = b.dataset.k; renderSegs(); renderClients(); });
+}
+
+function daysAgo(n){
+  if (n === null || n === undefined) return '';
+  if (n === 0) return 'сегодня';
+  if (n === 1) return 'вчера';
+  return `${n} ${plural(n,'день','дня','дней')} назад`;
+}
+function fmtIso(iso, withYear){
+  const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return iso || '';
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const showY = withYear || y !== new Date().getFullYear();
+  return `${d} ${MONTHS[mo-1]}${showY ? ' ' + y : ''}`;
+}
+function fmtShort(iso){
+  const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}.${m[2]}` : iso;
+}
+
+function renderClients(){
+  const q = QUERY.trim().toLowerCase();
+  const qDigits = q.replace(/\D/g,'');
+  let list = CLIENTS.filter(c => inSeg(c, SEG)).filter(c => {
+    if (!q) return true;
+    if (qDigits.length >= 3 && String(c.phone).includes(qDigits)) return true;
+    return (shownName(c) + ' ' + (c.tg_name||'')).toLowerCase().includes(q);
+  });
+
+  const lastSort = (a,b) => {
+    const da = a.days_since ?? Infinity, db = b.days_since ?? Infinity;
+    if (da !== db) return da - db;
+    return (b.upcoming.length - a.upcoming.length) || shownName(a).localeCompare(shownName(b),'ru');
+  };
+  if (SORT === 'count') list.sort((a,b) => (b.visits_count - a.visits_count) || lastSort(a,b));
+  else if (SORT === 'name') list.sort((a,b) => shownName(a).localeCompare(shownName(b),'ru'));
+  else list.sort(lastSort);
+
+  document.getElementById('cFound').textContent =
+    `${list.length} ${plural(list.length,'клиент','клиента','клиентов')}` +
+    (list.length ? ` · в Telegram ${list.filter(c => c.can_message).length}` : '');
+
+  const box = document.getElementById('cList');
+  if (!list.length){ box.innerHTML = '<div class="state" style="padding:24px 8px"><b>Никого</b>По этому фильтру клиентов нет.</div>'; return; }
+
+  box.innerHTML = list.map(c => {
+    const sleeping = c.segment === 'sleeping';
+    let sub;
+    if (c.visits_count){
+      sub = `${daysAgo(c.days_since)}`;
+      sub += c.discount ? ` · ${c.level} ${c.discount}%` : '';
+    } else sub = 'ещё не был(а)';
+    if (c.no_shows) sub += ` · неявок ${c.no_shows}`;
+    const nx = c.upcoming[0];
+    return `<button type="button" class="cl" data-k="${esc(c.key)}">
+      <div class="cl-main">
+        <div class="cl-name">${esc(shownName(c))}${c.can_message ? '<span class="tg">TG</span>' : ''}</div>
+        <div class="cl-sub${sleeping ? ' warn' : ''}">${esc(sub)}</div>
+        ${nx ? `<div class="cl-next">записан(а) ${fmtShort(nx.date)} в ${esc(nx.time)}</div>` : ''}
+      </div>
+      <div class="cl-count"><b>${c.visits_count}</b><span>${plural(c.visits_count,'визит','визита','визитов')}</span></div>
+    </button>`;
+  }).join('');
+  box.querySelectorAll('.cl').forEach(b => b.onclick = () => openClient(b.dataset.k));
+}
+
+document.getElementById('cSearch').addEventListener('input', e => { QUERY = e.target.value; renderClients(); });
+document.getElementById('cSort').addEventListener('change', e => { SORT = e.target.value; renderClients(); });
+
+const SEG_LABEL = { none:'Без визитов', active:'Был(а) 1–2 раза', regular:'Постоянный клиент', sleeping:'Давно не был(а)' };
+
+function openClient(key){
+  const c = CLIENTS.find(x => x.key === key); if (!c) return;
+  const ph = c.phone ? fmtPhone(c.phone) : 'телефон не указан';
+  const tags = [];
+  tags.push(`<span class="tag">${esc(c.level)}${c.discount ? ' · ' + c.discount + '%' : ''}</span>`);
+  if (SEG_LABEL[c.segment]) tags.push(`<span class="tag${c.segment === 'sleeping' ? ' warn' : ''}">${SEG_LABEL[c.segment]}</span>`);
+  tags.push(c.can_message ? '<span class="tag ok">Есть в боте</span>' : '<span class="tag muted">Нет в боте</span>');
+
+  const rows = (arr) => arr.map(([a,b]) => `<div class="sh-row"><span>${a}</span><span>${b}</span></div>`).join('');
+  let html = `
+    <div class="sh-head">
+      <div><div class="sh-name">${esc(shownName(c))}</div><div class="sh-phone">${esc(ph)}</div></div>
+      <button class="sh-x" type="button" aria-label="Закрыть">×</button>
+    </div>
+    <div class="sh-tags">${tags.join('')}</div>`;
+
+  if (c.phone){
+    html += `<div class="sh-actions">
+      <a href="tel:+${esc(c.phone)}">Позвонить</a>
+      <a href="https://wa.me/${esc(c.phone)}" data-ext="1">WhatsApp</a>
+    </div>`;
+  }
+
+  if (c.upcoming.length){
+    html += `<div class="sh-block"><h4>Предстоящие записи</h4>${rows(c.upcoming.map(u =>
+      [fmtIso(u.date), `${esc(u.time)}${u.duration_min ? ' · ' + u.duration_min + ' мин' : ''}`]))}</div>`;
+  }
+
+  const stats = [];
+  stats.push(['Визитов', String(c.visits_count)]);
+  if (c.last_visit)  stats.push(['Последний', `${fmtIso(c.last_visit)} · ${daysAgo(c.days_since)}`]);
+  if (c.first_visit) stats.push(['Первый', fmtIso(c.first_visit, true)]);
+  if (c.no_shows)    stats.push(['Не пришёл(а)', String(c.no_shows)]);
+  if (c.cancels)     stats.push(['Отменял(а)', String(c.cancels)]);
+  if (c.first_seen)  stats.push(['Впервые появился(ась)', fmtIso(c.first_seen, true)]);
+  html += `<div class="sh-block"><h4>Сводка</h4>${rows(stats)}</div>`;
+
+  if (c.history.length){
+    html += `<div class="sh-block"><h4>История визитов</h4>${rows(c.history.map(h =>
+      [fmtIso(h.date), esc(h.service || '—')]))}</div>`;
+  }
+  if (c.memory){
+    html += `<div class="sh-block"><h4>Бот помнит из переписки</h4><div class="sh-mem">${esc(c.memory)}</div></div>`;
+  }
+
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = html;
+  sheet.scrollTop = 0;
+  document.getElementById('sheetBg').classList.remove('hidden');
+  sheet.querySelector('.sh-x').onclick = closeClient;
+  sheet.querySelectorAll('a[data-ext]').forEach(a => a.onclick = (e) => {
+    if (tg?.openLink){ e.preventDefault(); tg.openLink(a.href); }
+  });
+}
+function closeClient(){ document.getElementById('sheetBg').classList.add('hidden'); }
+document.getElementById('sheetBg').addEventListener('click', e => { if (e.target.id === 'sheetBg') closeClient(); });
+
+// Открыть сразу нужную вкладку: admin.html?tab=clients
+if (new URLSearchParams(location.search).get('tab') === 'clients') showTab('clients');
+</script>
+</body>
+</html>
