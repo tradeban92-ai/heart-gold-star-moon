@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-22-0650 aftercare -->
+<!-- admin-build 2026-09-22-0718 levels -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -77,6 +77,11 @@
   .head-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;}
   .as-client{font-size:12.5px;font-weight:600;color:var(--steel);text-decoration:none;white-space:nowrap;}
   .ver{font-size:10.5px;color:rgba(107,122,138,.55);margin:3px 0 0;font-variant-numeric:tabular-nums;}
+  .lvl{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+  .lvl:empty{display:none;}
+  .lv{font-size:12px;font-weight:700;padding:3px 8px;border-radius:7px;background:#EEF2F5;color:var(--steel-dk);}
+  .lv-disc{background:var(--ok-bg);color:#2F5A3D;}
+  .lv-warn{background:var(--no-bg);color:var(--no);}
   .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 16px 6px;padding:4px;
         background:#DCE3E9;border-radius:12px;}
   .tabs button{height:38px;border:none;border-radius:9px;background:transparent;color:var(--steel-dk);
@@ -149,7 +154,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-22-0650</p>
+  <p class="ver">версия 2026-09-22-0718</p>
 </header>
 
 <nav class="tabs">
@@ -298,6 +303,7 @@ function render(){
         <div class="meta">${esc(b.time)}${b.duration_min?` · ${b.duration_min} мин`:''}</div>
         <div class="name">${esc(b.client_name||'Без имени')}</div>
         ${b.phone?`<a class="phone" href="tel:+${esc(b.phone)}">${esc(fmtPhone(b.phone))}</a>`:''}
+        <div class="lvl" data-p="${esc(String(b.phone||'').replace(/\D/g,'').slice(-10))}"></div>
         <div class="seg">
           <button type="button" data-act="came">Была</button>
           <button type="button" data-act="no">Не пришла</button>
@@ -330,6 +336,8 @@ function render(){
     };
   });
   updateCount();
+  paintLevels();
+  fetchClientsData();
 }
 
 function paintCard(card){
@@ -478,7 +486,7 @@ function showTab(t){
   document.getElementById('tabVisits').classList.toggle('hidden', t !== 'visits');
   document.getElementById('tabClients').classList.toggle('hidden', t !== 'clients');
   document.getElementById('pageTitle').textContent = t === 'clients' ? 'Клиенты' : 'Отметка визитов';
-  if (t === 'clients' && !CLIENTS) loadClients();
+  if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
@@ -507,8 +515,50 @@ function cState(title, text){
   document.getElementById('cMain').classList.add('hidden');
 }
 
+// ---- Уровень клиента на карточках визитов: Катя видит скидку до оплаты ----
+let _clientsPromise = null;
+function fetchClientsData(){
+  if (_clientsPromise || !tgUser) return _clientsPromise;
+  _clientsPromise = fetch(`${API}/admin-clients?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`)
+    .then(r => r.json())
+    .then(raw => {
+      const d = Array.isArray(raw) ? raw[0] : raw;
+      if (d && d.ok !== false && Array.isArray(d.clients)) {
+        CLIENTS = d.clients; SUMMARY = d.summary || {}; SLEEP_DAYS = d.sleeping_after || 130;
+        paintLevels();
+      }
+      return d;
+    })
+    .catch(() => null);
+  return _clientsPromise;
+}
+function paintLevels(){
+  if (!CLIENTS) return;
+  const by = {};
+  CLIENTS.forEach(c => { if (c.phone) by[String(c.phone).slice(-10)] = c; });
+  document.querySelectorAll('.lvl[data-p]').forEach(el => {
+    const c = by[el.dataset.p];
+    if (!c) { el.innerHTML = ''; return; }
+    let t;
+    if (c.discount)           t = `<span class="lv lv-disc">${esc(c.level)} · скидка ${c.discount}%</span>`;
+    else if (c.visits_count)  t = `<span class="lv">${c.visits_count} ${plural(c.visits_count,'визит','визита','визитов')} · без скидки</span>`;
+    else                      t = `<span class="lv">первый визит</span>`;
+    if (c.no_shows)           t += `<span class="lv lv-warn">неявок ранее: ${c.no_shows}</span>`;
+    el.innerHTML = t;
+  });
+}
+
 async function loadClients(){
   if (!tgUser){ cState('Откройте через бота','Раздел работает только внутри Telegram.'); return; }
+  // Один общий запрос на обе вкладки; если он не удался —
+  // ниже повторим с подробным разбором ошибки
+  await fetchClientsData();
+  if (CLIENTS) {
+    document.getElementById('cState').classList.add('hidden');
+    document.getElementById('cMain').classList.remove('hidden');
+    renderSummary(); renderSegs(); renderClients();
+    return;
+  }
   cState('Загружаю…');
   let r, txt;
   try{
