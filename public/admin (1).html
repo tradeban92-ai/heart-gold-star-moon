@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-21-1453 tg-button -->
+<!-- admin-build 2026-09-22-0650 aftercare -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -69,7 +69,7 @@
   .save{height:50px;padding:0 26px;border:none;border-radius:12px;background:var(--steel-dk);color:#fff;
         font:700 16px 'Manrope',sans-serif;cursor:pointer;}
   .save:disabled{opacity:.45;}
-  .toast{margin:0 16px 12px;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;display:none;}
+  .toast{margin:0 16px 12px;padding:12px 14px;border-radius:12px;font-size:14px;line-height:1.45;display:none;white-space:pre-line;}
   .toast.ok{display:block;background:var(--ok-bg);color:#2F5A3D;}
   .toast.bad{display:block;background:var(--no-bg);color:#7A4526;}
   .hidden{display:none!important;}
@@ -149,7 +149,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-21-1453</p>
+  <p class="ver">версия 2026-09-22-0650</p>
 </header>
 
 <nav class="tabs">
@@ -437,6 +437,26 @@ document.getElementById('saveBtn').onclick = async ()=>{
     if(d.walkins) bits.push(`${d.walkins} без записи`);
     toast('ok', '✅ Сохранено: ' + (bits.join(', ')||'изменений нет'));
     try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+
+    // Памятки клиентам — тем, кто пришёл. Отдельный запрос: если он
+    // не пройдёт, отметки всё равно уже сохранены.
+    const cameVisits = bookings.filter(x => x.came === true)
+      .map(x => ({ phone:x.phone, name:x.client_name, service:x.service, date:x.date }))
+      .concat(walkins.map(w => ({ phone:w.phone, name:w.name, service:w.service, date:w.date })));
+    if (cameVisits.length){
+      try{
+        const ctrl = new AbortController(); const tmr = setTimeout(() => ctrl.abort(), 12000);
+        const ar = await fetch(`${API}/aftercare-send`, { method:'POST', signal:ctrl.signal,
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, visits:cameVisits }) });
+        clearTimeout(tmr);
+        const araw = await ar.json(); const ad = Array.isArray(araw) ? araw[0] : araw;
+        if (ad && ad.sent) {
+          toast('ok', '✅ Сохранено: ' + (bits.join(', ')||'изменений нет') +
+            `\n💬 Памятка по уходу ушла ${ad.sent} ${plural(ad.sent,'клиенту','клиентам','клиентам')}`);
+        }
+      }catch(e){ /* памятки не критичны */ }
+    }
 
     Object.keys(marks).forEach(k=>delete marks[k]);
     document.getElementById('walkins').innerHTML='';
