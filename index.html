@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-21-1015 manage-btn -->
+<!-- altyeva-build 2026-09-22-1205 lean-events -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -1443,7 +1443,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
 </div>
 <div style="text-align:center;padding:16px 20px 8px;">
   <a href="https://tradeban92-ai.github.io/heart-gold-star-moon/privacy.html" target="_blank" style="font-size:10px;color:rgba(43,54,66,0.28);text-decoration:none;">Политика обработки данных</a>
-  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-21-1015</div>
+  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-22-1205</div>
 </div>
 <div class="tabbar">
   <button class="tab active" data-page="page-services">
@@ -1675,6 +1675,9 @@ const CONSULT_PING_API  = 'https://unikon777.app.n8n.cloud/webhook/consult-ping'
 const EVENTS_API        = 'https://unikon777.app.n8n.cloud/webhook/app-event';
 
 // ===== Счётчик действий =====
+// Пишем только значимые действия: записи, вопросы Кате, заявки, переносы.
+// Открытия приложения и нажатия зон на карте лица НЕ пишем — каждое событие
+// тратит запуск n8n, а пользы от них почти нет.
 // Пишем событие в таблицу. Ошибки глушим: статистика не должна
 // мешать человеку пользоваться приложением.
 function track(event, label){
@@ -1898,7 +1901,6 @@ async function loadLoyalty(manualPhone){
 
 initChips(); initTabs(); try{initServiceSelect()}catch(e){}; try{initRequestForm()}catch(e){}; try{getMyLoyalty()}catch(e){}; try{loadLoyalty()}catch(e){}; try{prefillContacts()}catch(e){};
 if(window.Telegram && window.Telegram.WebApp){ const tg=window.Telegram.WebApp; tg.ready(); tg.expand(); }
-try{ track('app_open',''); }catch(e){}
 
 // ===== Памятки по уходу (вкладка Уход) =====
 const CARE = [
@@ -2078,7 +2080,6 @@ function renderFace(){
 
 function selectZone(key){
   const e=document.getElementById('fempty'); if(e) e.style.display='none';
-  try{ track('face_zone', key); }catch(err){}
   faceActive = key;
   document.getElementById('fdetail').innerHTML = '';
   const zd = FACE_ZONES.find(z=>z.key===key);
