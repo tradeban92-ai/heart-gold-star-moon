@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-22-0818 mail-revenue -->
+<!-- admin-build 2026-09-22-1208 price-match -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -189,7 +189,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-22-0818</p>
+  <p class="ver">версия 2026-09-22-1208</p>
 </header>
 
 <nav class="tabs">
@@ -974,6 +974,26 @@ function openComposer(){
 // ============================================================
 // ВЫРУЧКА — оценка по прайсу с учётом скидки по карте на момент визита
 // ============================================================
+// ---- Поиск цены по названию процедуры ----
+// Прощаем расхождения в написании: регистр, пробелы, тип тире, «ё».
+// Ищем по полному названию, затем по одной второй части («Пилинг Джесснера»),
+// затем по первой — но только если совпадение однозначное.
+const normSvc = s => String(s || '').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9%]/g,'');
+const PRICE_FULL = {}, PRICE_DESC = {}, PRICE_NAME = {}, _cnt = { d:{}, n:{} };
+SERVICES.forEach(s => {
+  const [name, desc] = String(s.l).split(' — ');
+  PRICE_FULL[normSvc(s.l)] = s.p;
+  if (desc) { const k = normSvc(desc); PRICE_DESC[k] = s.p; _cnt.d[k] = (_cnt.d[k] || 0) + 1; }
+  const kn = normSvc(name); PRICE_NAME[kn] = s.p; _cnt.n[kn] = (_cnt.n[kn] || 0) + 1;
+});
+function priceOf(service){
+  const k = normSvc(service);
+  if (!k) return undefined;
+  if (k in PRICE_FULL) return PRICE_FULL[k];
+  if (_cnt.d[k] === 1) return PRICE_DESC[k];
+  if (_cnt.n[k] === 1) return PRICE_NAME[k];
+  return undefined;
+}
 const PRICE = Object.fromEntries(SERVICES.map(s => [s.l, s.p]));
 const MONTHS_NOM = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const MONTHS_SH  = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
@@ -987,7 +1007,7 @@ function revVisits(){
   (CLIENTS || []).forEach(c => {
     const h = (c.history || []).slice().sort((a,b) => String(a.date).localeCompare(String(b.date)));
     h.forEach((v, idx) => {
-      const base  = PRICE[v.service];
+      const base  = priceOf(v.service);
       const known = typeof base === 'number';
       const pct   = pctOf(idx);                       // скидка по визитам ДО этого
       const paid  = known ? (pct ? Math.floor(base * (100 - pct) / 100 / 10) * 10 : base) : 0;
