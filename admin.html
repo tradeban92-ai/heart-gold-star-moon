@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-22-1208 price-match -->
+<!-- admin-build 2026-09-23-0638 old-prices+cost -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -108,6 +108,11 @@
   .rv-hero span{display:block;font-size:12.5px;opacity:.7;}
   .rv-hero b{display:block;font-size:32px;font-weight:700;margin:4px 0 2px;font-variant-numeric:tabular-nums;}
   .rv-delta{font-size:12.5px;font-weight:700;} .rv-delta.up{color:#B9E4C3;} .rv-delta.down{color:#F2C5A8;}
+  .rv-profit{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;}
+  .rv-profit div{background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px;}
+  .rv-profit span{display:block;font-size:12.5px;color:var(--muted);}
+  .rv-profit b{display:block;font-size:22px;font-weight:700;color:var(--ink);line-height:1.2;font-variant-numeric:tabular-nums;}
+  .rv-profit .pr b{color:#2F5A3D;} .rv-profit i{font-style:normal;font-size:11.5px;color:var(--muted);}
   .rv-cat{padding:7px 0;} .rv-cat-top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;}
   .rv-cat-top i{font-style:normal;color:var(--muted);} .rv-cat-top span:last-child{font-weight:700;font-variant-numeric:tabular-nums;}
   .rv-bar{height:7px;border-radius:4px;background:#EEF2F5;overflow:hidden;} .rv-bar div{height:100%;background:var(--steel);border-radius:4px;}
@@ -189,7 +194,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-22-1208</p>
+  <p class="ver">версия 2026-09-23-0638</p>
 </header>
 
 <nav class="tabs">
@@ -974,25 +979,101 @@ function openComposer(){
 // ============================================================
 // ВЫРУЧКА — оценка по прайсу с учётом скидки по карте на момент визита
 // ============================================================
+// ============================================================
+// ЦЕНЫ ДО И ПОСЛЕ ПОВЫШЕНИЯ
+// С 1 октября 2026 действует новый прайс (он в SERVICES).
+// Визиты раньше этой даты считаем по старым ценам — они выведены
+// из фактических сумм DIKIDI за декабрь 2025 — сентябрь 2026.
+// ============================================================
+const PRICE_FROM = '2026-10-01';
+const OLD_PRICE = {
+  "Биоревитализация — Пентакле": 9000,
+  "Филлер — Губы. Франция Stylage M,L": 15000,
+  "Бланширование — Белатеро софт": 9000,
+  "Биоревитализация — Мезовартон": 14000,
+  "Биоревитализация — Реви Стронг/Силк 1 мл": 14000,
+  "Коллагенотерапия — Коллост 15%": 16000,
+  "Чистка лица — Комбинированная чистка": 4500,
+  "Ботулинотерапия Rentox — Зона Глаз": 2000,
+  "Биоревитализация — Мезо волос": 4500,
+  "Филлер — Выведение геля": 5000,
+  "Филлер — Губы. Южная Корея Eptg 300": 12000,
+  "Пилинг — Пилинг Джесснера": 3500,
+  "Коллагенотерапия — Коллост микро": 17000,
+  "Филлер — Скулы Tesoro sab": 12000,
+  "Пилинг — Пилинг Bio Re Pill": 3500,
+  "Ботулинотерапия — Коррекция прошлых процедур": 0
+};
+
+// ============================================================
+// РАСХОДНИКИ — себестоимость материалов на процедуру, ₽.
+// Меняются здесь. Где значения нет, себестоимость не учитывается
+// и визит попадает в пометку «себестоимость задана у N из M».
+// ============================================================
+const BOTOX_VIAL    = 4000;   // Rentox, флакон
+const BOTOX_CLIENTS = 4.5;    // сколько человек выходит из флакона
+const RELATOX_VIAL  = 10300;  // Релатокс, флакон
+const COST = {
+  'Филлер — Губы. Южная Корея Eptg 300': 2100,
+  'Филлер — Губы. Франция Stylage M,L': 4400,
+  'Филлер — Скулы Stylage L': 4950,
+  'Филлер — Подбородок Stylage L': 4950,
+  'Коллагенотерапия — Коллост микро': 5400,
+  'Коллагенотерапия — Коллост 7%': 5400,
+  'Коллагенотерапия — Коллост 15%': 5400,
+  'Липолитики — Липолитик Lipolong': 5000,
+  'Ботулинотерапия — Лечение гипергидроза "Сухие подмышки"': BOTOX_VIAL,   // уходит флакон целиком
+  'Консультация — Консультация косметолога': 0,
+  'Ботулинотерапия — Коррекция прошлых процедур': 0,
+};
+function costOne(label){
+  if (label in COST) return COST[label];
+  if (/^Ботулинотерапия Rentox/.test(label))   return Math.round(BOTOX_VIAL / BOTOX_CLIENTS);
+  if (/^Ботулинотерапия Релатокс/.test(label)) return Math.round(RELATOX_VIAL / BOTOX_CLIENTS);
+  if (/^Ботулинотерапия —/.test(label))        return Math.round(BOTOX_VIAL / BOTOX_CLIENTS);
+  return undefined;                              // себестоимость неизвестна
+}
+
 // ---- Поиск цены по названию процедуры ----
 // Прощаем расхождения в написании: регистр, пробелы, тип тире, «ё».
 // Ищем по полному названию, затем по одной второй части («Пилинг Джесснера»),
 // затем по первой — но только если совпадение однозначное.
 const normSvc = s => String(s || '').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9%]/g,'');
-const PRICE_FULL = {}, PRICE_DESC = {}, PRICE_NAME = {}, _cnt = { d:{}, n:{} };
+const PRICE_FULL = {}, LABEL_FULL = {}, LABEL_DESC = {}, LABEL_NAME = {}, _cnt = { d:{}, n:{} };
 SERVICES.forEach(s => {
   const [name, desc] = String(s.l).split(' — ');
-  PRICE_FULL[normSvc(s.l)] = s.p;
-  if (desc) { const k = normSvc(desc); PRICE_DESC[k] = s.p; _cnt.d[k] = (_cnt.d[k] || 0) + 1; }
-  const kn = normSvc(name); PRICE_NAME[kn] = s.p; _cnt.n[kn] = (_cnt.n[kn] || 0) + 1;
+  PRICE_FULL[normSvc(s.l)] = s.p; LABEL_FULL[normSvc(s.l)] = s.l;
+  if (desc) { const k = normSvc(desc); LABEL_DESC[k] = s.l; _cnt.d[k] = (_cnt.d[k] || 0) + 1; }
+  const kn = normSvc(name); LABEL_NAME[kn] = s.l; _cnt.n[kn] = (_cnt.n[kn] || 0) + 1;
 });
-function priceOf(service){
+function labelOf(service){            // точное название из прайса
   const k = normSvc(service);
   if (!k) return undefined;
-  if (k in PRICE_FULL) return PRICE_FULL[k];
-  if (_cnt.d[k] === 1) return PRICE_DESC[k];
-  if (_cnt.n[k] === 1) return PRICE_NAME[k];
+  if (k in LABEL_FULL) return LABEL_FULL[k];
+  if (_cnt.d[k] === 1) return LABEL_DESC[k];
+  if (_cnt.n[k] === 1) return LABEL_NAME[k];
   return undefined;
+}
+// Визит может быть из нескольких процедур: «A + B» — считаем сумму частей
+const splitSvc = s => String(s || '').split(/\s+\+\s+(?=[А-ЯA-Z])/).map(x => x.trim()).filter(Boolean);
+function priceOf(service, isoDate){
+  const old = isoDate && String(isoDate) < PRICE_FROM;
+  let sum = 0, known = false;
+  splitSvc(service).forEach(part => {
+    const lbl = labelOf(part); if (!lbl) return;
+    const p = old && (lbl in OLD_PRICE) ? OLD_PRICE[lbl] : PRICE_FULL[normSvc(lbl)];
+    if (typeof p === 'number') { sum += p; known = true; }
+  });
+  return known ? sum : undefined;
+}
+function costOf(service){
+  let sum = 0, known = false;
+  splitSvc(service).forEach(part => {
+    const lbl = labelOf(part); if (!lbl) return;
+    const c = costOne(lbl);
+    if (typeof c === 'number') { sum += c; known = true; }
+  });
+  return known ? sum : undefined;
 }
 const PRICE = Object.fromEntries(SERVICES.map(s => [s.l, s.p]));
 const MONTHS_NOM = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -1007,12 +1088,14 @@ function revVisits(){
   (CLIENTS || []).forEach(c => {
     const h = (c.history || []).slice().sort((a,b) => String(a.date).localeCompare(String(b.date)));
     h.forEach((v, idx) => {
-      const base  = priceOf(v.service);
+      const base  = priceOf(v.service, v.date);       // до 01.10.2026 — по старому прайсу
       const known = typeof base === 'number';
       const pct   = pctOf(idx);                       // скидка по визитам ДО этого
       const paid  = known ? (pct ? Math.floor(base * (100 - pct) / 100 / 10) * 10 : base) : 0;
+      const cst   = costOf(v.service);
       const cat   = careKey(v.service) || (/консультац/i.test(v.service) ? 'consult' : 'other');
       out.push({ ym: String(v.date).slice(0,7), known, base: base || 0, paid, disc: known ? base - paid : 0,
+                 cost: cst || 0, costKnown: typeof cst === 'number',
                  cat, key: c.key, first: idx === 0 });
     });
   });
@@ -1047,6 +1130,10 @@ function renderRevenue(){
   const fresh = inM.filter(v => v.first).length;
   const disc = inM.reduce((s,v) => s + v.disc, 0);
   const unknown = inM.filter(v => !v.known).length;
+  const cost = inM.reduce((s,v) => s + v.cost, 0);
+  const profit = rev - cost;
+  const costKnown = inM.filter(v => v.costKnown).length;
+  const margin = rev > 0 ? Math.round(profit / rev * 100) : 0;
 
   let delta = '';
   if (revP > 0) {
@@ -1072,6 +1159,10 @@ function renderRevenue(){
       <button type="button" id="rvNext" aria-label="Следующий месяц" ${REV_OFFSET === 0 ? 'disabled' : ''}>›</button>
     </div>
     <div class="rv-hero"><span>Выручка за месяц</span><b>${rub(rev)}</b>${delta}</div>
+    <div class="rv-profit">
+      <div><span>Расходники</span><b>− ${rub(cost)}</b></div>
+      <div class="pr"><span>Прибыль</span><b>${rub(profit)}</b><i>${rev > 0 ? margin + '% от выручки' : ''}</i></div>
+    </div>
     <div class="sum">
       <div class="sum-card"><b>${inM.length}</b><span>${plural(inM.length,'визит','визита','визитов')}</span></div>
       <div class="sum-card"><b>${known.length ? rub(avg) : '—'}</b><span>средний чек</span></div>
@@ -1087,7 +1178,9 @@ function renderRevenue(){
         <div class="rv-col${m.on ? ' on' : ''}"><em>${m.s ? Math.round(m.s/1000) + 'к' : ''}</em>
           <div class="rv-colbar" style="height:${m.s ? Math.max(4, m.s / maxM * 100) : 0}%"></div>
           <span>${MONTHS_SH[m.m]}</span></div>`).join('')}</div></div>
-    <p class="sh-note">Оценка по прайсу со скидкой по карте на момент визита. Не учитывает дополнительные мл филлера и индивидуальные договорённости.${
+    <p class="sh-note">Цены: до 01.10.2026 по старому прайсу, с 01.10 — по новому. Скидка по карте учтена на момент визита.
+      Себестоимость материалов посчитана у ${costKnown} ${plural(costKnown,'визита','визитов','визитов')} из ${inM.length}${
+      costKnown < inM.length ? ' — у остальных расходники не заданы, прибыль по ним завышена' : ''}. Не учитывает дополнительные мл филлера и индивидуальные договорённости.${
       unknown ? ` ${unknown} ${plural(unknown,'визит','визита','визитов')} ${unknown === 1 ? 'внесён' : 'внесены'} без точной процедуры и в сумму не ${unknown === 1 ? 'вошёл' : 'вошли'} — визиты, отмеченные через кабинет, считаются всегда.` : ''}</p>`;
 
   document.getElementById('rvPrev').onclick = () => { REV_OFFSET++; renderRevenue(); };
