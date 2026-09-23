@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-23-0638 old-prices+cost -->
+<!-- admin-build 2026-09-23-0647 no-old-discounts -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -194,7 +194,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-23-0638</p>
+  <p class="ver">версия 2026-09-23-0647</p>
 </header>
 
 <nav class="tabs">
@@ -1090,7 +1090,9 @@ function revVisits(){
     h.forEach((v, idx) => {
       const base  = priceOf(v.service, v.date);       // до 01.10.2026 — по старому прайсу
       const known = typeof base === 'number';
-      const pct   = pctOf(idx);                       // скидка по визитам ДО этого
+      // Скидки по карте лояльности действуют только с 01.10.2026 —
+      // до этой даты все платили полную цену
+      const pct   = String(v.date) < PRICE_FROM ? 0 : pctOf(idx);
       const paid  = known ? (pct ? Math.floor(base * (100 - pct) / 100 / 10) * 10 : base) : 0;
       const cst   = costOf(v.service);
       const cat   = careKey(v.service) || (/консультац/i.test(v.service) ? 'consult' : 'other');
@@ -1179,6 +1181,7 @@ function renderRevenue(){
           <div class="rv-colbar" style="height:${m.s ? Math.max(4, m.s / maxM * 100) : 0}%"></div>
           <span>${MONTHS_SH[m.m]}</span></div>`).join('')}</div></div>
     <p class="sh-note">Цены: до 01.10.2026 по старому прайсу, с 01.10 — по новому. Скидка по карте учтена на момент визита.
+      Скидки по картам — только с 01.10.2026, раньше их не было.
       Себестоимость материалов посчитана у ${costKnown} ${plural(costKnown,'визита','визитов','визитов')} из ${inM.length}${
       costKnown < inM.length ? ' — у остальных расходники не заданы, прибыль по ним завышена' : ''}. Не учитывает дополнительные мл филлера и индивидуальные договорённости.${
       unknown ? ` ${unknown} ${plural(unknown,'визит','визита','визитов')} ${unknown === 1 ? 'внесён' : 'внесены'} без точной процедуры и в сумму не ${unknown === 1 ? 'вошёл' : 'вошли'} — визиты, отмеченные через кабинет, считаются всегда.` : ''}</p>`;
