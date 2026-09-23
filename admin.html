@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-23-0647 no-old-discounts -->
+<!-- admin-build 2026-09-23-0733 picks+consult -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -91,6 +91,14 @@
     font:500 15px/1.45 'Manrope',sans-serif;color:var(--ink);resize:vertical;}
   .chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:4px 2px 12px;color:var(--ink);}
   .chk input{-webkit-appearance:checkbox;appearance:auto;width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:var(--steel-dk);}
+  .bc-tools{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:12.5px;color:var(--muted);}
+  .bc-tools button{border:none;background:none;color:var(--steel);font:600 12.5px 'Manrope',sans-serif;cursor:pointer;padding:4px;}
+  .bc-list{max-height:240px;overflow-y:auto;margin:0 -4px;}
+  .bc-who{display:flex;align-items:center;gap:10px;padding:8px 4px;border-top:1px solid #EEF2F5;}
+  .bc-who:first-child{border-top:none;}
+  .bc-who input{-webkit-appearance:checkbox;appearance:auto;width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:var(--steel-dk);}
+  .bc-who b{display:block;font-size:14px;font-weight:600;}
+  .bc-who i{font-style:normal;font-size:12px;color:var(--muted);}
   .bc-preview{white-space:pre-line;font-size:14px;line-height:1.45;background:#EEF2F5;border-radius:12px;padding:10px 12px;}
   .bc-kb{margin-top:8px;text-align:center;font-weight:600;font-size:13.5px;color:var(--steel-dk);background:#fff;border-radius:8px;padding:8px;}
   .bc-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;}
@@ -194,7 +202,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-23-0647</p>
+  <p class="ver">версия 2026-09-23-0733</p>
 </header>
 
 <nav class="tabs">
@@ -599,6 +607,9 @@ function enrichClients(){
     else if (c.visits_count >= 3)    c.segment = 'regular';
     else                             c.segment = 'active';
     c.due = !!c.visits_count && d !== null && d <= c.repeat_days && d >= c.repeat_days - DUE_WINDOW;
+    // Был только на консультации и больше не приходил
+    const hist = c.history || [];
+    c.only_consult = hist.length > 0 && hist.every(h => /консультац/i.test(h.service || ''));
   });
 }
 
@@ -607,6 +618,7 @@ const SEGS = [
   { k:'booked',   l:'Записаны' },
   { k:'due',      l:'Пора повторить' },
   { k:'sleeping', l:'Давно не были' },
+  { k:'consult',  l:'Не вернулись после консультации' },
   { k:'none',     l:'Без визитов' },
   { k:'active',   l:'1–2 визита' },
   { k:'regular',  l:'Постоянные' },
@@ -618,6 +630,7 @@ const inSeg = (c, k) => {
   if (k === 'booked')   return c.upcoming.length > 0;
   if (k === 'due')      return c.due && !c.upcoming.length;
   if (k === 'sleeping') return c.segment === 'sleeping' && !c.upcoming.length;
+  if (k === 'consult')  return c.only_consult && !c.upcoming.length;
   return c.segment === k;
 };
 
@@ -748,7 +761,11 @@ function renderClients(){
     if (da !== db) return da - db;
     return (b.upcoming.length - a.upcoming.length) || shownName(a).localeCompare(shownName(b),'ru');
   };
-  if (SORT === 'count') list.sort((a,b) => (b.visits_count - a.visits_count) || lastSort(a,b));
+  if (SEG === 'booked') {                       // ближайшая запись — сверху
+    list.sort((a,b) => String(a.upcoming[0]?.date || '').localeCompare(String(b.upcoming[0]?.date || ''))
+                    || String(a.upcoming[0]?.time || '').localeCompare(String(b.upcoming[0]?.time || '')));
+  }
+  else if (SORT === 'count') list.sort((a,b) => (b.visits_count - a.visits_count) || lastSort(a,b));
   else if (SORT === 'name') list.sort((a,b) => shownName(a).localeCompare(shownName(b),'ru'));
   else list.sort(lastSort);
 
@@ -873,6 +890,7 @@ let CURRENT_LIST = [];
 const TEMPLATES = {
   due:      '{имя}, здравствуйте! 💛\nПодходит время повторить {процедура}, чтобы сохранить результат. Свободные окна можно посмотреть по кнопке ниже.',
   sleeping: '{имя}, здравствуйте! 💛\nДавно вас не видели! Екатерина будет рада встрече — свободные окна можно посмотреть по кнопке ниже.',
+  consult:  '{имя}, здравствуйте! 💛\nВы были у Екатерины на консультации — если остались вопросы или сомнения, напишите сюда, она подскажет. А записаться можно по кнопке ниже.',
   none:     '{имя}, здравствуйте! 💛\nЕсли остались вопросы по процедурам — напишите сюда, Екатерина подскажет. А свободные окна можно посмотреть по кнопке ниже.',
 };
 const firstName = s => String(s||'').trim().split(/\s+/)[0] || '';
@@ -904,8 +922,13 @@ function openComposer(){
       <div><div class="sh-name">Рассылка</div><div class="sh-phone">Фильтр: «${esc(segName)}»${QUERY ? ' + поиск' : ''}</div></div>
       <button class="sh-x" type="button" aria-label="Закрыть">×</button>
     </div>
-    <div class="sh-block"><h4>Получатели</h4>
-      <div class="sh-row"><span>Получат в Telegram</span><span><b style="color:var(--ink)">${reach.length}</b></span></div>
+    <div class="sh-block"><h4>Кому отправить</h4>
+      <div class="bc-tools"><span id="bcCount"></span><button type="button" id="bcAll">снять все</button></div>
+      <div class="bc-list">${reach.map((c,i) => `<label class="bc-who">
+        <input type="checkbox" class="bc-pick" data-i="${i}" checked>
+        <span><b>${esc(shownName(c))}</b><i>${c.visits_count ? `${c.visits_count} ${plural(c.visits_count,'визит','визита','визитов')}` : 'без визитов'}${
+          c.last_cat ? ' · ' + esc(CAT_TITLE[c.last_cat] || '') : ''}${c.days_since !== null ? ' · ' + daysAgo(c.days_since) : ''}</i></span>
+      </label>`).join('')}</div>
       ${noTg.length ? `<div class="sh-row"><span>Без Telegram</span><span>${noTg.length} · <a href="#" id="noTgToggle">показать</a></span></div>
       <div id="noTgList" class="hidden">${noTg.map(c => `<div class="sh-row"><span>${esc(shownName(c))}</span><span>${
         c.phone ? `<a href="https://wa.me/${esc(c.phone)}" data-ext="1">WhatsApp</a>` : 'нет телефона'}</span></div>`).join('')}</div>` : ''}
@@ -918,9 +941,27 @@ function openComposer(){
       <div class="bc-preview" id="bcPreview"></div></div>
     <div class="bc-actions">
       <button type="button" id="bcTest">Отправить себе тест</button>
-      <button type="button" id="bcSend" class="primary" ${reach.length ? '' : 'disabled'}>Отправить ${reach.length} ${plural(reach.length,'клиенту','клиентам','клиентам')}</button>
+      <button type="button" id="bcSend" class="primary" ${reach.length ? '' : 'disabled'}>Отправить</button>
     </div>
     <div id="bcResult"></div>`;
+
+  // Кого отправляем — можно снимать галочки
+  const picks = () => [...sheet.querySelectorAll('.bc-pick')].filter(x => x.checked).map(x => reach[+x.dataset.i]);
+  const refreshPicks = () => {
+    const n = picks().length;
+    sheet.querySelector('#bcCount').textContent = `${n} ${plural(n,'получатель','получателя','получателей')} из ${reach.length}`;
+    const send = sheet.querySelector('#bcSend');
+    send.disabled = n === 0;
+    send.textContent = n ? `Отправить ${n} ${plural(n,'клиенту','клиентам','клиентам')}` : 'Никто не выбран';
+    sheet.querySelector('#bcAll').textContent = n ? 'снять все' : 'выбрать все';
+  };
+  sheet.querySelectorAll('.bc-pick').forEach(x => x.onchange = refreshPicks);
+  sheet.querySelector('#bcAll').onclick = () => {
+    const on = picks().length === 0;
+    sheet.querySelectorAll('.bc-pick').forEach(x => x.checked = on);
+    refreshPicks();
+  };
+  refreshPicks();
 
   const ta = sheet.querySelector('#bcText');
   const pv = sheet.querySelector('#bcPreview');
@@ -941,7 +982,9 @@ function openComposer(){
     const text = ta.value.trim();
     if (!text){ result.innerHTML = '<p class="bc-res bad">Напишите текст сообщения.</p>'; ta.focus(); return; }
     if (!test){
-      const ok = await confirmBox(`Отправить сообщение ${reach.length} ${plural(reach.length,'клиенту','клиентам','клиентам')}? Отменить будет нельзя.`);
+      const chosen = picks();
+      if (!chosen.length) return;
+      const ok = await confirmBox(`Отправить сообщение ${chosen.length} ${plural(chosen.length,'клиенту','клиентам','клиентам')}? Отменить будет нельзя.`);
       if (!ok) return;
     }
     const btn = sheet.querySelector(test ? '#bcTest' : '#bcSend');
@@ -951,7 +994,7 @@ function openComposer(){
         body: JSON.stringify({
           init_data: initData, user_id: tgUser?.id, text, with_button: btnBox.checked, test,
           test_name: firstName(tgUser?.first_name), test_proc: sample ? (CAT_PROC[sample.last_cat] || '') : '',
-          recipients: test ? [] : reach.map(c => ({ chat_id: c.chat_id, name: c.tg_name || '', proc: CAT_PROC[c.last_cat] || '' }))
+          recipients: test ? [] : picks().map(c => ({ chat_id: c.chat_id, name: c.tg_name || '', proc: CAT_PROC[c.last_cat] || '' }))
         })});
       const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
       if (!d || d.ok === false) throw new Error(d?.reason || 'forbidden');
@@ -959,7 +1002,7 @@ function openComposer(){
         result.innerHTML = '<p class="bc-res ok">Тест отправлен вам в бот — проверьте, как выглядит.</p>';
         btn.disabled = false; btn.textContent = was;
       } else {
-        result.innerHTML = `<p class="bc-res ok">✅ Доставлено: ${d.sent} из ${reach.length}.${d.failed
+        result.innerHTML = `<p class="bc-res ok">✅ Доставлено: ${d.sent} из ${picks().length}.${d.failed
           ? `<br>Не дошло: ${d.failed} — обычно это значит, что человек удалил или заблокировал бота.` : ''}</p>`;
         btn.textContent = 'Отправлено';   // повторно не даём, чтобы не задвоить
         try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
@@ -985,7 +1028,8 @@ function openComposer(){
 // Визиты раньше этой даты считаем по старым ценам — они выведены
 // из фактических сумм DIKIDI за декабрь 2025 — сентябрь 2026.
 // ============================================================
-const PRICE_FROM = '2026-10-01';
+const PRICE_FROM    = '2026-10-01';   // с этой даты — новый прайс
+const DISCOUNT_FROM = '2026-09-23';   // с этой даты работает карта лояльности
 const OLD_PRICE = {
   "Биоревитализация — Пентакле": 9000,
   "Филлер — Губы. Франция Stylage M,L": 15000,
@@ -1092,7 +1136,7 @@ function revVisits(){
       const known = typeof base === 'number';
       // Скидки по карте лояльности действуют только с 01.10.2026 —
       // до этой даты все платили полную цену
-      const pct   = String(v.date) < PRICE_FROM ? 0 : pctOf(idx);
+      const pct   = String(v.date) < DISCOUNT_FROM ? 0 : pctOf(idx);
       const paid  = known ? (pct ? Math.floor(base * (100 - pct) / 100 / 10) * 10 : base) : 0;
       const cst   = costOf(v.service);
       const cat   = careKey(v.service) || (/консультац/i.test(v.service) ? 'consult' : 'other');
@@ -1181,7 +1225,7 @@ function renderRevenue(){
           <div class="rv-colbar" style="height:${m.s ? Math.max(4, m.s / maxM * 100) : 0}%"></div>
           <span>${MONTHS_SH[m.m]}</span></div>`).join('')}</div></div>
     <p class="sh-note">Цены: до 01.10.2026 по старому прайсу, с 01.10 — по новому. Скидка по карте учтена на момент визита.
-      Скидки по картам — только с 01.10.2026, раньше их не было.
+      Скидки по картам — только с 23.09.2026, раньше их не было.
       Себестоимость материалов посчитана у ${costKnown} ${plural(costKnown,'визита','визитов','визитов')} из ${inM.length}${
       costKnown < inM.length ? ' — у остальных расходники не заданы, прибыль по ним завышена' : ''}. Не учитывает дополнительные мл филлера и индивидуальные договорённости.${
       unknown ? ` ${unknown} ${plural(unknown,'визит','визита','визитов')} ${unknown === 1 ? 'внесён' : 'внесены'} без точной процедуры и в сумму не ${unknown === 1 ? 'вошёл' : 'вошли'} — визиты, отмеченные через кабинет, считаются всегда.` : ''}</p>`;
