@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-22-0718 levels -->
+<!-- admin-build 2026-09-23-1628 visit-days -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -82,7 +82,83 @@
   .lv{font-size:12px;font-weight:700;padding:3px 8px;border-radius:7px;background:#EEF2F5;color:var(--steel-dk);}
   .lv-disc{background:var(--ok-bg);color:#2F5A3D;}
   .lv-warn{background:var(--no-bg);color:var(--no);}
-  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 16px 6px;padding:4px;
+  .cl-due{font-size:12px;font-weight:700;color:#7A5A1E;background:#F6EFDC;display:inline-block;border-radius:6px;padding:2px 7px;margin-top:5px;}
+  .tag.due{color:#7A5A1E;background:#F6EFDC;border-color:transparent;}
+  .mail-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:10px;height:46px;padding:0 14px;
+    border:1px solid var(--steel-dk);border-radius:12px;background:#fff;color:var(--steel-dk);font:700 14px 'Manrope',sans-serif;cursor:pointer;}
+  .mail-btn span{font-weight:600;font-size:12.5px;color:var(--muted);}
+  textarea#bcText{width:100%;min-height:130px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;
+    font:500 15px/1.45 'Manrope',sans-serif;color:var(--ink);resize:vertical;}
+  .chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:4px 2px 12px;color:var(--ink);}
+  .chk input{-webkit-appearance:checkbox;appearance:auto;width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:var(--steel-dk);}
+  .bc-tools{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:12.5px;color:var(--muted);}
+  .bc-tools button{border:none;background:none;color:var(--steel);font:600 12.5px 'Manrope',sans-serif;cursor:pointer;padding:4px;}
+  .bc-list{max-height:240px;overflow-y:auto;margin:0 -4px;}
+  .bc-who{display:flex;align-items:center;gap:10px;padding:8px 4px;border-top:1px solid #EEF2F5;}
+  .bc-who:first-child{border-top:none;}
+  .bc-who input{-webkit-appearance:checkbox;appearance:auto;width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:var(--steel-dk);}
+  .bc-who b{display:block;font-size:14px;font-weight:600;}
+  .bc-who i{font-style:normal;font-size:12px;color:var(--muted);}
+  .wa-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid #EEF2F5;}
+  .wa-row:first-of-type{border-top:none;}
+  .wa-row b{display:block;font-size:14px;font-weight:600;}
+  .wa-row i{font-style:normal;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .wa-row.sent{opacity:.5;}
+  .wa-btn{flex:none;height:36px;padding:0 14px;border:1px solid var(--line);border-radius:9px;background:#fff;
+    color:var(--steel-dk);font:700 13px 'Manrope',sans-serif;cursor:pointer;}
+  .bc-preview{white-space:pre-line;font-size:14px;line-height:1.45;background:#EEF2F5;border-radius:12px;padding:10px 12px;}
+  .bc-kb{margin-top:8px;text-align:center;font-weight:600;font-size:13.5px;color:var(--steel-dk);background:#fff;border-radius:8px;padding:8px;}
+  .bc-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;}
+  .bc-actions button{height:48px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--steel-dk);font:700 14px 'Manrope',sans-serif;cursor:pointer;}
+  .bc-actions button.primary{background:var(--steel-dk);border-color:var(--steel-dk);color:#fff;}
+  .bc-actions button:disabled{opacity:.5;}
+  .bc-res{font-size:13.5px;line-height:1.5;padding:10px 12px;border-radius:10px;margin:12px 0 0;}
+  .bc-res.ok{background:var(--ok-bg);color:#2F5A3D;} .bc-res.bad{background:var(--no-bg);color:#7A4526;}
+
+  .rv-nav{display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px;}
+  .rv-nav b{font-size:16px;color:var(--steel-dk);}
+  .rv-nav button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:20px;color:var(--steel-dk);cursor:pointer;}
+  .rv-nav button:disabled{opacity:.3;}
+  .rv-hero{background:var(--steel-dk);color:#fff;border-radius:16px;padding:16px 18px;margin:10px 0 4px;}
+  .rv-hero span{display:block;font-size:12.5px;opacity:.7;}
+  .rv-hero b{display:block;font-size:32px;font-weight:700;margin:4px 0 2px;font-variant-numeric:tabular-nums;}
+  .rv-delta{font-size:12.5px;font-weight:700;} .rv-delta.up{color:#B9E4C3;} .rv-delta.down{color:#F2C5A8;}
+  .rv-profit{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;}
+  .rv-profit div{background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px;}
+  .rv-profit span{display:block;font-size:12.5px;color:var(--muted);}
+  .rv-profit b{display:block;font-size:22px;font-weight:700;color:var(--ink);line-height:1.2;font-variant-numeric:tabular-nums;}
+  .rv-profit .pr b{color:#2F5A3D;} .rv-profit i{font-style:normal;font-size:11.5px;color:var(--muted);}
+  .rv-cat{display:block;width:100%;text-align:left;padding:8px 8px;border:1px solid transparent;border-radius:10px;
+    background:none;font-family:'Manrope',sans-serif;color:var(--ink);cursor:pointer;}
+  .rv-cat.on{background:#EEF2F5;border-color:var(--line);}
+  .rv-clear{float:right;border:none;background:none;color:var(--steel);font:600 12px 'Manrope',sans-serif;cursor:pointer;}
+  .rv-visit{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;
+    border-top:1px solid #EEF2F5;padding:9px 2px;font-family:'Manrope',sans-serif;color:var(--ink);cursor:pointer;}
+  .rv-visit:first-of-type{border-top:none;}
+  .rv-when{flex:none;width:46px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .rv-who{flex:1;min-width:0;}
+  .rv-who b{display:block;font-size:14px;font-weight:600;}
+  .rv-who i{font-style:normal;font-size:12px;color:var(--muted);display:block;line-height:1.35;}
+  .rv-who i b{font-weight:600;color:var(--steel-dk);}
+  .rv-sum{flex:none;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .ed-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;}
+  .ed-row label{font-size:13.5px;color:var(--muted);}
+  .ed-row input{width:120px;height:40px;text-align:right;}
+  .ed-row b{font-size:16px;color:#2F5A3D;}
+  .ed-svc{font-size:13px;line-height:1.5;color:var(--ink);background:#F7F9FB;border-radius:10px;padding:10px 12px;margin-bottom:10px;}
+  .ed-svc i{font-style:normal;color:var(--muted);}
+  .ed-all{margin-top:4px;}
+  .ed-all summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--steel);padding:8px 2px;}
+  .rv-sum .own{font-size:11px;font-weight:700;color:#7A5A1E;background:#F6EFDC;border-radius:5px;padding:1px 5px;margin-left:5px;} .rv-cat-top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;}
+  .rv-cat-top i{font-style:normal;color:var(--muted);} .rv-cat-top span:last-child{font-weight:700;font-variant-numeric:tabular-nums;}
+  .rv-bar{height:7px;border-radius:4px;background:#EEF2F5;overflow:hidden;} .rv-bar div{height:100%;background:var(--steel);border-radius:4px;}
+  .rv-chart{display:flex;align-items:flex-end;gap:8px;height:150px;padding-top:6px;}
+  .rv-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;}
+  .rv-col em{font-style:normal;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .rv-colbar{width:100%;max-width:34px;background:#C9D3DC;border-radius:6px 6px 2px 2px;}
+  .rv-col.on .rv-colbar{background:var(--steel-dk);} .rv-col.on em{color:var(--ink);font-weight:700;}
+  .rv-col span{font-size:11.5px;color:var(--muted);}
+  .tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin:0 16px 6px;padding:4px;
         background:#DCE3E9;border-radius:12px;}
   .tabs button{height:38px;border:none;border-radius:9px;background:transparent;color:var(--steel-dk);
         font:600 14px 'Manrope',sans-serif;cursor:pointer;}
@@ -95,9 +171,8 @@
   .sum-card span{font-size:12.5px;color:var(--muted);}
   .sum-card.warn b{color:var(--no);}
 
-  .segs{display:flex;gap:6px;overflow-x:auto;margin:12px -16px 10px;padding:0 16px;scrollbar-width:none;}
-  .segs::-webkit-scrollbar{display:none;}
-  .seg-chip{flex:none;height:36px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:#fff;
+  .segs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 10px;}
+  .seg-chip{flex:0 0 auto;min-height:36px;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:#fff;
         color:var(--steel-dk);font:600 13px 'Manrope',sans-serif;cursor:pointer;white-space:nowrap;}
   .seg-chip i{font-style:normal;color:var(--muted);font-weight:500;margin-left:4px;}
   .seg-chip.on{background:var(--steel-dk);border-color:var(--steel-dk);color:#fff;}
@@ -154,12 +229,13 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-22-0718</p>
+  <p class="ver">версия 2026-09-23-1628</p>
 </header>
 
 <nav class="tabs">
   <button type="button" data-tab="visits" class="on">Визиты</button>
   <button type="button" data-tab="clients">Клиенты</button>
+  <button type="button" data-tab="revenue">Выручка</button>
 </nav>
 
 <div id="tabVisits">
@@ -193,16 +269,22 @@
         <option value="name">По имени</option>
       </select>
     </div>
+    <div id="mailBar"></div>
     <p class="cfound" id="cFound"></p>
     <div id="cList"></div>
   </div>
+</div>
+
+<div id="tabRevenue" class="hidden">
+  <div id="rState" class="state"><b>Загружаю…</b></div>
+  <div id="rMain" class="wrap hidden"></div>
 </div>
 
 <div class="sheet-bg hidden" id="sheetBg"><div class="sheet" id="sheet"></div></div>
 
 <script>
 const API = 'https://unikon777.app.n8n.cloud/webhook';
-const SERVICES = [{"l": "Ботулинотерапия Rentox — Лоб+Межбровье+Глаза", "d": 20}, {"l": "Ботулинотерапия Релатокс — Лоб+Межбровье+Глаза", "d": 20}, {"l": "Ботулинотерапия Rentox — Лоб+Межбровье", "d": 20}, {"l": "Ботулинотерапия Релатокс — Лоб+Межбровье", "d": 20}, {"l": "Ботулинотерапия Rentox — Зона Межбровья", "d": 15}, {"l": "Ботулинотерапия Релатокс — Зона Межбровья", "d": 15}, {"l": "Ботулинотерапия Rentox — Зона Глаз", "d": 15}, {"l": "Ботулинотерапия Релатокс — Зона Глаз", "d": 15}, {"l": "Ботулинотерапия Rentox — Гипертонус подбородка", "d": 15}, {"l": "Ботулинотерапия Rentox — Коррекция десневой улыбки", "d": 15}, {"l": "Ботулинотерапия — Лечение гипергидроза \"Сухие подмышки\"", "d": 45}, {"l": "Ботулинотерапия — Нижняя треть лица (платизма шеи)", "d": 30}, {"l": "Ботулинотерапия — Гипертонус жевательных мышц", "d": 30}, {"l": "Ботулинотерапия — Коррекция прошлых процедур", "d": 10}, {"l": "Бланширование — Белатеро софт", "d": 60}, {"l": "Коллагенотерапия — Коллост микро", "d": 60}, {"l": "Коллагенотерапия — Коллост 7%", "d": 60}, {"l": "Коллагенотерапия — Коллост 15%", "d": 60}, {"l": "Липолитики — Липолитик Lipolong", "d": 30}, {"l": "Биоревитализация — Мезо волос", "d": 30}, {"l": "Биоревитализация — Пентакле", "d": 60}, {"l": "Биоревитализация — Реви Стронг/Силк 1 мл", "d": 60}, {"l": "Биоревитализация — Мезовартон", "d": 60}, {"l": "Филлер — Губы. Южная Корея Eptg 300", "d": 60}, {"l": "Филлер — Губы. Франция Stylage M,L", "d": 60}, {"l": "Филлер — Скулы Tesoro sab", "d": 60}, {"l": "Филлер — Скулы Stylage L", "d": 60}, {"l": "Филлер — Подбородок Tesoro sab", "d": 45}, {"l": "Филлер — Подбородок Stylage L", "d": 45}, {"l": "Филлер — Углы НЧ 3 мл", "d": 60}, {"l": "Филлер — Выведение геля", "d": 45}, {"l": "Филлер — Заполнение носогубных складок", "d": 60}, {"l": "Филлер — Коррекция губ", "d": 10}, {"l": "Чистка лица — Комбинированная чистка", "d": 90}, {"l": "Чистка лица+пилинг — Комбинированная чистка+пилинг", "d": 100}, {"l": "Пилинг — Пилинг Джесснера", "d": 30}, {"l": "Пилинг — Пилинг Bio Re Pill", "d": 30}, {"l": "Пилинг — Пилинг Peach Peel", "d": 30}, {"l": "Консультация — Консультация косметолога", "d": 20}];
+const SERVICES = [{"l": "Ботулинотерапия Rentox — Лоб+Межбровье+Глаза", "d": 20, "p": 8500}, {"l": "Ботулинотерапия Релатокс — Лоб+Межбровье+Глаза", "d": 20, "p": 14000}, {"l": "Ботулинотерапия Rentox — Лоб+Межбровье", "d": 20, "p": 7500}, {"l": "Ботулинотерапия Релатокс — Лоб+Межбровье", "d": 20, "p": 12000}, {"l": "Ботулинотерапия Rentox — Зона Межбровья", "d": 15, "p": 4500}, {"l": "Ботулинотерапия Релатокс — Зона Межбровья", "d": 15, "p": 6000}, {"l": "Ботулинотерапия Rentox — Зона Глаз", "d": 15, "p": 3500}, {"l": "Ботулинотерапия Релатокс — Зона Глаз", "d": 15, "p": 5000}, {"l": "Ботулинотерапия Rentox — Гипертонус подбородка", "d": 15, "p": 3500}, {"l": "Ботулинотерапия Rentox — Коррекция десневой улыбки", "d": 15, "p": 4000}, {"l": "Ботулинотерапия — Лечение гипергидроза \"Сухие подмышки\"", "d": 45, "p": 18000}, {"l": "Ботулинотерапия — Нижняя треть лица (платизма шеи)", "d": 30, "p": 9000}, {"l": "Ботулинотерапия — Гипертонус жевательных мышц", "d": 30, "p": 9000}, {"l": "Ботулинотерапия — Коррекция прошлых процедур", "d": 10, "p": 0}, {"l": "Бланширование — Белатеро софт", "d": 60, "p": 16000}, {"l": "Коллагенотерапия — Коллост микро", "d": 60, "p": 20000}, {"l": "Коллагенотерапия — Коллост 7%", "d": 60, "p": 16000}, {"l": "Коллагенотерапия — Коллост 15%", "d": 60, "p": 17000}, {"l": "Липолитики — Липолитик Lipolong", "d": 30, "p": 10000}, {"l": "Биоревитализация — Мезо волос", "d": 30, "p": 5000}, {"l": "Биоревитализация — Пентакле", "d": 60, "p": 10000}, {"l": "Биоревитализация — Реви Стронг/Силк 1 мл", "d": 60, "p": 15000}, {"l": "Биоревитализация — Мезовартон", "d": 60, "p": 16000}, {"l": "Филлер — Губы. Южная Корея Eptg 300", "d": 60, "p": 15000}, {"l": "Филлер — Губы. Франция Stylage M,L", "d": 60, "p": 18000}, {"l": "Филлер — Скулы Tesoro sab", "d": 60, "p": 15000}, {"l": "Филлер — Скулы Stylage L", "d": 60, "p": 18000}, {"l": "Филлер — Подбородок Tesoro sab", "d": 45, "p": 15000}, {"l": "Филлер — Подбородок Stylage L", "d": 45, "p": 18000}, {"l": "Филлер — Углы НЧ 3 мл", "d": 60, "p": 30000}, {"l": "Филлер — Выведение геля", "d": 45, "p": 7000}, {"l": "Филлер — Заполнение носогубных складок", "d": 60, "p": 15000}, {"l": "Филлер — Коррекция губ", "d": 10, "p": 1000}, {"l": "Чистка лица — Комбинированная чистка", "d": 90, "p": 5000}, {"l": "Чистка лица+пилинг — Комбинированная чистка+пилинг", "d": 100, "p": 6500}, {"l": "Пилинг — Пилинг Джесснера", "d": 30, "p": 5500}, {"l": "Пилинг — Пилинг Bio Re Pill", "d": 30, "p": 4500}, {"l": "Пилинг — Пилинг Peach Peel", "d": 30, "p": 5000}, {"l": "Консультация — Консультация косметолога", "d": 20, "p": 0}];
 
 const tg = window.Telegram?.WebApp;
 const initData = tg?.initData || '';
@@ -485,8 +567,10 @@ function showTab(t){
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.getElementById('tabVisits').classList.toggle('hidden', t !== 'visits');
   document.getElementById('tabClients').classList.toggle('hidden', t !== 'clients');
-  document.getElementById('pageTitle').textContent = t === 'clients' ? 'Клиенты' : 'Отметка визитов';
+  document.getElementById('tabRevenue').classList.toggle('hidden', t !== 'revenue');
+  document.getElementById('pageTitle').textContent = { visits:'Отметка визитов', clients:'Клиенты', revenue:'Выручка' }[t];
   if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
+  if (t === 'revenue') loadRevenue();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
@@ -497,16 +581,85 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab
 let CLIENTS = null, SUMMARY = null, SLEEP_DAYS = 130;
 let SEG = 'all', QUERY = '', SORT = 'last';
 
+// ============================================================
+// ЧЕРЕЗ СКОЛЬКО ДНЕЙ КЛИЕНТУ ПОРА ПОВТОРИТЬ — по его последней процедуре.
+// Поменять срок: исправить число и загрузить файл заново.
+// ============================================================
+const REPEAT_DAYS = {
+  botox:             130,   // ботулинотерапия
+  filler:            270,   // филлеры: губы, скулы, подбородок, носогубные
+  biorevitalization: 120,   // биоревитализация
+  collagen:          120,   // коллагенотерапия
+  blanching:          90,   // бланширование
+  lipolytics:         60,   // липолитики — курсом
+  mesohair:           45,   // мезотерапия волос — курсом
+  cleaning:           75,   // чистка лица
+  peeling:            60,   // пилинги — курсом
+};
+const DEFAULT_REPEAT = 130;  // если процедура неизвестна
+const DUE_WINDOW     = 14;   // «пора повторить» — за сколько дней до срока
+
+const CAT_TITLE = { botox:'Ботокс', filler:'Филлеры', biorevitalization:'Биоревитализация', collagen:'Коллаген',
+  blanching:'Бланширование', lipolytics:'Липолитики', mesohair:'Мезо волос', cleaning:'Чистка', peeling:'Пилинг',
+  consult:'Консультации', other:'Прочее' };
+// Как процедура звучит в фразе «пора повторить …»
+const CAT_PROC  = { botox:'ботокс', filler:'филлер', biorevitalization:'биоревитализацию', collagen:'коллагенотерапию',
+  blanching:'бланширование', lipolytics:'курс липолитиков', mesohair:'мезотерапию волос', cleaning:'чистку лица', peeling:'пилинг' };
+
+function careKey(label){
+  const s = String(label||'').toLowerCase();
+  if (/консультац/.test(s)) return null;
+  if (/мезо\s*волос|волос/.test(s)) return 'mesohair';
+  if (/пилинг/.test(s)) return 'peeling';
+  if (/чистк/.test(s)) return 'cleaning';
+  if (/бланшир|белатеро|белотеро/.test(s)) return 'blanching';
+  if (/коллаген|коллост/.test(s)) return 'collagen';
+  if (/липолит|lipolong/.test(s)) return 'lipolytics';
+  if (/биорев|пентакле|реви|мезовартон/.test(s)) return 'biorevitalization';
+  if (/ботул|ботокс|rentox|релатокс|гипергидроз|платизм|жеват|десн|гипертонус|прошлых процедур/.test(s)) return 'botox';
+  if (/филлер|губ|скул|подбород|носогуб|углы|челюст|stylage|tesoro|eptg|выведение|гел/.test(s)) return 'filler';
+  return null;
+}
+
+// Пересчёт статуса клиента с учётом срока его процедуры
+function enrichClients(){
+  if (!CLIENTS) return;
+  CLIENTS.forEach(c => {
+    const known = (c.history || []).find(h => careKey(h.service));
+    c.last_cat    = known ? careKey(known.service) : '';
+    c.repeat_days = REPEAT_DAYS[c.last_cat] || DEFAULT_REPEAT;
+    const d = c.days_since;
+    if (!c.visits_count)             c.segment = 'none';
+    else if (d > c.repeat_days)      c.segment = 'sleeping';
+    else if (c.visits_count >= 3)    c.segment = 'regular';
+    else                             c.segment = 'active';
+    c.due = !!c.visits_count && d !== null && d <= c.repeat_days && d >= c.repeat_days - DUE_WINDOW;
+    // Был только на консультации и больше не приходил
+    const hist = c.history || [];
+    c.only_consult = hist.length > 0 && hist.every(h => /консультац/i.test(h.service || ''));
+  });
+}
+
 const SEGS = [
   { k:'all',      l:'Все' },
   { k:'booked',   l:'Записаны' },
+  { k:'due',      l:'Пора повторить' },
+  { k:'sleeping', l:'Давно не были' },
+  { k:'consult',  l:'Не вернулись после консультации' },
   { k:'none',     l:'Без визитов' },
   { k:'active',   l:'1–2 визита' },
   { k:'regular',  l:'Постоянные' },
-  { k:'sleeping', l:'Давно не были' },
 ];
 const shownName = c => c.name || (c.phone ? fmtPhone(c.phone) : 'Без имени');
-const inSeg = (c, k) => k === 'all' ? true : k === 'booked' ? c.upcoming.length > 0 : c.segment === k;
+// Кто уже записан — тому «пора» и «давно не были» не пишем
+const inSeg = (c, k) => {
+  if (k === 'all')      return true;
+  if (k === 'booked')   return c.upcoming.length > 0;
+  if (k === 'due')      return c.due && !c.upcoming.length;
+  if (k === 'sleeping') return c.segment === 'sleeping' && !c.upcoming.length;
+  if (k === 'consult')  return c.only_consult && !c.upcoming.length;
+  return c.segment === k;
+};
 
 function cState(title, text){
   const s = document.getElementById('cState');
@@ -525,6 +678,7 @@ function fetchClientsData(){
       const d = Array.isArray(raw) ? raw[0] : raw;
       if (d && d.ok !== false && Array.isArray(d.clients)) {
         CLIENTS = d.clients; SUMMARY = d.summary || {}; SLEEP_DAYS = d.sleeping_after || 130;
+        enrichClients();
         paintLevels();
       }
       return d;
@@ -575,6 +729,7 @@ async function loadClients(){
   if (!d || d.ok === false){ cState('Нет доступа', 'Раздел только для администратора.' + (d?.mode ? `<br><br><small style="opacity:.7">${esc(d.mode)}</small>` : '')); return; }
 
   CLIENTS = d.clients || []; SUMMARY = d.summary || {}; SLEEP_DAYS = d.sleeping_after || 130;
+  enrichClients();
   document.getElementById('cState').classList.add('hidden');
   document.getElementById('cMain').classList.remove('hidden');
   renderSummary(); renderSegs(); renderClients();
@@ -584,11 +739,14 @@ function renderSummary(){
   const s = SUMMARY;
   const card = (n, label, seg, warn) =>
     `<button type="button" class="sum-card${warn ? ' warn' : ''}" data-seg="${seg}"><b>${n ?? 0}</b><span>${label}</span></button>`;
+  const total = CLIENTS.length;
+  const due   = CLIENTS.filter(c => inSeg(c,'due')).length;
+  const sleep = CLIENTS.filter(c => inSeg(c,'sleeping')).length;
   document.getElementById('cSum').innerHTML =
-      card(s.total, `${plural(s.total||0,'клиент','клиента','клиентов')} всего`, 'all')
-    + card(s.visits_30, `${plural(s.visits_30||0,'визит','визита','визитов')} за 30 дней`, 'all')
+      card(total, `${plural(total,'клиент','клиента','клиентов')} всего`, 'all')
     + card(s.upcoming_7, `${plural(s.upcoming_7||0,'запись','записи','записей')} на неделю`, 'booked')
-    + card(s.sleeping, `не ${(s.sleeping||0)===1?'был':'были'} ${SLEEP_DAYS}+ дней`, 'sleeping', s.sleeping > 0);
+    + card(due,   'пора повторить', 'due')
+    + card(sleep, 'давно не были', 'sleeping', sleep > 0);
   document.querySelectorAll('.sum-card').forEach(b => b.onclick = () => { SEG = b.dataset.seg; renderSegs(); renderClients(); });
 }
 
@@ -630,13 +788,27 @@ function renderClients(){
     if (da !== db) return da - db;
     return (b.upcoming.length - a.upcoming.length) || shownName(a).localeCompare(shownName(b),'ru');
   };
-  if (SORT === 'count') list.sort((a,b) => (b.visits_count - a.visits_count) || lastSort(a,b));
+  if (SEG === 'booked') {                       // ближайшая запись — сверху
+    list.sort((a,b) => String(a.upcoming[0]?.date || '').localeCompare(String(b.upcoming[0]?.date || ''))
+                    || String(a.upcoming[0]?.time || '').localeCompare(String(b.upcoming[0]?.time || '')));
+  }
+  else if (SORT === 'count') list.sort((a,b) => (b.visits_count - a.visits_count) || lastSort(a,b));
   else if (SORT === 'name') list.sort((a,b) => shownName(a).localeCompare(shownName(b),'ru'));
   else list.sort(lastSort);
 
   document.getElementById('cFound').textContent =
     `${list.length} ${plural(list.length,'клиент','клиента','клиентов')}` +
     (list.length ? ` · в Telegram ${list.filter(c => c.can_message).length}` : '');
+
+  // Кнопка рассылки — по тому списку, что сейчас на экране
+  CURRENT_LIST = list;
+  const reach = list.filter(c => c.can_message).length;
+  const segName = (SEGS.find(s => s.k === SEG) || {}).l || 'Все';
+  document.getElementById('mailBar').innerHTML = list.length
+    ? `<button type="button" class="mail-btn" id="mailBtn">✉️ Написать: «${esc(segName)}»${QUERY ? ' + поиск' : ''}<span>${reach} в Telegram</span></button>`
+    : '';
+  const mb = document.getElementById('mailBtn');
+  if (mb) mb.onclick = () => openComposer();
 
   const box = document.getElementById('cList');
   if (!list.length){ box.innerHTML = '<div class="state" style="padding:24px 8px"><b>Никого</b>По этому фильтру клиентов нет.</div>'; return; }
@@ -655,6 +827,7 @@ function renderClients(){
         <div class="cl-name">${esc(shownName(c))}${c.can_message ? '<span class="tg">TG</span>' : ''}</div>
         <div class="cl-sub${sleeping ? ' warn' : ''}">${esc(sub)}</div>
         ${nx ? `<div class="cl-next">записан(а) ${fmtShort(nx.date)} в ${esc(nx.time)}</div>` : ''}
+        ${!nx && c.due ? `<div class="cl-due">пора повторить · ${esc(CAT_TITLE[c.last_cat] || 'процедура')}</div>` : ''}
       </div>
       <div class="cl-count"><b>${c.visits_count}</b><span>${plural(c.visits_count,'визит','визита','визитов')}</span></div>
     </button>`;
@@ -673,6 +846,7 @@ function openClient(key){
   const tags = [];
   tags.push(`<span class="tag">${esc(c.level)}${c.discount ? ' · ' + c.discount + '%' : ''}</span>`);
   if (SEG_LABEL[c.segment]) tags.push(`<span class="tag${c.segment === 'sleeping' ? ' warn' : ''}">${SEG_LABEL[c.segment]}</span>`);
+  if (c.due) tags.push('<span class="tag due">Пора повторить</span>');
   tags.push(c.can_message ? '<span class="tag ok">Есть в боте</span>' : '<span class="tag muted">Нет в боте</span>');
 
   const rows = (arr) => arr.map(([a,b]) => `<div class="sh-row"><span>${a}</span><span>${b}</span></div>`).join('');
@@ -700,6 +874,12 @@ function openClient(key){
   const stats = [];
   stats.push(['Визитов', String(c.visits_count)]);
   if (c.last_visit)  stats.push(['Последний', `${fmtIso(c.last_visit)} · ${daysAgo(c.days_since)}`]);
+  if (c.last_cat)    stats.push(['Последняя процедура', CAT_TITLE[c.last_cat] || '—']);
+  if (c.visits_count){
+    const left = c.repeat_days - (c.days_since || 0);
+    stats.push(['Повторяют через', `${c.repeat_days} ${plural(c.repeat_days,'день','дня','дней')}` +
+      (left > 0 ? ` · осталось ${left}` : left === 0 ? ' · сегодня' : ` · просрочено на ${-left}`)]);
+  }
   if (c.first_visit) stats.push(['Первый', fmtIso(c.first_visit, true)]);
   if (c.no_shows)    stats.push(['Не пришёл(а)', String(c.no_shows)]);
   if (c.cancels)     stats.push(['Отменял(а)', String(c.cancels)]);
@@ -729,10 +909,578 @@ function openClient(key){
   });
 }
 function closeClient(){ document.getElementById('sheetBg').classList.add('hidden'); }
+
+// ============================================================
+// РАССЫЛКА
+// ============================================================
+let CURRENT_LIST = [];
+const TEMPLATES = {
+  due:      '{имя}, здравствуйте! 💛\nПодходит время повторить {процедура}, чтобы сохранить результат. Свободные окна можно посмотреть по кнопке ниже.',
+  sleeping: '{имя}, здравствуйте! 💛\nДавно вас не видели! Екатерина будет рада встрече — свободные окна можно посмотреть по кнопке ниже.',
+  consult:  '{имя}, здравствуйте! 💛\nВы были у Екатерины на консультации — если остались вопросы или сомнения, напишите сюда, она подскажет. А записаться можно по кнопке ниже.',
+  none:     '{имя}, здравствуйте! 💛\nЕсли остались вопросы по процедурам — напишите сюда, Екатерина подскажет. А свободные окна можно посмотреть по кнопке ниже.',
+};
+const firstName = s => String(s||'').trim().split(/\s+/)[0] || '';
+function personalize(text, c){
+  const n = firstName(c && c.tg_name);
+  return text
+    .replace(/\{имя\}\s*,\s*/gi, n ? n + ', ' : '')
+    .replace(/\{имя\}/gi, n)
+    .replace(/\{процедура\}/gi, (c && CAT_PROC[c.last_cat]) || 'процедуру')
+    .replace(/^\s*([a-zа-яё])/i, (m, ch) => m.replace(ch, ch.toUpperCase()));
+}
+function confirmBox(msg){
+  return new Promise(res => {
+    if (tg?.showConfirm) { try { tg.showConfirm(msg, ok => res(!!ok)); return; } catch(e){} }
+    res(window.confirm(msg));
+  });
+}
+
+function openComposer(){
+  const list  = CURRENT_LIST.slice();
+  const reach = list.filter(c => c.can_message);
+  const noTg  = list.filter(c => !c.can_message);
+  const segName = (SEGS.find(s => s.k === SEG) || {}).l || 'Все';
+  const sample = reach[0] || null;
+
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sh-head">
+      <div><div class="sh-name">Рассылка</div><div class="sh-phone">Фильтр: «${esc(segName)}»${QUERY ? ' + поиск' : ''}</div></div>
+      <button class="sh-x" type="button" aria-label="Закрыть">×</button>
+    </div>
+    <div class="sh-block"><h4>Кому отправить</h4>
+      <div class="bc-tools"><span id="bcCount"></span><button type="button" id="bcAll">снять все</button></div>
+      <div class="bc-list">${reach.map((c,i) => `<label class="bc-who">
+        <input type="checkbox" class="bc-pick" data-i="${i}" checked>
+        <span><b>${esc(shownName(c))}</b><i>${c.visits_count ? `${c.visits_count} ${plural(c.visits_count,'визит','визита','визитов')}` : 'без визитов'}${
+          c.last_cat ? ' · ' + esc(CAT_TITLE[c.last_cat] || '') : ''}${c.days_since !== null ? ' · ' + daysAgo(c.days_since) : ''}</i></span>
+      </label>`).join('')}</div>
+    </div>
+    ${noTg.length ? `<div class="sh-block"><h4>Нет в боте — отправить в WhatsApp (${noTg.length})</h4>
+      <p class="sh-note" style="margin:0 0 8px">Бот пишет только тем, кто ему писал. Остальным — по кнопке: откроется чат в WhatsApp с готовым текстом, останется нажать отправку.</p>
+      ${noTg.map((c,i) => `<div class="wa-row" data-wa="${i}">
+        <span><b>${esc(shownName(c))}</b><i>${c.phone ? esc(fmtPhone(c.phone)) : 'нет телефона'}</i></span>
+        ${c.phone ? `<button type="button" class="wa-btn" data-i="${i}">WhatsApp</button>` : ''}
+      </div>`).join('')}</div>` : ''}
+    <label class="f" for="bcText">Текст сообщения</label>
+    <textarea id="bcText" rows="6" placeholder="{имя}, здравствуйте! …">${esc(TEMPLATES[SEG] || '')}</textarea>
+    <p class="sh-note">{имя} — имя клиента в Telegram, {процедура} — его последняя процедура</p>
+    <label class="chk"><input type="checkbox" id="bcBtn" checked> Кнопка «📅 Записаться» под сообщением</label>
+    <div class="sh-block"><h4>Так увидит ${sample ? esc(firstName(sample.tg_name) || 'клиент') : 'клиент'}</h4>
+      <div class="bc-preview" id="bcPreview"></div></div>
+    <div class="bc-actions">
+      <button type="button" id="bcTest">Отправить себе тест</button>
+      <button type="button" id="bcSend" class="primary" ${reach.length ? '' : 'disabled'}>Отправить</button>
+    </div>
+    <div id="bcResult"></div>`;
+
+  // Кого отправляем — можно снимать галочки
+  const picks = () => [...sheet.querySelectorAll('.bc-pick')].filter(x => x.checked).map(x => reach[+x.dataset.i]);
+  const refreshPicks = () => {
+    const n = picks().length;
+    sheet.querySelector('#bcCount').textContent = `${n} ${plural(n,'получатель','получателя','получателей')} из ${reach.length}`;
+    const send = sheet.querySelector('#bcSend');
+    send.disabled = n === 0;
+    send.textContent = n ? `Отправить ${n} ${plural(n,'клиенту','клиентам','клиентам')}` : 'Никто не выбран';
+    sheet.querySelector('#bcAll').textContent = n ? 'снять все' : 'выбрать все';
+  };
+  sheet.querySelectorAll('.bc-pick').forEach(x => x.onchange = refreshPicks);
+  sheet.querySelector('#bcAll').onclick = () => {
+    const on = picks().length === 0;
+    sheet.querySelectorAll('.bc-pick').forEach(x => x.checked = on);
+    refreshPicks();
+  };
+  refreshPicks();
+
+  const ta = sheet.querySelector('#bcText');
+  const pv = sheet.querySelector('#bcPreview');
+  const btnBox = sheet.querySelector('#bcBtn');
+  const paint = () => {
+    pv.textContent = personalize(ta.value, sample) || '—';
+    if (btnBox.checked) pv.insertAdjacentHTML('beforeend', '<div class="bc-kb">📅 Записаться</div>');
+  };
+  ta.addEventListener('input', paint); btnBox.addEventListener('change', paint); paint();
+
+  sheet.querySelector('.sh-x').onclick = closeClient;
+  sheet.querySelectorAll('a[data-ext]').forEach(a => a.onclick = e => { if (tg?.openLink){ e.preventDefault(); tg.openLink(a.href); } });
+
+  const DIKIDI_BOOK = 'https://dikidi.net/ru/profile/katya_1788592';
+  const result = sheet.querySelector('#bcResult');
+
+  // WhatsApp: открываем чат с уже подставленным текстом рассылки
+  sheet.querySelectorAll('.wa-btn').forEach(btn => btn.onclick = () => {
+    const c = noTg[+btn.dataset.i];
+    const text = ta.value.trim();
+    if (!text){
+      sheet.querySelector('#bcResult').innerHTML = '<p class="bc-res bad">Сначала напишите текст сообщения.</p>';
+      ta.focus(); return;
+    }
+    // У клиентов не из бота имя приходит из DIKIDI: бывает и «Имя Фамилия»,
+    // и «Фамилия Имя». Подставляем только однословное — иначе назовём по фамилии.
+    const waName = c.tg_name || (String(c.name||'').trim().split(/\s+/).length === 1 ? c.name : '');
+    let msg = personalize(text, { ...c, tg_name: waName });
+    if (btnBox.checked) msg += '\n\nЗаписаться: ' + DIKIDI_BOOK;   // кнопок в WhatsApp нет — даём ссылкой
+    const url = `https://wa.me/${c.phone}?text=${encodeURIComponent(msg)}`;
+    if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
+    btn.closest('.wa-row').classList.add('sent');
+    btn.textContent = 'открыт';
+  });
+  async function send(test){
+    const text = ta.value.trim();
+    if (!text){ result.innerHTML = '<p class="bc-res bad">Напишите текст сообщения.</p>'; ta.focus(); return; }
+    if (!test){
+      const chosen = picks();
+      if (!chosen.length) return;
+      const ok = await confirmBox(`Отправить сообщение ${chosen.length} ${plural(chosen.length,'клиенту','клиентам','клиентам')}? Отменить будет нельзя.`);
+      if (!ok) return;
+    }
+    const btn = sheet.querySelector(test ? '#bcTest' : '#bcSend');
+    const was = btn.textContent; btn.disabled = true; btn.textContent = 'Отправляю…';
+    try{
+      const r = await fetch(`${API}/admin-broadcast`, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          init_data: initData, user_id: tgUser?.id, text, with_button: btnBox.checked, test,
+          test_name: firstName(tgUser?.first_name), test_proc: sample ? (CAT_PROC[sample.last_cat] || '') : '',
+          recipients: test ? [] : picks().map(c => ({ chat_id: c.chat_id, name: c.tg_name || '', proc: CAT_PROC[c.last_cat] || '' }))
+        })});
+      const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+      if (!d || d.ok === false) throw new Error(d?.reason || 'forbidden');
+      if (test) {
+        result.innerHTML = '<p class="bc-res ok">Тест отправлен вам в бот — проверьте, как выглядит.</p>';
+        btn.disabled = false; btn.textContent = was;
+      } else {
+        result.innerHTML = `<p class="bc-res ok">✅ Доставлено: ${d.sent} из ${picks().length}.${d.failed
+          ? `<br>Не дошло: ${d.failed} — обычно это значит, что человек удалил или заблокировал бота.` : ''}</p>`;
+        btn.textContent = 'Отправлено';   // повторно не даём, чтобы не задвоить
+        try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+      }
+    }catch(e){
+      result.innerHTML = '<p class="bc-res bad">Не удалось отправить. Проверьте, что воркфлоу Admin Broadcast API включён, и попробуйте ещё раз.</p>';
+      btn.disabled = false; btn.textContent = was;
+    }
+  }
+  sheet.querySelector('#bcTest').onclick = () => send(true);
+  sheet.querySelector('#bcSend').onclick = () => send(false);
+
+  sheet.scrollTop = 0;
+  document.getElementById('sheetBg').classList.remove('hidden');
+}
+
+// ============================================================
+// ВЫРУЧКА — оценка по прайсу с учётом скидки по карте на момент визита
+// ============================================================
+// ============================================================
+// ЦЕНЫ ДО И ПОСЛЕ ПОВЫШЕНИЯ
+// С 1 октября 2026 действует новый прайс (он в SERVICES).
+// Визиты раньше этой даты считаем по старым ценам — они выведены
+// из фактических сумм DIKIDI за декабрь 2025 — сентябрь 2026.
+// ============================================================
+const PRICE_FROM    = '2026-10-01';   // с этой даты — новый прайс
+const DISCOUNT_FROM = '2026-09-23';   // с этой даты работает карта лояльности
+const OLD_PRICE = {
+  "Биоревитализация — Пентакле": 9000,
+  "Филлер — Губы. Франция Stylage M,L": 15000,
+  "Бланширование — Белатеро софт": 9000,
+  "Биоревитализация — Мезовартон": 14000,
+  "Биоревитализация — Реви Стронг/Силк 1 мл": 14000,
+  "Коллагенотерапия — Коллост 15%": 16000,
+  "Чистка лица — Комбинированная чистка": 4500,
+  "Ботулинотерапия Rentox — Зона Глаз": 2000,
+  "Биоревитализация — Мезо волос": 4500,
+  "Филлер — Выведение геля": 5000,
+  "Филлер — Губы. Южная Корея Eptg 300": 12000,
+  "Пилинг — Пилинг Джесснера": 3500,
+  "Коллагенотерапия — Коллост микро": 17000,
+  "Филлер — Скулы Tesoro sab": 12000,
+  "Пилинг — Пилинг Bio Re Pill": 3500,
+  "Ботулинотерапия — Коррекция прошлых процедур": 0
+};
+
+// ============================================================
+// РАСХОДНИКИ — себестоимость материалов на процедуру, ₽.
+// Меняются здесь. Где значения нет, себестоимость не учитывается
+// и визит попадает в пометку «себестоимость задана у N из M».
+// ============================================================
+const BOTOX_VIAL    = 4000;   // Rentox, флакон
+const BOTOX_CLIENTS = 4.5;    // сколько человек выходит из флакона
+const RELATOX_VIAL  = 10300;  // Релатокс, флакон
+const COST = {
+  // филлеры
+  'Филлер — Губы. Южная Корея Eptg 300': 2100,
+  'Филлер — Губы. Франция Stylage M,L': 4400,
+  'Филлер — Скулы Stylage L': 4950,
+  'Филлер — Подбородок Stylage L': 4950,
+  'Филлер — Скулы Tesoro sab': 1650,
+  'Филлер — Подбородок Tesoro sab': 1650,
+  'Филлер — Углы НЧ 3 мл': 15900,          // Stylage, 3 мл
+  'Филлер — Заполнение носогубных складок': 1650,   // Корея; на Франции — 5300
+  'Филлер — Коррекция губ': 0,             // остаток предыдущего шприца
+  'Филлер — Выведение геля': 0,
+  // биоревитализация
+  'Биоревитализация — Пентакле': 2700,
+  'Биоревитализация — Реви Стронг/Силк 1 мл': 5250,
+  'Биоревитализация — Мезовартон': 5750,
+  'Биоревитализация — Мезо волос': 1400,
+  // коллаген и липолитики
+  'Коллагенотерапия — Коллост микро': 5400,
+  'Коллагенотерапия — Коллост 7%': 5400,
+  'Коллагенотерапия — Коллост 15%': 5400,
+  'Липолитики — Липолитик Lipolong': 5000,
+  // бланширование
+  'Бланширование — Белатеро софт': 6950,
+  // чистки и пилинги (флакон делится на число процедур)
+  'Чистка лица — Комбинированная чистка': 0,
+  'Чистка лица+пилинг — Комбинированная чистка+пилинг': 0,
+  'Пилинг — Пилинг Джесснера': Math.round(5000 / 50),
+  'Пилинг — Пилинг Bio Re Pill': Math.round(3900 / 6),
+  'Пилинг — Пилинг Peach Peel': Math.round(4700 / 6),
+  // ботокс
+  'Ботулинотерапия — Лечение гипергидроза "Сухие подмышки"': 4000,
+  'Ботулинотерапия — Коррекция прошлых процедур': 0,
+  'Консультация — Консультация косметолога': 0,
+};
+// Цены и расходники берём из листа «цены» вашей таблицы — они общие
+// для всех, кто открывает кабинет. Правка из кабинета пишется туда же.
+let PRICES = null;                       // { название: {old, new, cost} }
+let _pricesPromise = null;
+function fetchPrices(force){
+  if (_pricesPromise && !force) return _pricesPromise;
+  _pricesPromise = fetch(`${API}/admin-prices`)
+    .then(r => r.json())
+    .then(raw => {
+      const d = Array.isArray(raw) ? raw[0] : raw;
+      if (d && d.ok && Array.isArray(d.prices)) {
+        PRICES = {};
+        d.prices.forEach(x => { if (x.label) PRICES[x.label] = x; });
+      }
+      return PRICES;
+    })
+    .catch(() => null);
+  return _pricesPromise;
+}
+
+function costOne(label){
+  if (label in COST) return COST[label];
+  if (/^Ботулинотерапия Rentox/.test(label))   return Math.round(BOTOX_VIAL / BOTOX_CLIENTS);
+  if (/^Ботулинотерапия Релатокс/.test(label)) return Math.round(RELATOX_VIAL / BOTOX_CLIENTS);
+  if (/^Ботулинотерапия —/.test(label))        return Math.round(BOTOX_VIAL / BOTOX_CLIENTS);
+  return undefined;                              // себестоимость неизвестна
+}
+
+// ---- Поиск цены по названию процедуры ----
+// Прощаем расхождения в написании: регистр, пробелы, тип тире, «ё».
+// Ищем по полному названию, затем по одной второй части («Пилинг Джесснера»),
+// затем по первой — но только если совпадение однозначное.
+const normSvc = s => String(s || '').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9%]/g,'');
+const PRICE_FULL = {}, LABEL_FULL = {}, LABEL_DESC = {}, LABEL_NAME = {}, _cnt = { d:{}, n:{} };
+SERVICES.forEach(s => {
+  const [name, desc] = String(s.l).split(' — ');
+  PRICE_FULL[normSvc(s.l)] = s.p; LABEL_FULL[normSvc(s.l)] = s.l;
+  if (desc) { const k = normSvc(desc); LABEL_DESC[k] = s.l; _cnt.d[k] = (_cnt.d[k] || 0) + 1; }
+  const kn = normSvc(name); LABEL_NAME[kn] = s.l; _cnt.n[kn] = (_cnt.n[kn] || 0) + 1;
+});
+function labelOf(service){            // точное название из прайса
+  const k = normSvc(service);
+  if (!k) return undefined;
+  if (k in LABEL_FULL) return LABEL_FULL[k];
+  if (_cnt.d[k] === 1) return LABEL_DESC[k];
+  if (_cnt.n[k] === 1) return LABEL_NAME[k];
+  return undefined;
+}
+// Визит может быть из нескольких процедур: «A + B» — считаем сумму частей
+const splitSvc = s => String(s || '').split(/\s+\+\s+(?=[А-ЯA-Z])/).map(x => x.trim()).filter(Boolean);
+function priceOf(service, isoDate){
+  const old = isoDate && String(isoDate) < PRICE_FROM;
+  let sum = 0, known = false;
+  splitSvc(service).forEach(part => {
+    const lbl = labelOf(part); if (!lbl) return;
+    const row = PRICES && PRICES[lbl];
+    const fromSheet = row && (old ? row.old : row.new);
+    const p = (typeof fromSheet === 'number') ? fromSheet
+            : (old && (lbl in OLD_PRICE) ? OLD_PRICE[lbl] : PRICE_FULL[normSvc(lbl)]);
+    if (typeof p === 'number') { sum += p; known = true; }
+  });
+  return known ? sum : undefined;
+}
+function costOf(service){
+  let sum = 0, known = false;
+  splitSvc(service).forEach(part => {
+    const lbl = labelOf(part); if (!lbl) return;
+    const row = PRICES && PRICES[lbl];
+    const c = (row && typeof row.cost === 'number') ? row.cost : costOne(lbl);
+    if (typeof c === 'number') { sum += c; known = true; }
+  });
+  return known ? sum : undefined;
+}
+const PRICE = Object.fromEntries(SERVICES.map(s => [s.l, s.p]));
+const MONTHS_NOM = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_SH  = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+const MONTHS_DAT = ['январю','февралю','марту','апрелю','маю','июню','июлю','августу','сентябрю','октябрю','ноябрю','декабрю'];
+let REV_OFFSET = 0, REV_CAT = null;
+const rub = n => Math.round(n).toLocaleString('ru-RU') + ' ₽';
+const pctOf = prior => prior >= 10 ? 7 : prior >= 6 ? 5 : prior >= 3 ? 3 : 0;
+
+function revVisits(){
+  const out = [];
+  (CLIENTS || []).forEach(c => {
+    const h = (c.history || []).slice().sort((a,b) => String(a.date).localeCompare(String(b.date)));
+    // Скидка зависит от числа ПОСЕЩЕНИЙ, а не строк: две процедуры
+    // за один день — это один визит
+    const seenDays = [];
+    h.forEach(v => { const dd = String(v.date).slice(0,10); if (!seenDays.includes(dd)) seenDays.push(dd); });
+    const usedDays = new Set();
+    h.forEach(v => {
+      const dd  = String(v.date).slice(0,10);
+      const idx = seenDays.indexOf(dd);          // сколько визитов было ДО этого дня
+      const firstOfDay = !usedDays.has(dd); usedDays.add(dd);
+      // Своя сумма у визита главнее прайса — так учитываются
+      // индивидуальные скидки и договорённости
+      const ownPrice = typeof v.price === 'number';
+      const base  = ownPrice ? v.price : priceOf(v.service, v.date);
+      const known = typeof base === 'number';
+      // Скидка по карте — с 23.09.2026 и только если сумма не задана вручную
+      const pct   = (ownPrice || String(v.date) < DISCOUNT_FROM) ? 0 : pctOf(idx);
+      const paid  = known ? (pct ? Math.floor(base * (100 - pct) / 100 / 10) * 10 : base) : 0;
+      const cst   = (typeof v.cost === 'number') ? v.cost : costOf(v.service);
+      const cat   = careKey(v.service) || (/консультац/i.test(v.service) ? 'consult' : 'other');
+      out.push({ ym: String(v.date).slice(0,7), date: String(v.date).slice(0,10), known, base: base || 0, paid,
+                 disc: known ? base - paid : 0, cost: cst || 0, costKnown: typeof cst === 'number',
+                 cat, key: c.key, first: idx === 0 && firstOfDay, day: dd,
+                 own: ownPrice, row: v.row,
+                 who: shownName(c), service: v.service,
+                 labels: splitSvc(v.service).map(labelOf).filter(Boolean) });
+    });
+  });
+  return out;
+}
+function ymShift(off){ const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - off);
+  return { ym: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, m: d.getMonth(), y: d.getFullYear() }; }
+
+// ---- Ручная правка цены и расходников по процедуре ----
+function openVisitEdit(v){
+  const labels = v.labels && v.labels.length ? v.labels : [];
+  const isOld = v.date < PRICE_FROM;
+  const sheet = document.getElementById('sheet');
+  if (!labels.length){
+    sheet.innerHTML = `<div class="sh-head"><div><div class="sh-name">${esc(v.who)}</div>
+      <div class="sh-phone">${fmtIso(v.date, true)}</div></div>
+      <button class="sh-x" type="button">×</button></div>
+      <div class="sh-block"><h4>Процедура не распознана</h4><div class="sh-mem">${esc(v.service)}</div>
+      <p class="sh-note" style="margin:8px 0 0">Название не совпало с прайсом, поэтому цену подставить не из чего. Поправьте его в таблице визитов.</p></div>`;
+  } else {
+    sheet.innerHTML = `
+      <div class="sh-head"><div><div class="sh-name">${esc(v.who)}</div>
+        <div class="sh-phone">${fmtIso(v.date, true)}${isOld ? ' · старый прайс' : ''}</div></div>
+        <button class="sh-x" type="button" aria-label="Закрыть">×</button></div>
+      <div class="sh-block">
+        <h4>Этот визит${v.own ? ' · сумма изменена вручную' : ''}</h4>
+        <div class="ed-svc">${splitSvc(v.service).map(s => {
+          const lbl = labelOf(s);
+          const pp = lbl ? priceOf(lbl, v.date) : undefined;
+          return `<div>${esc(s)}${typeof pp === 'number' ? ` <i>· по прайсу ${rub(pp)}</i>` : ' <i>· нет в прайсе</i>'}</div>`;
+        }).join('')}</div>
+        <div class="ed-row"><label>Сумма, ₽</label><input id="vPrice" type="number" inputmode="numeric" value="${v.known ? v.paid : ''}"></div>
+        <div class="ed-row"><label>Расходники, ₽</label><input id="vCost" type="number" inputmode="numeric" value="${v.cost || 0}"></div>
+        <div class="ed-row"><label>Прибыль</label><b class="ed-profit" id="vProfit">${rub((v.known ? v.paid : 0) - (v.cost || 0))}</b></div>
+        <div class="bc-actions" style="margin-top:10px">
+          <button type="button" id="vReset"${v.own ? '' : ' disabled'}>Вернуть по прайсу</button>
+          <button type="button" id="vSave" class="primary">Сохранить</button>
+        </div>
+        <p class="sh-note" style="margin:8px 0 0">Меняется только этот визит — у остальных клиентов цена останется прежней.</p>
+      </div>
+
+      <details class="ed-all"><summary>Изменить цену процедуры для всех</summary>
+      ${labels.map((lbl, i) => {
+        const price = priceOf(lbl, v.date) || 0;
+        const cost  = costOf(lbl) ?? 0;
+        return `<div class="sh-block" data-lbl="${esc(lbl)}">
+          <h4>${esc(lbl)}</h4>
+          <div class="ed-row"><label>Цена, ₽</label><input class="ed-price" type="number" inputmode="numeric" value="${price}"></div>
+          <div class="ed-row"><label>Расходники, ₽</label><input class="ed-cost" type="number" inputmode="numeric" value="${cost}"></div>
+          <div class="ed-row"><label>Прибыль</label><b class="ed-profit">${rub(price - cost)}</b></div>
+        </div>`; }).join('')}
+      <p class="sh-note">Это изменит прайс${isOld ? ' до 01.10.2026' : ' с 01.10.2026'} для всех визитов с этой процедурой.</p>
+      <div class="bc-actions"><button type="button" id="edReset">Вернуть как было</button>
+        <button type="button" id="edSave" class="primary">Изменить у всех</button></div>
+      </details>`;
+    const recalc = () => sheet.querySelectorAll('[data-lbl]').forEach(box => {
+      const p = +box.querySelector('.ed-price').value || 0, c = +box.querySelector('.ed-cost').value || 0;
+      box.querySelector('.ed-profit').textContent = rub(p - c);
+    });
+    sheet.querySelectorAll('.ed-price,.ed-cost').forEach(i => i.addEventListener('input', recalc));
+    // ---- сумма этого визита ----
+    const vP = sheet.querySelector('#vPrice'), vC = sheet.querySelector('#vCost');
+    const vProfit = () => sheet.querySelector('#vProfit').textContent = rub((+vP.value || 0) - (+vC.value || 0));
+    vP.addEventListener('input', vProfit); vC.addEventListener('input', vProfit);
+    async function pushVisit(price, cost){
+      const btn = sheet.querySelector('#vSave'); const was = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Сохраняю…';
+      try{
+        if (!v.row) throw new Error('no_row');
+        const r = await fetch(`${API}/admin-visit-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, row_number:v.row, price, cost }) });
+        const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+        if (!d || d.ok === false) throw new Error(d?.reason || 'error');
+        CLIENTS = null; _clientsPromise = null;          // перечитаем визиты с новой суммой
+        await fetchClientsData();
+        closeClient(); renderRevenue();
+        try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+      }catch(e){
+        btn.disabled = false; btn.textContent = was;
+        sheet.insertAdjacentHTML('beforeend', `<p class="bc-res bad">${e.message === 'no_row'
+          ? 'У этого визита нет номера строки — обновите воркфлоу Admin Clients API.'
+          : 'Не удалось сохранить. Проверьте, что воркфлоу Admin Prices API включён.'}</p>`);
+      }
+    }
+    sheet.querySelector('#vSave').onclick = () => pushVisit(+vP.value || 0, +vC.value || 0);
+    sheet.querySelector('#vReset').onclick = () => pushVisit('', '');
+
+    const btnSave = sheet.querySelector('#edSave');
+    async function pushPrices(getValues){
+      btnSave.disabled = true; btnSave.textContent = 'Сохраняю…';
+      const rows = [...sheet.querySelectorAll('[data-lbl]')].map(box => {
+        const lbl = box.dataset.lbl;
+        const known = (PRICES && PRICES[lbl]) || {};
+        const v = getValues(box, lbl);
+        return {
+          label: lbl,
+          old:  isOld ? v.price : (typeof known.old === 'number' ? known.old : (OLD_PRICE[lbl] ?? PRICE_FULL[normSvc(lbl)] ?? 0)),
+          new: !isOld ? v.price : (typeof known.new === 'number' ? known.new : (PRICE_FULL[normSvc(lbl)] ?? 0)),
+          cost: v.cost,
+        };
+      });
+      try{
+        const r = await fetch(`${API}/admin-price-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, rows }) });
+        const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+        if (!d || d.ok === false) throw new Error('forbidden');
+        await fetchPrices(true);
+        closeClient(); renderRevenue();
+        try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+      }catch(e){
+        btnSave.disabled = false; btnSave.textContent = 'Сохранить';
+        sheet.insertAdjacentHTML('beforeend',
+          '<p class="bc-res bad">Не удалось сохранить в таблицу. Проверьте, что воркфлоу Admin Prices API включён.</p>');
+      }
+    }
+    btnSave.onclick = () => pushPrices(box => ({
+      price: +box.querySelector('.ed-price').value || 0,
+      cost:  +box.querySelector('.ed-cost').value  || 0 }));
+    sheet.querySelector('#edReset').onclick = () => pushPrices((box, lbl) => ({
+      price: (isOld ? (OLD_PRICE[lbl] ?? PRICE_FULL[normSvc(lbl)]) : PRICE_FULL[normSvc(lbl)]) || 0,
+      cost:  costOne(lbl) ?? 0 }));
+  }
+  sheet.querySelector('.sh-x').onclick = closeClient;
+  sheet.scrollTop = 0;
+  document.getElementById('sheetBg').classList.remove('hidden');
+}
+
+function rState(title, text){
+  const s = document.getElementById('rState'); s.innerHTML = `<b>${title}</b>${text||''}`;
+  s.classList.remove('hidden'); document.getElementById('rMain').classList.add('hidden');
+}
+async function loadRevenue(){
+  if (!tgUser){ rState('Откройте через бота','Раздел работает только внутри Telegram.'); return; }
+  if (!CLIENTS || !PRICES){ rState('Загружаю…'); await Promise.all([fetchClientsData(), fetchPrices()]); }
+  if (!CLIENTS){ rState('Не загрузилось','Откройте вкладку «Клиенты» — там будет видна причина.'); return; }
+  document.getElementById('rState').classList.add('hidden');
+  document.getElementById('rMain').classList.remove('hidden');
+  renderRevenue();
+}
+
+function renderRevenue(){
+  const all = revVisits();
+  const cur = ymShift(REV_OFFSET), prev = ymShift(REV_OFFSET + 1);
+  const inM  = all.filter(v => v.ym === cur.ym);
+  const inP  = all.filter(v => v.ym === prev.ym);
+  const sum  = a => a.reduce((s,v) => s + v.paid, 0);
+  const rev = sum(inM), revP = sum(inP);
+  const known = inM.filter(v => v.known && v.base > 0);
+  const avg = new Set(known.map(v => v.key + '|' + v.day)).size
+    ? rev / new Set(known.map(v => v.key + '|' + v.day)).size : 0;   // чек за визит, а не за процедуру
+  const clients = new Set(inM.map(v => v.key)).size;
+  const visitDays = new Set(inM.map(v => v.key + '|' + v.day)).size;   // приход = один визит
+  const fresh = inM.filter(v => v.first).length;
+  const disc = inM.reduce((s,v) => s + v.disc, 0);
+  const unknown = inM.filter(v => !v.known).length;
+  const cost = inM.reduce((s,v) => s + v.cost, 0);
+  const profit = rev - cost;
+  const costKnown = inM.filter(v => v.costKnown).length;
+  const margin = rev > 0 ? Math.round(profit / rev * 100) : 0;
+
+  let delta = '';
+  if (revP > 0) {
+    const d = Math.round((rev - revP) / revP * 100);
+    delta = `<span class="rv-delta ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${d}% к ${MONTHS_DAT[prev.m]}</span>`;
+  }
+
+  // по процедурам
+  const byCat = {};
+  inM.forEach(v => { const b = byCat[v.cat] = byCat[v.cat] || { n:0, s:0, unk:0 }; b.n++; b.s += v.paid; if (!v.known) b.unk++; });
+  const cats = Object.entries(byCat).sort((a,b) => b[1].s - a[1].s || b[1].n - a[1].n);
+  const maxS = Math.max(1, ...cats.map(([,b]) => b.s));
+
+  // полгода
+  inM.forEach((v, i) => v._i = i);
+  const shown = (REV_CAT ? inM.filter(v => v.cat === REV_CAT) : inM)
+    .slice().sort((a,b) => a.date.localeCompare(b.date));
+
+  const months = [5,4,3,2,1,0].map(o => { const m = ymShift(REV_OFFSET + o);
+    return { ...m, s: sum(all.filter(v => v.ym === m.ym)), on: o === 0 }; });
+  const maxM = Math.max(1, ...months.map(m => m.s));
+
+  document.getElementById('rMain').innerHTML = `
+    <div class="rv-nav">
+      <button type="button" id="rvPrev" aria-label="Предыдущий месяц">‹</button>
+      <b>${MONTHS_NOM[cur.m]} ${cur.y}</b>
+      <button type="button" id="rvNext" aria-label="Следующий месяц" ${REV_OFFSET === 0 ? 'disabled' : ''}>›</button>
+    </div>
+    <div class="rv-hero"><span>Выручка за месяц</span><b>${rub(rev)}</b>${delta}</div>
+    <div class="rv-profit">
+      <div><span>Расходники</span><b>− ${rub(cost)}</b></div>
+      <div class="pr"><span>Прибыль</span><b>${rub(profit)}</b><i>${rev > 0 ? margin + '% от выручки' : ''}</i></div>
+    </div>
+    <div class="sum">
+      <div class="sum-card"><b>${visitDays}</b><span>${plural(visitDays,'визит','визита','визитов')}, процедур ${inM.length}</span></div>
+      <div class="sum-card"><b>${known.length ? rub(avg) : '—'}</b><span>средний чек</span></div>
+      <div class="sum-card"><b>${clients}</b><span>${plural(clients,'клиент','клиента','клиентов')}, новых ${fresh}</span></div>
+      <div class="sum-card"><b>${rub(disc)}</b><span>скидки по картам</span></div>
+    </div>
+    ${cats.length ? `<div class="sh-block"><h4>По процедурам — нажмите, чтобы посмотреть визиты</h4>${cats.map(([k,b]) => `
+      <button type="button" class="rv-cat${REV_CAT === k ? ' on' : ''}" data-cat="${k}">
+        <div class="rv-cat-top"><span>${esc(CAT_TITLE[k] || k)} <i>· ${b.n}</i></span><span>${b.s ? rub(b.s) : (b.unk ? '<i>без цены</i>' : rub(0))}</span></div>
+        <div class="rv-bar"><div style="width:${Math.max(3, b.s / maxS * 100)}%"></div></div></button>`).join('')}</div>`
+      : '<div class="state" style="padding:20px 8px"><b>Визитов нет</b>В этом месяце отмеченных визитов нет.</div>'}
+    <div class="sh-block"><h4>Последние полгода</h4>
+      <div class="rv-chart">${months.map(m => `
+        <div class="rv-col${m.on ? ' on' : ''}"><em>${m.s ? Math.round(m.s/1000) + 'к' : ''}</em>
+          <div class="rv-colbar" style="height:${m.s ? Math.max(4, m.s / maxM * 100) : 0}%"></div>
+          <span>${MONTHS_SH[m.m]}</span></div>`).join('')}</div></div>
+    <div class="sh-block">
+      <h4>${REV_CAT ? `Визиты: ${esc(CAT_TITLE[REV_CAT] || REV_CAT)}` : 'Все визиты за месяц'} · ${shown.length}
+        ${REV_CAT ? '<button type="button" id="rvAll" class="rv-clear">показать все</button>' : ''}</h4>
+      ${shown.length ? shown.map((v, i) => `
+        <button type="button" class="rv-visit" data-i="${v._i}">
+          <span class="rv-when">${fmtShort(v.date)}</span>
+          <span class="rv-who"><b>${esc(v.who)}</b><i>${splitSvc(v.service).map(s => esc(s)).join('<br>')}</i></span>
+          <span class="rv-sum">${v.known ? rub(v.paid) : '—'}${v.own ? '<span class="own">✎</span>' : ''}</span>
+        </button>`).join('') : '<p class="sh-note" style="margin:0">Визитов нет</p>'}
+    </div>
+    ${unknown ? `<p class="sh-note">${unknown} ${plural(unknown,'визит','визита','визитов')} без распознанной процедуры — в суммы не ${unknown === 1 ? 'вошёл' : 'вошли'}.</p>` : ''}`;
+
+  document.getElementById('rvPrev').onclick = () => { REV_OFFSET++; REV_CAT = null; renderRevenue(); };
+  document.getElementById('rvNext').onclick = () => { if (REV_OFFSET > 0) { REV_OFFSET--; REV_CAT = null; renderRevenue(); } };
+  document.querySelectorAll('.rv-cat[data-cat]').forEach(b => b.onclick = () => {
+    REV_CAT = (REV_CAT === b.dataset.cat) ? null : b.dataset.cat; renderRevenue();
+  });
+  const clr = document.getElementById('rvAll'); if (clr) clr.onclick = () => { REV_CAT = null; renderRevenue(); };
+  document.querySelectorAll('.rv-visit[data-i]').forEach(b => b.onclick = () => openVisitEdit(inM[+b.dataset.i]));
+}
 document.getElementById('sheetBg').addEventListener('click', e => { if (e.target.id === 'sheetBg') closeClient(); });
 
 // Открыть сразу нужную вкладку: admin.html?tab=clients
-if (new URLSearchParams(location.search).get('tab') === 'clients') showTab('clients');
+{ const t0 = new URLSearchParams(location.search).get('tab'); if (t0 === 'clients' || t0 === 'revenue') showTab(t0); }
 </script>
 </body>
 </html>
