@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-23-1137 prices-sheet -->
+<!-- admin-build 2026-09-23-1149 per-visit-price -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -143,7 +143,10 @@
   .ed-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;}
   .ed-row label{font-size:13.5px;color:var(--muted);}
   .ed-row input{width:120px;height:40px;text-align:right;}
-  .ed-row b{font-size:16px;color:#2F5A3D;} .rv-cat-top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;}
+  .ed-row b{font-size:16px;color:#2F5A3D;}
+  .ed-all{margin-top:4px;}
+  .ed-all summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--steel);padding:8px 2px;}
+  .rv-sum .own{font-size:11px;font-weight:700;color:#7A5A1E;background:#F6EFDC;border-radius:5px;padding:1px 5px;margin-left:5px;} .rv-cat-top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;}
   .rv-cat-top i{font-style:normal;color:var(--muted);} .rv-cat-top span:last-child{font-weight:700;font-variant-numeric:tabular-nums;}
   .rv-bar{height:7px;border-radius:4px;background:#EEF2F5;overflow:hidden;} .rv-bar div{height:100%;background:var(--steel);border-radius:4px;}
   .rv-chart{display:flex;align-items:flex-end;gap:8px;height:150px;padding-top:6px;}
@@ -224,7 +227,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-23-1137</p>
+  <p class="ver">версия 2026-09-23-1149</p>
 </header>
 
 <nav class="tabs">
@@ -1221,17 +1224,19 @@ function revVisits(){
   (CLIENTS || []).forEach(c => {
     const h = (c.history || []).slice().sort((a,b) => String(a.date).localeCompare(String(b.date)));
     h.forEach((v, idx) => {
-      const base  = priceOf(v.service, v.date);       // до 01.10.2026 — по старому прайсу
+      // Своя сумма у визита главнее прайса — так учитываются
+      // индивидуальные скидки и договорённости
+      const ownPrice = typeof v.price === 'number';
+      const base  = ownPrice ? v.price : priceOf(v.service, v.date);
       const known = typeof base === 'number';
-      // Скидки по карте лояльности действуют только с 01.10.2026 —
-      // до этой даты все платили полную цену
-      const pct   = String(v.date) < DISCOUNT_FROM ? 0 : pctOf(idx);
+      // Скидка по карте — с 23.09.2026 и только если сумма не задана вручную
+      const pct   = (ownPrice || String(v.date) < DISCOUNT_FROM) ? 0 : pctOf(idx);
       const paid  = known ? (pct ? Math.floor(base * (100 - pct) / 100 / 10) * 10 : base) : 0;
-      const cst   = costOf(v.service);
+      const cst   = (typeof v.cost === 'number') ? v.cost : costOf(v.service);
       const cat   = careKey(v.service) || (/консультац/i.test(v.service) ? 'consult' : 'other');
       out.push({ ym: String(v.date).slice(0,7), date: String(v.date).slice(0,10), known, base: base || 0, paid,
                  disc: known ? base - paid : 0, cost: cst || 0, costKnown: typeof cst === 'number',
-                 cat, key: c.key, first: idx === 0,
+                 cat, key: c.key, first: idx === 0, own: ownPrice, row: v.row,
                  who: shownName(c), service: v.service,
                  labels: splitSvc(v.service).map(labelOf).filter(Boolean) });
     });
@@ -1257,6 +1262,19 @@ function openVisitEdit(v){
       <div class="sh-head"><div><div class="sh-name">${esc(v.who)}</div>
         <div class="sh-phone">${fmtIso(v.date, true)}${isOld ? ' · старый прайс' : ''}</div></div>
         <button class="sh-x" type="button" aria-label="Закрыть">×</button></div>
+      <div class="sh-block">
+        <h4>Этот визит${v.own ? ' · сумма изменена вручную' : ''}</h4>
+        <div class="ed-row"><label>Сумма, ₽</label><input id="vPrice" type="number" inputmode="numeric" value="${v.known ? v.paid : ''}"></div>
+        <div class="ed-row"><label>Расходники, ₽</label><input id="vCost" type="number" inputmode="numeric" value="${v.cost || 0}"></div>
+        <div class="ed-row"><label>Прибыль</label><b class="ed-profit" id="vProfit">${rub((v.known ? v.paid : 0) - (v.cost || 0))}</b></div>
+        <div class="bc-actions" style="margin-top:10px">
+          <button type="button" id="vReset"${v.own ? '' : ' disabled'}>Вернуть по прайсу</button>
+          <button type="button" id="vSave" class="primary">Сохранить</button>
+        </div>
+        <p class="sh-note" style="margin:8px 0 0">Меняется только этот визит — у остальных клиентов цена останется прежней.</p>
+      </div>
+
+      <details class="ed-all"><summary>Изменить цену процедуры для всех</summary>
       ${labels.map((lbl, i) => {
         const price = priceOf(lbl, v.date) || 0;
         const cost  = costOf(lbl) ?? 0;
@@ -1266,14 +1284,42 @@ function openVisitEdit(v){
           <div class="ed-row"><label>Расходники, ₽</label><input class="ed-cost" type="number" inputmode="numeric" value="${cost}"></div>
           <div class="ed-row"><label>Прибыль</label><b class="ed-profit">${rub(price - cost)}</b></div>
         </div>`; }).join('')}
-      <p class="sh-note">Меняется для всех визитов с этой процедурой${isOld ? ' до 01.10.2026' : ' с 01.10.2026'} и сохраняется в таблицу — увидят все.</p>
+      <p class="sh-note">Это изменит прайс${isOld ? ' до 01.10.2026' : ' с 01.10.2026'} для всех визитов с этой процедурой.</p>
       <div class="bc-actions"><button type="button" id="edReset">Вернуть как было</button>
-        <button type="button" id="edSave" class="primary">Сохранить</button></div>`;
+        <button type="button" id="edSave" class="primary">Изменить у всех</button></div>
+      </details>`;
     const recalc = () => sheet.querySelectorAll('[data-lbl]').forEach(box => {
       const p = +box.querySelector('.ed-price').value || 0, c = +box.querySelector('.ed-cost').value || 0;
       box.querySelector('.ed-profit').textContent = rub(p - c);
     });
     sheet.querySelectorAll('.ed-price,.ed-cost').forEach(i => i.addEventListener('input', recalc));
+    // ---- сумма этого визита ----
+    const vP = sheet.querySelector('#vPrice'), vC = sheet.querySelector('#vCost');
+    const vProfit = () => sheet.querySelector('#vProfit').textContent = rub((+vP.value || 0) - (+vC.value || 0));
+    vP.addEventListener('input', vProfit); vC.addEventListener('input', vProfit);
+    async function pushVisit(price, cost){
+      const btn = sheet.querySelector('#vSave'); const was = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Сохраняю…';
+      try{
+        if (!v.row) throw new Error('no_row');
+        const r = await fetch(`${API}/admin-visit-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, row_number:v.row, price, cost }) });
+        const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+        if (!d || d.ok === false) throw new Error(d?.reason || 'error');
+        CLIENTS = null; _clientsPromise = null;          // перечитаем визиты с новой суммой
+        await fetchClientsData();
+        closeClient(); renderRevenue();
+        try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+      }catch(e){
+        btn.disabled = false; btn.textContent = was;
+        sheet.insertAdjacentHTML('beforeend', `<p class="bc-res bad">${e.message === 'no_row'
+          ? 'У этого визита нет номера строки — обновите воркфлоу Admin Clients API.'
+          : 'Не удалось сохранить. Проверьте, что воркфлоу Admin Prices API включён.'}</p>`);
+      }
+    }
+    sheet.querySelector('#vSave').onclick = () => pushVisit(+vP.value || 0, +vC.value || 0);
+    sheet.querySelector('#vReset').onclick = () => pushVisit('', '');
+
     const btnSave = sheet.querySelector('#edSave');
     async function pushPrices(getValues){
       btnSave.disabled = true; btnSave.textContent = 'Сохраняю…';
@@ -1400,7 +1446,7 @@ function renderRevenue(){
         <button type="button" class="rv-visit" data-i="${v._i}">
           <span class="rv-when">${fmtShort(v.date)}</span>
           <span class="rv-who"><b>${esc(v.who)}</b><i>${esc(v.service)}</i></span>
-          <span class="rv-sum">${v.known ? rub(v.paid) : '—'}</span>
+          <span class="rv-sum">${v.known ? rub(v.paid) : '—'}${v.own ? '<span class="own">✎</span>' : ''}</span>
         </button>`).join('') : '<p class="sh-note" style="margin:0">Визитов нет</p>'}
     </div>
     ${unknown ? `<p class="sh-note">${unknown} ${plural(unknown,'визит','визита','визитов')} без распознанной процедуры — в суммы не ${unknown === 1 ? 'вошёл' : 'вошли'}.</p>` : ''}`;
