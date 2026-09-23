@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-23-1149 per-visit-price -->
+<!-- admin-build 2026-09-23-1622 ui-fixes -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -138,12 +138,15 @@
   .rv-when{flex:none;width:46px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;}
   .rv-who{flex:1;min-width:0;}
   .rv-who b{display:block;font-size:14px;font-weight:600;}
-  .rv-who i{font-style:normal;font-size:12px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rv-who i{font-style:normal;font-size:12px;color:var(--muted);display:block;line-height:1.35;}
+  .rv-who i b{font-weight:600;color:var(--steel-dk);}
   .rv-sum{flex:none;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;}
   .ed-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;}
   .ed-row label{font-size:13.5px;color:var(--muted);}
   .ed-row input{width:120px;height:40px;text-align:right;}
   .ed-row b{font-size:16px;color:#2F5A3D;}
+  .ed-svc{font-size:13px;line-height:1.5;color:var(--ink);background:#F7F9FB;border-radius:10px;padding:10px 12px;margin-bottom:10px;}
+  .ed-svc i{font-style:normal;color:var(--muted);}
   .ed-all{margin-top:4px;}
   .ed-all summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--steel);padding:8px 2px;}
   .rv-sum .own{font-size:11px;font-weight:700;color:#7A5A1E;background:#F6EFDC;border-radius:5px;padding:1px 5px;margin-left:5px;} .rv-cat-top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;}
@@ -168,9 +171,8 @@
   .sum-card span{font-size:12.5px;color:var(--muted);}
   .sum-card.warn b{color:var(--no);}
 
-  .segs{display:flex;gap:6px;overflow-x:auto;margin:12px -16px 10px;padding:0 16px;scrollbar-width:none;}
-  .segs::-webkit-scrollbar{display:none;}
-  .seg-chip{flex:none;height:36px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:#fff;
+  .segs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 10px;}
+  .seg-chip{flex:0 0 auto;min-height:36px;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:#fff;
         color:var(--steel-dk);font:600 13px 'Manrope',sans-serif;cursor:pointer;white-space:nowrap;}
   .seg-chip i{font-style:normal;color:var(--muted);font-weight:500;margin-left:4px;}
   .seg-chip.on{background:var(--steel-dk);border-color:var(--steel-dk);color:#fff;}
@@ -227,7 +229,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-23-1149</p>
+  <p class="ver">версия 2026-09-23-1622</p>
 </header>
 
 <nav class="tabs">
@@ -1264,6 +1266,11 @@ function openVisitEdit(v){
         <button class="sh-x" type="button" aria-label="Закрыть">×</button></div>
       <div class="sh-block">
         <h4>Этот визит${v.own ? ' · сумма изменена вручную' : ''}</h4>
+        <div class="ed-svc">${splitSvc(v.service).map(s => {
+          const lbl = labelOf(s);
+          const pp = lbl ? priceOf(lbl, v.date) : undefined;
+          return `<div>${esc(s)}${typeof pp === 'number' ? ` <i>· по прайсу ${rub(pp)}</i>` : ' <i>· нет в прайсе</i>'}</div>`;
+        }).join('')}</div>
         <div class="ed-row"><label>Сумма, ₽</label><input id="vPrice" type="number" inputmode="numeric" value="${v.known ? v.paid : ''}"></div>
         <div class="ed-row"><label>Расходники, ₽</label><input id="vCost" type="number" inputmode="numeric" value="${v.cost || 0}"></div>
         <div class="ed-row"><label>Прибыль</label><b class="ed-profit" id="vProfit">${rub((v.known ? v.paid : 0) - (v.cost || 0))}</b></div>
@@ -1445,7 +1452,7 @@ function renderRevenue(){
       ${shown.length ? shown.map((v, i) => `
         <button type="button" class="rv-visit" data-i="${v._i}">
           <span class="rv-when">${fmtShort(v.date)}</span>
-          <span class="rv-who"><b>${esc(v.who)}</b><i>${esc(v.service)}</i></span>
+          <span class="rv-who"><b>${esc(v.who)}</b><i>${splitSvc(v.service).map(s => esc(s)).join('<br>')}</i></span>
           <span class="rv-sum">${v.known ? rub(v.paid) : '—'}${v.own ? '<span class="own">✎</span>' : ''}</span>
         </button>`).join('') : '<p class="sh-note" style="margin:0">Визитов нет</p>'}
     </div>
