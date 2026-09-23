@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-23-1622 ui-fixes -->
+<!-- admin-build 2026-09-23-1628 visit-days -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -229,7 +229,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-23-1622</p>
+  <p class="ver">версия 2026-09-23-1628</p>
 </header>
 
 <nav class="tabs">
@@ -1225,7 +1225,15 @@ function revVisits(){
   const out = [];
   (CLIENTS || []).forEach(c => {
     const h = (c.history || []).slice().sort((a,b) => String(a.date).localeCompare(String(b.date)));
-    h.forEach((v, idx) => {
+    // Скидка зависит от числа ПОСЕЩЕНИЙ, а не строк: две процедуры
+    // за один день — это один визит
+    const seenDays = [];
+    h.forEach(v => { const dd = String(v.date).slice(0,10); if (!seenDays.includes(dd)) seenDays.push(dd); });
+    const usedDays = new Set();
+    h.forEach(v => {
+      const dd  = String(v.date).slice(0,10);
+      const idx = seenDays.indexOf(dd);          // сколько визитов было ДО этого дня
+      const firstOfDay = !usedDays.has(dd); usedDays.add(dd);
       // Своя сумма у визита главнее прайса — так учитываются
       // индивидуальные скидки и договорённости
       const ownPrice = typeof v.price === 'number';
@@ -1238,7 +1246,8 @@ function revVisits(){
       const cat   = careKey(v.service) || (/консультац/i.test(v.service) ? 'consult' : 'other');
       out.push({ ym: String(v.date).slice(0,7), date: String(v.date).slice(0,10), known, base: base || 0, paid,
                  disc: known ? base - paid : 0, cost: cst || 0, costKnown: typeof cst === 'number',
-                 cat, key: c.key, first: idx === 0, own: ownPrice, row: v.row,
+                 cat, key: c.key, first: idx === 0 && firstOfDay, day: dd,
+                 own: ownPrice, row: v.row,
                  who: shownName(c), service: v.service,
                  labels: splitSvc(v.service).map(labelOf).filter(Boolean) });
     });
@@ -1388,8 +1397,10 @@ function renderRevenue(){
   const sum  = a => a.reduce((s,v) => s + v.paid, 0);
   const rev = sum(inM), revP = sum(inP);
   const known = inM.filter(v => v.known && v.base > 0);
-  const avg = known.length ? rev / known.length : 0;
+  const avg = new Set(known.map(v => v.key + '|' + v.day)).size
+    ? rev / new Set(known.map(v => v.key + '|' + v.day)).size : 0;   // чек за визит, а не за процедуру
   const clients = new Set(inM.map(v => v.key)).size;
+  const visitDays = new Set(inM.map(v => v.key + '|' + v.day)).size;   // приход = один визит
   const fresh = inM.filter(v => v.first).length;
   const disc = inM.reduce((s,v) => s + v.disc, 0);
   const unknown = inM.filter(v => !v.known).length;
@@ -1431,7 +1442,7 @@ function renderRevenue(){
       <div class="pr"><span>Прибыль</span><b>${rub(profit)}</b><i>${rev > 0 ? margin + '% от выручки' : ''}</i></div>
     </div>
     <div class="sum">
-      <div class="sum-card"><b>${inM.length}</b><span>${plural(inM.length,'визит','визита','визитов')}</span></div>
+      <div class="sum-card"><b>${visitDays}</b><span>${plural(visitDays,'визит','визита','визитов')}, процедур ${inM.length}</span></div>
       <div class="sum-card"><b>${known.length ? rub(avg) : '—'}</b><span>средний чек</span></div>
       <div class="sum-card"><b>${clients}</b><span>${plural(clients,'клиент','клиента','клиентов')}, новых ${fresh}</span></div>
       <div class="sum-card"><b>${rub(disc)}</b><span>скидки по картам</span></div>
