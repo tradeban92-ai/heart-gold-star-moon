@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-23-1127 rev-drill -->
+<!-- admin-build 2026-09-23-1137 prices-sheet -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -224,7 +224,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-23-1127</p>
+  <p class="ver">версия 2026-09-23-1137</p>
 </header>
 
 <nav class="tabs">
@@ -1135,11 +1135,25 @@ const COST = {
   'Ботулинотерапия — Коррекция прошлых процедур': 0,
   'Консультация — Консультация косметолога': 0,
 };
-// Ручные поправки: цена и расходники, изменённые вами в кабинете.
-// Хранятся в этом браузере — на другом устройстве их не будет.
-let OVR = { price:{}, cost:{} };
-try { OVR = Object.assign({price:{},cost:{}}, JSON.parse(localStorage.getItem('altyeva_ovr') || '{}')); } catch(e){}
-const saveOvr = () => { try { localStorage.setItem('altyeva_ovr', JSON.stringify(OVR)); } catch(e){} };
+// Цены и расходники берём из листа «цены» вашей таблицы — они общие
+// для всех, кто открывает кабинет. Правка из кабинета пишется туда же.
+let PRICES = null;                       // { название: {old, new, cost} }
+let _pricesPromise = null;
+function fetchPrices(force){
+  if (_pricesPromise && !force) return _pricesPromise;
+  _pricesPromise = fetch(`${API}/admin-prices`)
+    .then(r => r.json())
+    .then(raw => {
+      const d = Array.isArray(raw) ? raw[0] : raw;
+      if (d && d.ok && Array.isArray(d.prices)) {
+        PRICES = {};
+        d.prices.forEach(x => { if (x.label) PRICES[x.label] = x; });
+      }
+      return PRICES;
+    })
+    .catch(() => null);
+  return _pricesPromise;
+}
 
 function costOne(label){
   if (label in COST) return COST[label];
@@ -1176,8 +1190,9 @@ function priceOf(service, isoDate){
   let sum = 0, known = false;
   splitSvc(service).forEach(part => {
     const lbl = labelOf(part); if (!lbl) return;
-    const ovr = OVR.price[lbl] && OVR.price[lbl][old ? 'old' : 'new'];
-    const p = (typeof ovr === 'number') ? ovr
+    const row = PRICES && PRICES[lbl];
+    const fromSheet = row && (old ? row.old : row.new);
+    const p = (typeof fromSheet === 'number') ? fromSheet
             : (old && (lbl in OLD_PRICE) ? OLD_PRICE[lbl] : PRICE_FULL[normSvc(lbl)]);
     if (typeof p === 'number') { sum += p; known = true; }
   });
@@ -1187,7 +1202,8 @@ function costOf(service){
   let sum = 0, known = false;
   splitSvc(service).forEach(part => {
     const lbl = labelOf(part); if (!lbl) return;
-    const c = (typeof OVR.cost[lbl] === 'number') ? OVR.cost[lbl] : costOne(lbl);
+    const row = PRICES && PRICES[lbl];
+    const c = (row && typeof row.cost === 'number') ? row.cost : costOne(lbl);
     if (typeof c === 'number') { sum += c; known = true; }
   });
   return known ? sum : undefined;
@@ -1243,14 +1259,14 @@ function openVisitEdit(v){
         <button class="sh-x" type="button" aria-label="Закрыть">×</button></div>
       ${labels.map((lbl, i) => {
         const price = priceOf(lbl, v.date) || 0;
-        const cost  = (typeof OVR.cost[lbl] === 'number') ? OVR.cost[lbl] : (costOne(lbl) ?? 0);
+        const cost  = costOf(lbl) ?? 0;
         return `<div class="sh-block" data-lbl="${esc(lbl)}">
           <h4>${esc(lbl)}</h4>
           <div class="ed-row"><label>Цена, ₽</label><input class="ed-price" type="number" inputmode="numeric" value="${price}"></div>
           <div class="ed-row"><label>Расходники, ₽</label><input class="ed-cost" type="number" inputmode="numeric" value="${cost}"></div>
           <div class="ed-row"><label>Прибыль</label><b class="ed-profit">${rub(price - cost)}</b></div>
         </div>`; }).join('')}
-      <p class="sh-note">Меняется для всех визитов с этой процедурой${isOld ? ' до 01.10.2026' : ' с 01.10.2026'}. Сохраняется в этом браузере.</p>
+      <p class="sh-note">Меняется для всех визитов с этой процедурой${isOld ? ' до 01.10.2026' : ' с 01.10.2026'} и сохраняется в таблицу — увидят все.</p>
       <div class="bc-actions"><button type="button" id="edReset">Вернуть как было</button>
         <button type="button" id="edSave" class="primary">Сохранить</button></div>`;
     const recalc = () => sheet.querySelectorAll('[data-lbl]').forEach(box => {
@@ -1258,20 +1274,40 @@ function openVisitEdit(v){
       box.querySelector('.ed-profit').textContent = rub(p - c);
     });
     sheet.querySelectorAll('.ed-price,.ed-cost').forEach(i => i.addEventListener('input', recalc));
-    sheet.querySelector('#edSave').onclick = () => {
-      sheet.querySelectorAll('[data-lbl]').forEach(box => {
+    const btnSave = sheet.querySelector('#edSave');
+    async function pushPrices(getValues){
+      btnSave.disabled = true; btnSave.textContent = 'Сохраняю…';
+      const rows = [...sheet.querySelectorAll('[data-lbl]')].map(box => {
         const lbl = box.dataset.lbl;
-        OVR.price[lbl] = OVR.price[lbl] || {};
-        OVR.price[lbl][isOld ? 'old' : 'new'] = +box.querySelector('.ed-price').value || 0;
-        OVR.cost[lbl] = +box.querySelector('.ed-cost').value || 0;
+        const known = (PRICES && PRICES[lbl]) || {};
+        const v = getValues(box, lbl);
+        return {
+          label: lbl,
+          old:  isOld ? v.price : (typeof known.old === 'number' ? known.old : (OLD_PRICE[lbl] ?? PRICE_FULL[normSvc(lbl)] ?? 0)),
+          new: !isOld ? v.price : (typeof known.new === 'number' ? known.new : (PRICE_FULL[normSvc(lbl)] ?? 0)),
+          cost: v.cost,
+        };
       });
-      saveOvr(); closeClient(); renderRevenue();
-      try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
-    };
-    sheet.querySelector('#edReset').onclick = () => {
-      labels.forEach(lbl => { delete OVR.cost[lbl]; if (OVR.price[lbl]) delete OVR.price[lbl][isOld ? 'old' : 'new']; });
-      saveOvr(); closeClient(); renderRevenue();
-    };
+      try{
+        const r = await fetch(`${API}/admin-price-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, rows }) });
+        const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+        if (!d || d.ok === false) throw new Error('forbidden');
+        await fetchPrices(true);
+        closeClient(); renderRevenue();
+        try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+      }catch(e){
+        btnSave.disabled = false; btnSave.textContent = 'Сохранить';
+        sheet.insertAdjacentHTML('beforeend',
+          '<p class="bc-res bad">Не удалось сохранить в таблицу. Проверьте, что воркфлоу Admin Prices API включён.</p>');
+      }
+    }
+    btnSave.onclick = () => pushPrices(box => ({
+      price: +box.querySelector('.ed-price').value || 0,
+      cost:  +box.querySelector('.ed-cost').value  || 0 }));
+    sheet.querySelector('#edReset').onclick = () => pushPrices((box, lbl) => ({
+      price: (isOld ? (OLD_PRICE[lbl] ?? PRICE_FULL[normSvc(lbl)]) : PRICE_FULL[normSvc(lbl)]) || 0,
+      cost:  costOne(lbl) ?? 0 }));
   }
   sheet.querySelector('.sh-x').onclick = closeClient;
   sheet.scrollTop = 0;
@@ -1284,7 +1320,7 @@ function rState(title, text){
 }
 async function loadRevenue(){
   if (!tgUser){ rState('Откройте через бота','Раздел работает только внутри Telegram.'); return; }
-  if (!CLIENTS){ rState('Загружаю…'); await fetchClientsData(); }
+  if (!CLIENTS || !PRICES){ rState('Загружаю…'); await Promise.all([fetchClientsData(), fetchPrices()]); }
   if (!CLIENTS){ rState('Не загрузилось','Откройте вкладку «Клиенты» — там будет видна причина.'); return; }
   document.getElementById('rState').classList.add('hidden');
   document.getElementById('rMain').classList.remove('hidden');
