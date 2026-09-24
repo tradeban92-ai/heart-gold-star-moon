@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-24-0708 signed -->
+<!-- altyeva-build 2026-09-24-0721 open-bot-chat -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -1443,7 +1443,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
 </div>
 <div style="text-align:center;padding:16px 20px 8px;">
   <a href="https://tradeban92-ai.github.io/heart-gold-star-moon/privacy.html" target="_blank" style="font-size:10px;color:rgba(43,54,66,0.28);text-decoration:none;">Политика обработки данных</a>
-  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-24-0708</div>
+  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-24-0721</div>
 </div>
 <div class="tabbar">
   <button class="tab active" data-page="page-services">
@@ -1563,8 +1563,12 @@ function render(cat){
               body:JSON.stringify({init_data:INIT_DATA, user_id:u.id, chat_id:u.id, user_name:u.first_name||''})});
           }
         }catch(e){ /* не дошло — всё равно уводим в чат */ }
-        if(tg?.close) tg.close();
-        else window.open('https://t.me/Altyevabot','_blank');
+        // Открываем именно чат с ботом: Telegram сам закроет приложение.
+        // tg.close() вернул бы туда, откуда приложение открывали, — в список чатов.
+        const BOT_LINK = 'https://t.me/Altyevabot';
+        if (tg?.openTelegramLink) tg.openTelegramLink(BOT_LINK);
+        else if (tg?.close) { window.open(BOT_LINK, '_blank'); tg.close(); }
+        else window.open(BOT_LINK, '_blank');
       };
       bwrap.appendChild(a);
     } else {
