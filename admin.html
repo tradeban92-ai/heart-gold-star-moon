@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-24-1723 chat-order -->
+<!-- admin-build 2026-09-24-1828 booked-when -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -257,7 +257,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-24-1723</p>
+  <p class="ver">версия 2026-09-24-1828</p>
 </header>
 
 <nav class="tabs">
@@ -297,6 +297,7 @@
         <option value="name">По имени</option>
       </select>
     </div>
+    <div class="segs hidden" id="cWhen"></div>
     <div id="mailBar"></div>
     <p class="cfound" id="cFound"></p>
     <div id="cList"></div>
@@ -719,6 +720,28 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab
 // ============================================================
 let CLIENTS = null, SUMMARY = null, SLEEP_DAYS = 130;
 let SEG = 'all', QUERY = '', SORT = 'last';
+let BOOK_WHEN = 'all';          // сегодня / завтра / неделя — внутри фильтра «Записаны»
+const BOOK_WHENS = [
+  { k:'all',      l:'Все' },
+  { k:'today',    l:'Сегодня' },
+  { k:'tomorrow', l:'Завтра' },
+  { k:'week',     l:'Неделя' },
+];
+// через сколько дней ближайшая запись
+function daysTo(iso){
+  const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return null;
+  const d = new Date(+m[1], +m[2]-1, +m[3]);
+  const t = new Date(); t.setHours(0,0,0,0);
+  return Math.round((d - t) / 86400000);
+}
+function bookedWhen(c, k){
+  const n = daysTo(c.upcoming[0] && c.upcoming[0].date);
+  if (n === null) return false;
+  if (k === 'today')    return n === 0;
+  if (k === 'tomorrow') return n === 1;
+  if (k === 'week')     return n >= 0 && n <= 7;
+  return true;
+}
 
 // ============================================================
 // ЧЕРЕЗ СКОЛЬКО ДНЕЙ КЛИЕНТУ ПОРА ПОВТОРИТЬ — по его последней процедуре.
@@ -805,7 +828,7 @@ const inSeg = (c, k) => {
   if (k === 'archived') return !!c.archived;
   if (c.archived)       return false;          // архивных не показываем нигде
   if (k === 'all')      return true;
-  if (k === 'booked')   return c.upcoming.length > 0;
+  if (k === 'booked')   return c.upcoming.length > 0 && bookedWhen(c, BOOK_WHEN);
   if (k === 'tg')       return !!c.can_message;      // зарегистрирован в боте
   if (k === 'due')      return c.due && !c.upcoming.length;
   if (k === 'sleeping') return c.segment === 'sleeping' && !c.upcoming.length;
@@ -983,6 +1006,17 @@ function renderClients(){
   CURRENT_LIST = list;
   const reach = list.filter(c => c.can_message).length;
   const segName = (SEGS.find(s => s.k === SEG) || {}).l || 'Все';
+  // подкнопки дня — только для «Записаны»
+  const whenBar = document.getElementById('cWhen');
+  if (SEG === 'booked'){
+    whenBar.innerHTML = BOOK_WHENS.map(w => {
+      const n = CLIENTS.filter(c => !c.archived && c.upcoming.length && bookedWhen(c, w.k)).length;
+      return `<button type="button" class="seg-chip${BOOK_WHEN === w.k ? ' on' : ''}" data-when="${w.k}">${w.l}<i>${n}</i></button>`;
+    }).join('');
+    whenBar.classList.remove('hidden');
+    whenBar.querySelectorAll('[data-when]').forEach(b => b.onclick = () => { BOOK_WHEN = b.dataset.when; renderClients(); });
+  } else { whenBar.innerHTML = ''; whenBar.classList.add('hidden'); BOOK_WHEN = 'all'; }
+
   document.getElementById('mailBar').innerHTML = list.length
     ? `<button type="button" class="mail-btn" id="mailBtn">✉️ Написать: «${esc(segName)}»${QUERY ? ' + поиск' : ''}<span>${reach} в Telegram</span></button>`
     : '';
@@ -1168,6 +1202,7 @@ function closeClient(){ document.getElementById('sheetBg').classList.add('hidden
 // ============================================================
 let CURRENT_LIST = [];
 const TEMPLATES = {
+  booked:   '{имя}, здравствуйте! 💛\nНапоминаем: {дата} в {время} ждём вас у Екатерины на Лисичанской 6.\n\nЕсли планы изменились — сообщите, пожалуйста, чтобы время смог занять кто-то другой.',
   due:      '{имя}, здравствуйте! 💛\nПодходит время повторить {процедура}, чтобы сохранить результат. Свободные окна можно посмотреть по кнопке ниже.',
   sleeping: '{имя}, здравствуйте! 💛\nДавно вас не видели! Екатерина будет рада встрече — свободные окна можно посмотреть по кнопке ниже.',
   consult:  '{имя}, здравствуйте! 💛\nВы были у Екатерины на консультации — если остались вопросы или сомнения, напишите сюда, она подскажет. А записаться можно по кнопке ниже.',
@@ -1180,6 +1215,8 @@ function personalize(text, c){
     .replace(/\{имя\}\s*,\s*/gi, n ? n + ', ' : '')
     .replace(/\{имя\}/gi, n)
     .replace(/\{процедура\}/gi, (c && CAT_PROC[c.last_cat]) || 'процедуру')
+    .replace(/\{дата\}/gi, (c && c.upcoming && c.upcoming[0]) ? dayWord(c.upcoming[0].date) : '')
+    .replace(/\{время\}/gi, (c && c.upcoming && c.upcoming[0]) ? c.upcoming[0].time : '')
     .replace(/^\s*([a-zа-яё])/i, (m, ch) => m.replace(ch, ch.toUpperCase()));
 }
 function confirmBox(msg){
@@ -1219,8 +1256,9 @@ function openComposer(only, title){
       </div>`).join('')}</div>` : ''}
     <label class="f" for="bcText">Текст сообщения</label>
     <textarea id="bcText" rows="6" placeholder="{имя}, здравствуйте! …">${esc(title ? '' : (TEMPLATES[SEG] || ''))}</textarea>
-    <p class="sh-note">{имя} — имя клиента в Telegram, {процедура} — его последняя процедура</p>
-    <label class="chk"><input type="checkbox" id="bcBtn" checked> Кнопка «📅 Записаться» под сообщением</label>
+    <p class="sh-note">{имя} — имя клиента, {процедура} — его последняя процедура${
+      SEG === 'booked' ? ', {дата} и {время} — его запись' : ''}</p>
+    <label class="chk"><input type="checkbox" id="bcBtn"${SEG === 'booked' ? '' : ' checked'}> Кнопка «📅 Записаться» под сообщением</label>
     <div class="sh-block"><h4>Так увидит ${sample ? esc(firstName(sample.tg_name) || 'клиент') : 'клиент'}</h4>
       <div class="bc-preview" id="bcPreview"></div></div>
     <div class="bc-actions">
@@ -1296,7 +1334,12 @@ function openComposer(only, title){
         body: JSON.stringify({
           init_data: initData, user_id: tgUser?.id, text, with_button: btnBox.checked, test,
           test_name: firstName(tgUser?.first_name), test_proc: sample ? (CAT_PROC[sample.last_cat] || '') : '',
-          recipients: test ? [] : picks().map(c => ({ chat_id: c.chat_id, name: c.tg_name || '', proc: CAT_PROC[c.last_cat] || '' }))
+          test_when: sample && sample.upcoming[0] ? dayWord(sample.upcoming[0].date) : 'завтра',
+          test_time: sample && sample.upcoming[0] ? sample.upcoming[0].time : '12:00',
+          recipients: test ? [] : picks().map(c => ({ chat_id: c.chat_id, name: c.tg_name || '',
+            proc: CAT_PROC[c.last_cat] || '',
+            when: c.upcoming[0] ? dayWord(c.upcoming[0].date) : '',
+            time: c.upcoming[0] ? c.upcoming[0].time : '' }))
         })});
       const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
       if (!d || d.ok === false) throw new Error(d?.reason || 'forbidden');
