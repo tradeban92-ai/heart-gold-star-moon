@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-24-1208 tg-filter -->
+<!-- admin-build 2026-09-24-1216 hide-any -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -256,7 +256,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-24-1208</p>
+  <p class="ver">версия 2026-09-24-1216</p>
 </header>
 
 <nav class="tabs">
@@ -804,7 +804,7 @@ const SEGS = [
   { k:'due',      l:'Пора повторить' },
   { k:'sleeping', l:'Давно не были' },
   { k:'consult',  l:'Не вернулись после консультации' },
-  { k:'archived', l:'Архив' },
+  { k:'archived', l:'Скрытые' },
   { k:'tg',       l:'TG' },
   { k:'active',   l:'1–2 визита' },
   { k:'regular',  l:'Постоянные' },
@@ -1037,7 +1037,7 @@ function openClient(key){
   if (SEG_LABEL[c.segment]) tags.push(`<span class="tag${c.segment === 'sleeping' ? ' warn' : ''}">${SEG_LABEL[c.segment]}</span>`);
   if (c.due) tags.push('<span class="tag due">Пора повторить</span>');
   tags.push(c.can_message ? '<span class="tag ok">Есть в боте</span>' : '<span class="tag muted">Нет в боте</span>');
-  if (c.archived) tags.push('<span class="tag muted">В архиве</span>');
+  if (c.archived) tags.push('<span class="tag muted">Скрыт</span>');
 
   const rows = (arr) => arr.map(([a,b]) => `<div class="sh-row"><span>${a}</span><span>${b}</span></div>`).join('');
   let html = `
@@ -1101,12 +1101,12 @@ function openClient(key){
       <button type="button" class="as-link" id="chatBtn" style="width:100%">Показать переписку</button>
     </div>`;
   }
-  if (c.user_id){
+  if (c.phone){
     html += `<div class="bc-actions" style="grid-template-columns:1fr">
-      <button type="button" id="archBtn">${c.archived ? 'Вернуть из архива' : 'Убрать в архив'}</button></div>
+      <button type="button" id="archBtn">${c.archived ? 'Вернуть в кабинет' : 'Скрыть — больше не придёт'}</button></div>
       <p class="sh-note">${c.archived
-        ? 'Клиент скрыт из кабинета. Вернётся сам, если снова напишет боту или придёт на визит.'
-        : 'Скроет клиента из списков и рассылок. Вернётся сам, когда снова напишет боту или придёт.'}</p>`;
+        ? 'Клиент скрыт из списков и рассылок. Появится сам, если запишется, придёт на визит или напишет боту.'
+        : 'Уберёт клиента из всех списков и рассылок. Появится сам, если запишется, придёт на визит или напишет боту.'}</p>`;
   }
 
   const sheet = document.getElementById('sheet');
@@ -1147,7 +1147,8 @@ function openClient(key){
     const was = ab.textContent; ab.disabled = true; ab.textContent = 'Сохраняю…';
     try{
       const r = await fetch(`${API}/admin-archive`, { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, target_user_id:c.user_id, archived: !c.archived }) });
+        body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, phone:c.phone,
+                               note:shownName(c), archived: !c.archived }) });
       const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
       if (!d || d.ok === false) throw new Error('fail');
       CLIENTS = null; _clientsPromise = null;
