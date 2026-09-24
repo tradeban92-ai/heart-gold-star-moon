@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-24-1216 hide-any -->
+<!-- admin-build 2026-09-24-1632 chat-fix -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -256,7 +256,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-24-1216</p>
+  <p class="ver">версия 2026-09-24-1632</p>
 </header>
 
 <nav class="tabs">
@@ -1130,10 +1130,11 @@ function openClient(key){
     if (!list.length){ box.innerHTML = '<h4>Переписка с ботом</h4><p class="sh-note" style="margin:0">Сообщений нет.</p>'; return; }
     const bubbles = list.slice(-60).map(m => {
       const when = esc(String(m.ts).slice(0,16));
-      let out = '';
-      if (m.role !== 'bot' && m.text) out += `<div class="msg them"><i>${when}</i>${esc(m.text)}</div>`;
-      const botText = m.role === 'bot' ? m.text : m.reply;
-      if (botText) out += `<div class="msg us">${esc(botText)}</div>`;
+      // В строках бота поле text — копия вопроса клиента,
+      // сам ответ лежит в отдельной колонке
+      if (m.role === 'bot') return m.reply ? `<div class="msg us">${esc(m.reply)}</div>` : '';
+      let out = m.text ? `<div class="msg them"><i>${when}</i>${esc(m.text)}</div>` : '';
+      if (m.reply) out += `<div class="msg us">${esc(m.reply)}</div>`;
       return out;
     }).join('');
     box.innerHTML = `<h4>Переписка с ботом · ${list.length} ${plural(list.length,'сообщение','сообщения','сообщений')}</h4>
