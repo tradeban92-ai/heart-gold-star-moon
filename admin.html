@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-24-1708 chat-n8n -->
+<!-- admin-build 2026-09-24-1723 chat-order -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -257,7 +257,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-24-1708</p>
+  <p class="ver">версия 2026-09-24-1723</p>
 </header>
 
 <nav class="tabs">
@@ -1118,13 +1118,15 @@ function openClient(key){
       box.insertAdjacentHTML('beforeend','<p class="sh-note">Не удалось загрузить переписку. Проверьте, что воркфлоу Admin Messages API включён.</p>'); return; }
     if (!list.length){ box.innerHTML = '<h4>Переписка с ботом</h4><p class="sh-note" style="margin:0">Сообщений нет.</p>'; return; }
     const bubbles = list.slice(-60).map(m => {
-      const when = esc(String(m.ts).slice(0,16));
+      const when = esc(String(m.ts));
       // В строках бота поле text — копия вопроса клиента,
       // сам ответ лежит в отдельной колонке
       if (m.role === 'bot'){
         const t = m.reply || m.text;
-        return t ? `<div class="msg us">${esc(t)}${m.intent && m.intent !== 'other'
-          ? `<i class="tagline">${esc(m.intent)}</i>` : ''}</div>` : '';
+        // метку ставим только на то, что отправили мы сами
+        const mark = ['рассылка','памятка','напоминание'].includes(String(m.intent||'').toLowerCase())
+          ? `<i class="tagline">${esc(m.intent)}</i>` : '';
+        return t ? `<div class="msg us">${esc(t)}${mark}</div>` : '';
       }
       let out = m.text ? `<div class="msg them"><i>${when}</i>${esc(m.text)}</div>` : '';
       if (m.reply) out += `<div class="msg us">${esc(m.reply)}</div>`;
