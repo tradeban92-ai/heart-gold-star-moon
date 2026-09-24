@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-24-1155 chat -->
+<!-- admin-build 2026-09-24-1208 tg-filter -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -256,7 +256,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-24-1155</p>
+  <p class="ver">версия 2026-09-24-1208</p>
 </header>
 
 <nav class="tabs">
@@ -805,7 +805,7 @@ const SEGS = [
   { k:'sleeping', l:'Давно не были' },
   { k:'consult',  l:'Не вернулись после консультации' },
   { k:'archived', l:'Архив' },
-  { k:'none',     l:'Без визитов' },
+  { k:'tg',       l:'TG' },
   { k:'active',   l:'1–2 визита' },
   { k:'regular',  l:'Постоянные' },
 ];
@@ -816,6 +816,7 @@ const inSeg = (c, k) => {
   if (c.archived)       return false;          // архивных не показываем нигде
   if (k === 'all')      return true;
   if (k === 'booked')   return c.upcoming.length > 0;
+  if (k === 'tg')       return !!c.can_message;      // зарегистрирован в боте
   if (k === 'due')      return c.due && !c.upcoming.length;
   if (k === 'sleeping') return c.segment === 'sleeping' && !c.upcoming.length;
   if (k === 'consult')  return c.only_consult && !c.upcoming.length;
@@ -1173,7 +1174,7 @@ const TEMPLATES = {
   due:      '{имя}, здравствуйте! 💛\nПодходит время повторить {процедура}, чтобы сохранить результат. Свободные окна можно посмотреть по кнопке ниже.',
   sleeping: '{имя}, здравствуйте! 💛\nДавно вас не видели! Екатерина будет рада встрече — свободные окна можно посмотреть по кнопке ниже.',
   consult:  '{имя}, здравствуйте! 💛\nВы были у Екатерины на консультации — если остались вопросы или сомнения, напишите сюда, она подскажет. А записаться можно по кнопке ниже.',
-  none:     '{имя}, здравствуйте! 💛\nЕсли остались вопросы по процедурам — напишите сюда, Екатерина подскажет. А свободные окна можно посмотреть по кнопке ниже.',
+  tg:       '{имя}, здравствуйте! 💛\nЕсли остались вопросы по процедурам — напишите сюда, Екатерина подскажет. А свободные окна можно посмотреть по кнопке ниже.',
 };
 const firstName = s => String(s||'').trim().split(/\s+/)[0] || '';
 function personalize(text, c){
