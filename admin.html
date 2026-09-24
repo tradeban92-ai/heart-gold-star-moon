@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-24-0639 multi-proc -->
+<!-- admin-build 2026-09-24-1143 archive -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -75,6 +75,8 @@
   .hidden{display:none!important;}
 
   .head-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;}
+  .as-link{height:44px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--steel-dk);
+    font:700 14px 'Manrope',sans-serif;cursor:pointer;}
   .as-client{font-size:12.5px;font-weight:600;color:var(--steel);text-decoration:none;white-space:nowrap;}
   .ver{font-size:10.5px;color:rgba(107,122,138,.55);margin:3px 0 0;font-variant-numeric:tabular-nums;}
   .lvl{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
@@ -230,6 +232,16 @@
   .proc-x{margin-left:auto;flex:none;width:34px;height:34px;border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;}
   .add-proc{width:100%;height:42px;border:1.5px dashed var(--line);border-radius:12px;background:transparent;
     color:var(--steel-dk);font:600 13.5px 'Manrope',sans-serif;cursor:pointer;margin-bottom:6px;}
+  .srcbox{margin-top:10px;}
+  .src-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .src-chip{min-height:34px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:#fff;
+    color:var(--steel-dk);font:600 12.5px 'Manrope',sans-serif;cursor:pointer;}
+  .src-chip.on{background:var(--steel-dk);border-color:var(--steel-dk);color:#fff;}
+  .rv-src{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-top:1px solid #EEF2F5;font-size:14px;}
+  .rv-src:first-of-type{border-top:none;}
+  .rv-src b{flex:1;font-weight:600;}
+  .rv-src i{font-style:normal;color:var(--muted);font-size:12.5px;}
+  .rv-src span{font-weight:700;font-variant-numeric:tabular-nums;}
 </style>
 </head>
 <body>
@@ -239,7 +251,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-24-0639</p>
+  <p class="ver">версия 2026-09-24-1143</p>
 </header>
 
 <nav class="tabs">
@@ -335,6 +347,24 @@ function serviceSelect(duration){
   }
   return `<select class="svc">${h}</select>`;
 }
+
+// Откуда пришёл клиент — спрашиваем только у новых
+const SOURCES = ['Instagram','Рекомендация','Прямая ссылка','Визитка','Сам в боте','Другое'];
+function sourceBox(){
+  return `<div class="srcbox">
+    <label class="f">Откуда пришёл клиент?</label>
+    <div class="src-chips">${SOURCES.map(s => `<button type="button" class="src-chip" data-src="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+  </div>`;
+}
+function wireSource(host, onChange){
+  host.querySelectorAll('.src-chip').forEach(b => b.onclick = () => {
+    const on = b.classList.contains('on');
+    host.querySelectorAll('.src-chip').forEach(x => x.classList.remove('on'));
+    if (!on) b.classList.add('on');
+    onChange();
+  });
+}
+const readSource = host => host?.querySelector('.src-chip.on')?.dataset.src || '';
 
 // ---- одна строка «процедура + цена» ----
 function procRowHTML(duration){
@@ -446,7 +476,7 @@ function render(){
     BOOKINGS.forEach(b=>{
       if(b.date!==last){ html += `<p class="day">${dayTitle(b.date)}</p>`; last=b.date; }
       html += `
-      <div class="card" data-row="${b.row_number}" data-dur="${b.duration_min||0}">
+      <div class="card" data-row="${b.row_number}" data-dur="${b.duration_min||0}" data-p="${esc(String(b.phone||'').replace(/\D/g,'').slice(-10))}">
         <div class="meta">${esc(b.time)}${b.duration_min?` · ${b.duration_min} мин`:''}</div>
         <div class="name">${esc(b.client_name||'Без имени')}</div>
         ${b.phone?`<a class="phone" href="tel:+${esc(b.phone)}">${esc(fmtPhone(b.phone))}</a>`:''}
@@ -459,6 +489,7 @@ function render(){
           <label class="f">Процедуры</label>
           <div class="proc-list"></div>
           <button type="button" class="add-proc">+ Было несколько процедур</button>
+          <div class="src-host"></div>
           <div class="err">Выберите процедуру</div>
         </div>
       </div>`;
@@ -487,6 +518,9 @@ function render(){
     };
     addProc(host, +card.dataset.dur || 0, sync);
     card.querySelector('.add-proc').onclick = () => addProc(host, 0, sync);
+    // источник спрашиваем только у новых — данные о клиентах могут
+    // прийти позже, поэтому блок рисуем отдельной функцией
+    paintSource(card);
   });
   updateCount();
   paintLevels();
@@ -518,6 +552,7 @@ function addWalk(){
     <label class="f">Процедуры</label>
     <div class="proc-list"></div>
     <button type="button" class="add-proc">+ Было несколько процедур</button>
+    <div class="src-host"></div>
     <label class="f">Дата визита</label>
     <input class="w-date" type="date" value="${todayISO()}" max="${todayISO()}">
     <div class="err">Нужны телефон и процедура</div>`;
@@ -530,6 +565,9 @@ function addWalk(){
   const sync = () => { el.querySelector('.err').classList.remove('show'); updateCount(); };
   addProc(host, 0, sync);
   el.querySelector('.add-proc').onclick = () => addProc(host, 0, sync);
+  const srcHost = el.querySelector('.src-host');
+  srcHost.innerHTML = sourceBox();
+  wireSource(srcHost, sync);
   el.querySelector('.w-phone').focus();
   updateCount();
 }
@@ -541,6 +579,7 @@ function collectWalkins(){
     phone: el.querySelector('.w-phone').value.trim(),
     name:  el.querySelector('.w-name').value.trim(),
     services: readProcs(el.querySelector('.proc-list')),
+    source: readSource(el.querySelector('.src-host')),
     date:  el.querySelector('.w-date').value || todayISO()
   }));
 }
@@ -590,8 +629,9 @@ document.getElementById('saveBtn').onclick = async ()=>{
   const bookings = BOOKINGS
     .filter(b=>marks[b.row_number] && marks[b.row_number].came!==undefined)
     .map(b=>({ row_number:b.row_number, date:b.date, time:b.time, client_name:b.client_name, phone:b.phone,
-               came:marks[b.row_number].came, services:marks[b.row_number].services||[] }));
-  const walkins = walks.map(w=>({ phone:w.phone, name:w.name, services:w.services, date:w.date }));
+               came:marks[b.row_number].came, services:marks[b.row_number].services||[],
+               source:marks[b.row_number].source||'' }));
+  const walkins = walks.map(w=>({ phone:w.phone, name:w.name, services:w.services, date:w.date, source:w.source||'' }));
 
   const btn=document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='Сохраняю…';
   try{
@@ -685,6 +725,15 @@ const CAT_TITLE = { botox:'Ботокс', filler:'Филлеры', biorevitaliza
 const CAT_PROC  = { botox:'ботокс', filler:'филлер', biorevitalization:'биоревитализацию', collagen:'коллагенотерапию',
   blanching:'бланширование', lipolytics:'курс липолитиков', mesohair:'мезотерапию волос', cleaning:'чистку лица', peeling:'пилинг' };
 
+// Визит засчитывается в карту лояльности, если была настоящая процедура.
+// Консультация и бесплатные коррекции (ботокса, губ) — не в счёт.
+function countsForLoyalty(service){
+  const s = String(service||'').toLowerCase();
+  if (/консультац/.test(s)) return false;
+  if (/коррекция\s+прошлых\s+процедур/.test(s)) return false;
+  if (/коррекция\s+губ/.test(s)) return false;
+  return true;
+}
 function careKey(label){
   const s = String(label||'').toLowerCase();
   if (/консультац/.test(s)) return null;
@@ -725,6 +774,7 @@ const SEGS = [
   { k:'due',      l:'Пора повторить' },
   { k:'sleeping', l:'Давно не были' },
   { k:'consult',  l:'Не вернулись после консультации' },
+  { k:'archived', l:'Архив' },
   { k:'none',     l:'Без визитов' },
   { k:'active',   l:'1–2 визита' },
   { k:'regular',  l:'Постоянные' },
@@ -732,6 +782,8 @@ const SEGS = [
 const shownName = c => c.name || (c.phone ? fmtPhone(c.phone) : 'Без имени');
 // Кто уже записан — тому «пора» и «давно не были» не пишем
 const inSeg = (c, k) => {
+  if (k === 'archived') return !!c.archived;
+  if (c.archived)       return false;          // архивных не показываем нигде
   if (k === 'all')      return true;
   if (k === 'booked')   return c.upcoming.length > 0;
   if (k === 'due')      return c.due && !c.upcoming.length;
@@ -765,6 +817,20 @@ function fetchClientsData(){
     .catch(() => null);
   return _clientsPromise;
 }
+// Показать выбор источника, если клиент у нас впервые
+function paintSource(card){
+  const host = card.querySelector('.src-host'); if (!host) return;
+  const known = (CLIENTS || []).find(c => String(c.phone || '').slice(-10) === String(card.dataset.p || ''));
+  const isNew = !known || !known.visits_count;
+  if (!isNew) { host.innerHTML = ''; delete marks[card.dataset.row]?.source; return; }
+  if (host.querySelector('.src-chip')) return;                 // уже нарисован
+  host.innerHTML = sourceBox();
+  wireSource(host, () => {
+    const row = card.dataset.row;
+    marks[row] = { ...(marks[row]||{}), source: readSource(host) };
+  });
+}
+
 function paintLevels(){
   if (!CLIENTS) return;
   const by = {};
@@ -779,6 +845,8 @@ function paintLevels(){
     if (c.no_shows)           t += `<span class="lv lv-warn">неявок ранее: ${c.no_shows}</span>`;
     el.innerHTML = t;
   });
+  // клиенты подгрузились — уточняем, у кого спрашивать источник
+  document.querySelectorAll('.card[data-row]').forEach(paintSource);
 }
 
 async function loadClients(){
@@ -938,6 +1006,7 @@ function openClient(key){
   if (SEG_LABEL[c.segment]) tags.push(`<span class="tag${c.segment === 'sleeping' ? ' warn' : ''}">${SEG_LABEL[c.segment]}</span>`);
   if (c.due) tags.push('<span class="tag due">Пора повторить</span>');
   tags.push(c.can_message ? '<span class="tag ok">Есть в боте</span>' : '<span class="tag muted">Нет в боте</span>');
+  if (c.archived) tags.push('<span class="tag muted">В архиве</span>');
 
   const rows = (arr) => arr.map(([a,b]) => `<div class="sh-row"><span>${a}</span><span>${b}</span></div>`).join('');
   let html = `
@@ -950,10 +1019,12 @@ function openClient(key){
   if (c.phone){
     html += `<div class="sh-actions">
       <a href="tel:+${esc(c.phone)}">Позвонить</a>
-      <a href="https://t.me/+${esc(c.phone)}" data-tg="1">Telegram</a>
+      ${c.can_message
+        ? `<button type="button" class="as-link" id="msgBot">Написать в боте</button>`
+        : `<a href="https://t.me/+${esc(c.phone)}" data-tg="1">Telegram</a>`}
       <a href="https://wa.me/${esc(c.phone)}" data-ext="1">WhatsApp</a>
     </div>
-    <p class="sh-note">Telegram откроется, если клиент не закрыл поиск по номеру в настройках приватности.</p>`;
+    ${c.can_message ? '' : '<p class="sh-note">Telegram откроется, если клиент не закрыл поиск по номеру в настройках приватности.</p>'}`;
   }
 
   if (c.upcoming.length){
@@ -965,7 +1036,9 @@ function openClient(key){
   }
 
   const stats = [];
-  stats.push(['Визитов', String(c.visits_count)]);
+  stats.push(['Визитов в зачёт скидки', String(c.visits_count)]);
+  if (c.all_days && c.all_days !== c.visits_count)
+    stats.push(['Всего приходов', `${c.all_days} — консультации и коррекции в скидку не идут`]);
   if (c.last_visit)  stats.push(['Последний', `${fmtIso(c.last_visit)} · ${daysAgo(c.days_since)}`]);
   if (c.last_cat)    stats.push(['Последняя процедура', CAT_TITLE[c.last_cat] || '—']);
   if (c.visits_count){
@@ -980,11 +1053,23 @@ function openClient(key){
   html += `<div class="sh-block"><h4>Сводка</h4>${rows(stats)}</div>`;
 
   if (c.history.length){
-    html += `<div class="sh-block"><h4>История визитов</h4>${rows(c.history.map(h =>
-      [fmtIso(h.date), esc(h.service || '—')]))}</div>`;
+    const byDay = {};
+    c.history.forEach(x => { const d = String(x.date).slice(0,10); (byDay[d] = byDay[d] || []).push(x.service || '—'); });
+    const days = Object.keys(byDay).sort((a,b) => b.localeCompare(a));
+    html += `<div class="sh-block"><h4>История: ${days.length} ${plural(days.length,'визит','визита','визитов')}, ${
+      c.history.length} ${plural(c.history.length,'процедура','процедуры','процедур')}</h4>` +
+      days.map(d => `<div class="sh-row"><span>${fmtIso(d)}</span><span>${
+        byDay[d].map(s => esc(s)).join('<br>')}</span></div>`).join('') + '</div>';
   }
   if (c.memory){
     html += `<div class="sh-block"><h4>Бот помнит из переписки</h4><div class="sh-mem">${esc(c.memory)}</div></div>`;
+  }
+  if (c.user_id){
+    html += `<div class="bc-actions" style="grid-template-columns:1fr">
+      <button type="button" id="archBtn">${c.archived ? 'Вернуть из архива' : 'Убрать в архив'}</button></div>
+      <p class="sh-note">${c.archived
+        ? 'Клиент скрыт из кабинета. Вернётся сам, если снова напишет боту или придёт на визит.'
+        : 'Скроет клиента из списков и рассылок. Вернётся сам, когда снова напишет боту или придёт.'}</p>`;
   }
 
   const sheet = document.getElementById('sheet');
@@ -997,6 +1082,24 @@ function openClient(key){
   });
   // Ссылки t.me открываем средствами Telegram — так чат откроется
   // прямо в приложении, а не во внешнем браузере
+  const ab = sheet.querySelector('#archBtn');
+  if (ab) ab.onclick = async () => {
+    const was = ab.textContent; ab.disabled = true; ab.textContent = 'Сохраняю…';
+    try{
+      const r = await fetch(`${API}/admin-archive`, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, target_user_id:c.user_id, archived: !c.archived }) });
+      const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+      if (!d || d.ok === false) throw new Error('fail');
+      CLIENTS = null; _clientsPromise = null;
+      await fetchClientsData();
+      closeClient(); renderSummary(); renderSegs(); renderClients();
+    }catch(e){
+      ab.disabled = false; ab.textContent = was;
+      sheet.insertAdjacentHTML('beforeend','<p class="bc-res bad">Не удалось сохранить. Проверьте, что воркфлоу Admin Prices API включён.</p>');
+    }
+  };
+  const mb = sheet.querySelector('#msgBot');
+  if (mb) mb.onclick = () => openComposer([c], 'личное сообщение');
   sheet.querySelectorAll('a[data-tg]').forEach(a => a.onclick = (e) => {
     if (tg?.openTelegramLink){ e.preventDefault(); tg.openTelegramLink(a.href); }
   });
@@ -1029,17 +1132,18 @@ function confirmBox(msg){
   });
 }
 
-function openComposer(){
-  const list  = CURRENT_LIST.slice();
+function openComposer(only, title){
+  const list  = only ? only.slice() : CURRENT_LIST.slice();
   const reach = list.filter(c => c.can_message);
   const noTg  = list.filter(c => !c.can_message);
-  const segName = (SEGS.find(s => s.k === SEG) || {}).l || 'Все';
+  const segName = title || (SEGS.find(s => s.k === SEG) || {}).l || 'Все';
   const sample = reach[0] || null;
 
   const sheet = document.getElementById('sheet');
   sheet.innerHTML = `
     <div class="sh-head">
-      <div><div class="sh-name">Рассылка</div><div class="sh-phone">Фильтр: «${esc(segName)}»${QUERY ? ' + поиск' : ''}</div></div>
+      <div><div class="sh-name">${title ? esc(shownName(list[0])) : 'Рассылка'}</div>
+        <div class="sh-phone">${title ? 'Сообщение через бота' : `Фильтр: «${esc(segName)}»${QUERY ? ' + поиск' : ''}`}</div></div>
       <button class="sh-x" type="button" aria-label="Закрыть">×</button>
     </div>
     <div class="sh-block"><h4>Кому отправить</h4>
@@ -1057,7 +1161,7 @@ function openComposer(){
         ${c.phone ? `<button type="button" class="wa-btn" data-i="${i}">WhatsApp</button>` : ''}
       </div>`).join('')}</div>` : ''}
     <label class="f" for="bcText">Текст сообщения</label>
-    <textarea id="bcText" rows="6" placeholder="{имя}, здравствуйте! …">${esc(TEMPLATES[SEG] || '')}</textarea>
+    <textarea id="bcText" rows="6" placeholder="{имя}, здравствуйте! …">${esc(title ? '' : (TEMPLATES[SEG] || ''))}</textarea>
     <p class="sh-note">{имя} — имя клиента в Telegram, {процедура} — его последняя процедура</p>
     <label class="chk"><input type="checkbox" id="bcBtn" checked> Кнопка «📅 Записаться» под сообщением</label>
     <div class="sh-block"><h4>Так увидит ${sample ? esc(firstName(sample.tg_name) || 'клиент') : 'клиент'}</h4>
@@ -1320,12 +1424,15 @@ function revVisits(){
     const h = (c.history || []).slice().sort((a,b) => String(a.date).localeCompare(String(b.date)));
     // Скидка зависит от числа ПОСЕЩЕНИЙ, а не строк: две процедуры
     // за один день — это один визит
+    // В стаж идут только дни с настоящими процедурами
     const seenDays = [];
-    h.forEach(v => { const dd = String(v.date).slice(0,10); if (!seenDays.includes(dd)) seenDays.push(dd); });
+    h.forEach(v => { const dd = String(v.date).slice(0,10);
+      if (countsForLoyalty(v.service) && !seenDays.includes(dd)) seenDays.push(dd); });
     const usedDays = new Set();
     h.forEach(v => {
       const dd  = String(v.date).slice(0,10);
-      const idx = seenDays.indexOf(dd);          // сколько визитов было ДО этого дня
+      const iSeen = seenDays.indexOf(dd);
+      const idx = iSeen === -1 ? seenDays.filter(d2 => d2 < dd).length : iSeen;
       const firstOfDay = !usedDays.has(dd); usedDays.add(dd);
       // Своя сумма у визита главнее прайса — так учитываются
       // индивидуальные скидки и договорённости
@@ -1519,6 +1626,20 @@ function renderRevenue(){
   const shown = (REV_CAT ? inM.filter(v => v.cat === REV_CAT) : inM)
     .slice().sort((a,b) => a.date.localeCompare(b.date));
 
+  // Откуда пришли клиенты: выручка за всё время, число людей и доля вернувшихся
+  const bySrc = {};
+  (CLIENTS || []).forEach(c => {
+    const src = String(c.source || '').trim();
+    if (!src) return;
+    const b = bySrc[src] = bySrc[src] || { name: src, clients: 0, back: 0, rev: 0 };
+    b.clients++;
+    if (c.visits_count > 1) b.back++;
+    b.rev += all.filter(v => v.key === c.key).reduce((s, v) => s + v.paid, 0);
+  });
+  const srcRows = Object.values(bySrc)
+    .map(s => ({ ...s, backPct: s.clients ? Math.round(s.back / s.clients * 100) : 0 }))
+    .sort((a,b) => b.rev - a.rev);
+
   const months = [5,4,3,2,1,0].map(o => { const m = ymShift(REV_OFFSET + o);
     return { ...m, s: sum(all.filter(v => v.ym === m.ym)), on: o === 0 }; });
   const maxM = Math.max(1, ...months.map(m => m.s));
@@ -1545,6 +1666,13 @@ function renderRevenue(){
         <div class="rv-cat-top"><span>${esc(CAT_TITLE[k] || k)} <i>· ${b.n}</i></span><span>${b.s ? rub(b.s) : (b.unk ? '<i>без цены</i>' : rub(0))}</span></div>
         <div class="rv-bar"><div style="width:${Math.max(3, b.s / maxS * 100)}%"></div></div></button>`).join('')}</div>`
       : '<div class="state" style="padding:20px 8px"><b>Визитов нет</b>В этом месяце отмеченных визитов нет.</div>'}
+    ${srcRows.length ? `<div class="sh-block"><h4>Откуда пришли клиенты · за всё время</h4>
+      ${srcRows.map(s => `<div class="rv-src">
+        <b>${esc(s.name)}</b>
+        <i>${s.clients} ${plural(s.clients,'клиент','клиента','клиентов')} · вернулись ${s.backPct}%</i>
+        <span>${rub(s.rev)}</span></div>`).join('')}
+      <p class="sh-note" style="margin:10px 0 0">Считается по колонке «источник» в визитах — она заполняется при отметке новых клиентов. «Вернулись» — доля тех, кто пришёл больше одного раза.</p>
+    </div>` : ''}
     <div class="sh-block"><h4>Последние полгода</h4>
       <div class="rv-chart">${months.map(m => `
         <div class="rv-col${m.on ? ' on' : ''}"><em>${m.s ? Math.round(m.s/1000) + 'к' : ''}</em>
