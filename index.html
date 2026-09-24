@@ -1,4 +1,4 @@
-<!-- altyeva-build 2026-09-22-1205 lean-events -->
+<!-- altyeva-build 2026-09-24-0708 signed -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -1443,7 +1443,7 @@ SWHj06hCF24/bjn6r0GKZmJhZNGbY8ah7dkyUIX0p6fKvtEpIQtMv//Z" alt="3D-модель �
 </div>
 <div style="text-align:center;padding:16px 20px 8px;">
   <a href="https://tradeban92-ai.github.io/heart-gold-star-moon/privacy.html" target="_blank" style="font-size:10px;color:rgba(43,54,66,0.28);text-decoration:none;">Политика обработки данных</a>
-  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-22-1205</div>
+  <div style="font-size:9px;color:rgba(43,54,66,0.18);margin-top:4px;">v2026-09-24-0708</div>
 </div>
 <div class="tabbar">
   <button class="tab active" data-page="page-services">
@@ -1560,7 +1560,7 @@ function render(cat){
         try{
           if(u?.id){
             await fetch(CONSULT_PING_API,{method:'POST',headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({user_id:u.id, chat_id:u.id, user_name:u.first_name||''})});
+              body:JSON.stringify({init_data:INIT_DATA, user_id:u.id, chat_id:u.id, user_name:u.first_name||''})});
           }
         }catch(e){ /* не дошло — всё равно уводим в чат */ }
         if(tg?.close) tg.close();
@@ -1674,6 +1674,10 @@ const PREFERRED_TIME_API = 'https://unikon777.app.n8n.cloud/webhook/preferred-ti
 const CONSULT_PING_API  = 'https://unikon777.app.n8n.cloud/webhook/consult-ping';
 const EVENTS_API        = 'https://unikon777.app.n8n.cloud/webhook/app-event';
 
+// Подпись Telegram — доказывает, что запрос идёт из приложения, а не со стороны.
+// Без неё сервер данные не отдаёт и заявки не принимает.
+const INIT_DATA = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+
 // ===== Счётчик действий =====
 // Пишем только значимые действия: записи, вопросы Кате, заявки, переносы.
 // Открытия приложения и нажатия зон на карте лица НЕ пишем — каждое событие
@@ -1684,6 +1688,7 @@ function track(event, label){
   try{
     const u = window.Telegram?.WebApp?.initDataUnsafe?.user;
     const payload = JSON.stringify({
+      init_data: INIT_DATA,
       event: event,
       label: label || '',
       user_id: u?.id || '',
@@ -1711,7 +1716,7 @@ function initRequestForm(){
     const tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
     try{
       await fetch(PREFERRED_TIME_API,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ user_id:tg?.id||'', user_name:name, username:tg?.username||'',
+        body:JSON.stringify({ init_data:INIT_DATA, user_id:tg?.id||'', user_name:name, username:tg?.username||'',
           phone, service, desired_time:when, comment })});
       st.textContent='✅ Спасибо! Екатерина свяжется с вами и подберёт время.';
       track('request_sent', service || '');
@@ -1736,7 +1741,7 @@ function getMyLoyalty(){
   if (_loyaltyPromise) return _loyaltyPromise;
   const u = window.Telegram?.WebApp?.initDataUnsafe?.user;
   if (!u?.id) return (_loyaltyPromise = Promise.resolve(null));
-  _loyaltyPromise = fetch(`${LOYALTY_API}?user_id=${u.id}`)
+  _loyaltyPromise = fetch(`${LOYALTY_API}?user_id=${u.id}&init_data=${encodeURIComponent(INIT_DATA)}`)
     .then(r => r.json())
     .then(raw => {
       const d = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
@@ -1862,11 +1867,11 @@ async function loadLoyalty(manualPhone){
     lt=document.getElementById('loyLast'), hw=document.getElementById('historyWrap'),
     hl=document.getElementById('historyList'), note=document.getElementById('loyNote');
   let url;
-  if(manualPhone){ url=`${LOYALTY_API}?phone=${encodeURIComponent(manualPhone)}`; }
+  if(manualPhone){ url=`${LOYALTY_API}?phone=${encodeURIComponent(manualPhone)}&init_data=${encodeURIComponent(INIT_DATA)}`; }
   else{
     const tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
     if(!tg?.id){ lv.textContent='Недоступно'; note.textContent='Откройте приложение через бота, чтобы увидеть свою карту.'; renderTiers(''); return; }
-    url=`${LOYALTY_API}?user_id=${tg.id}`;
+    url=`${LOYALTY_API}?user_id=${tg.id}&init_data=${encodeURIComponent(INIT_DATA)}`;
   }
   lv.textContent='Загрузка…'; note.textContent='';
   try{
