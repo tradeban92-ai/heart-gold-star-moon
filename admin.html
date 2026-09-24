@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-24-1143 archive -->
+<!-- admin-build 2026-09-24-1155 chat -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -221,6 +221,11 @@
   .sh-row:first-of-type{border-top:none;}
   .sh-row span:first-child{white-space:nowrap;}
   .sh-row span:last-child{color:var(--muted);text-align:right;}
+  .chat{max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-top:4px;}
+  .msg{max-width:88%;padding:8px 11px;border-radius:14px;font-size:13.5px;line-height:1.45;white-space:pre-wrap;}
+  .msg i{display:block;font-style:normal;font-size:10.5px;opacity:.6;margin-bottom:3px;}
+  .msg.them{align-self:flex-start;background:#EEF2F5;color:var(--ink);border-bottom-left-radius:5px;}
+  .msg.us{align-self:flex-end;background:var(--steel-dk);color:#fff;border-bottom-right-radius:5px;}
   .sh-mem{font-size:13.5px;line-height:1.5;color:var(--ink);}
   .proc{background:#F7F9FB;border:1px solid var(--line-soft);border-radius:12px;padding:10px;margin-bottom:8px;}
   .proc .svc{margin-bottom:8px;}
@@ -251,7 +256,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-24-1143</p>
+  <p class="ver">версия 2026-09-24-1155</p>
 </header>
 
 <nav class="tabs">
@@ -306,6 +311,31 @@
 
 <script>
 const API = 'https://unikon777.app.n8n.cloud/webhook';
+// Переписка с ботом — тот же источник, что у chat-viewer
+const MESSAGES_URL = 'https://script.google.com/macros/s/AKfycbzAYsJMCtW3XykCJdWB6dRKft8GkhmUeFEqiWg5Xaj4iu8iPodBbWzb5EPDEdj4fleU/exec';
+let MSGS = null, _msgsPromise = null;
+function fetchMessages(){
+  if (_msgsPromise) return _msgsPromise;
+  _msgsPromise = fetch(MESSAGES_URL).then(r => r.json())
+    .then(rows => { MSGS = Array.isArray(rows) ? rows : []; return MSGS; })
+    .catch(() => null);
+  return _msgsPromise;
+}
+// Все сообщения одного клиента, от старых к новым
+function chatOf(userId){
+  const uid = String(userId || '');
+  if (!uid || !MSGS) return [];
+  return MSGS
+    .filter(r => String(r['user_id'] || r['uid'] || '') === uid)
+    .map(r => ({
+      ts:     String(r['ts'] || r['date'] || ''),
+      role:   String(r['role'] || '').toLowerCase(),
+      text:   String(r['text'] || ''),
+      intent: String(r['intent'] || r['tag'] || ''),
+      reply:  String(r['ответ бота'] || r['bot_reply'] || r['reply'] || '')
+    }))
+    .sort((a,b) => String(a.ts).localeCompare(String(b.ts)));
+}
 const SERVICES = [{"l": "Ботулинотерапия Rentox — Лоб+Межбровье+Глаза", "d": 20, "p": 8500}, {"l": "Ботулинотерапия Релатокс — Лоб+Межбровье+Глаза", "d": 20, "p": 14000}, {"l": "Ботулинотерапия Rentox — Лоб+Межбровье", "d": 20, "p": 7500}, {"l": "Ботулинотерапия Релатокс — Лоб+Межбровье", "d": 20, "p": 12000}, {"l": "Ботулинотерапия Rentox — Зона Межбровья", "d": 15, "p": 4500}, {"l": "Ботулинотерапия Релатокс — Зона Межбровья", "d": 15, "p": 6000}, {"l": "Ботулинотерапия Rentox — Зона Глаз", "d": 15, "p": 3500}, {"l": "Ботулинотерапия Релатокс — Зона Глаз", "d": 15, "p": 5000}, {"l": "Ботулинотерапия Rentox — Гипертонус подбородка", "d": 15, "p": 3500}, {"l": "Ботулинотерапия Rentox — Коррекция десневой улыбки", "d": 15, "p": 4000}, {"l": "Ботулинотерапия — Лечение гипергидроза \"Сухие подмышки\"", "d": 45, "p": 18000}, {"l": "Ботулинотерапия — Нижняя треть лица (платизма шеи)", "d": 30, "p": 9000}, {"l": "Ботулинотерапия — Гипертонус жевательных мышц", "d": 30, "p": 9000}, {"l": "Ботулинотерапия — Коррекция прошлых процедур", "d": 10, "p": 0}, {"l": "Бланширование — Белатеро софт", "d": 60, "p": 16000}, {"l": "Коллагенотерапия — Коллост микро", "d": 60, "p": 20000}, {"l": "Коллагенотерапия — Коллост 7%", "d": 60, "p": 16000}, {"l": "Коллагенотерапия — Коллост 15%", "d": 60, "p": 17000}, {"l": "Липолитики — Липолитик Lipolong", "d": 30, "p": 10000}, {"l": "Биоревитализация — Мезо волос", "d": 30, "p": 5000}, {"l": "Биоревитализация — Пентакле", "d": 60, "p": 10000}, {"l": "Биоревитализация — Реви Стронг/Силк 1 мл", "d": 60, "p": 15000}, {"l": "Биоревитализация — Мезовартон", "d": 60, "p": 16000}, {"l": "Филлер — Губы. Южная Корея Eptg 300", "d": 60, "p": 15000}, {"l": "Филлер — Губы. Франция Stylage M,L", "d": 60, "p": 18000}, {"l": "Филлер — Скулы Tesoro sab", "d": 60, "p": 15000}, {"l": "Филлер — Скулы Stylage L", "d": 60, "p": 18000}, {"l": "Филлер — Подбородок Tesoro sab", "d": 45, "p": 15000}, {"l": "Филлер — Подбородок Stylage L", "d": 45, "p": 18000}, {"l": "Филлер — Углы НЧ 3 мл", "d": 60, "p": 30000}, {"l": "Филлер — Выведение геля", "d": 45, "p": 7000}, {"l": "Филлер — Заполнение носогубных складок", "d": 60, "p": 15000}, {"l": "Филлер — Коррекция губ", "d": 10, "p": 1000}, {"l": "Чистка лица — Комбинированная чистка", "d": 90, "p": 5000}, {"l": "Чистка лица+пилинг — Комбинированная чистка+пилинг", "d": 100, "p": 6500}, {"l": "Пилинг — Пилинг Джесснера", "d": 30, "p": 5500}, {"l": "Пилинг — Пилинг Bio Re Pill", "d": 30, "p": 4500}, {"l": "Пилинг — Пилинг Peach Peel", "d": 30, "p": 5000}, {"l": "Консультация — Консультация косметолога", "d": 20, "p": 0}];
 
 const tg = window.Telegram?.WebApp;
@@ -1065,6 +1095,12 @@ function openClient(key){
     html += `<div class="sh-block"><h4>Бот помнит из переписки</h4><div class="sh-mem">${esc(c.memory)}</div></div>`;
   }
   if (c.user_id){
+    html += `<div class="sh-block" id="chatBlock">
+      <h4>Переписка с ботом</h4>
+      <button type="button" class="as-link" id="chatBtn" style="width:100%">Показать переписку</button>
+    </div>`;
+  }
+  if (c.user_id){
     html += `<div class="bc-actions" style="grid-template-columns:1fr">
       <button type="button" id="archBtn">${c.archived ? 'Вернуть из архива' : 'Убрать в архив'}</button></div>
       <p class="sh-note">${c.archived
@@ -1082,6 +1118,29 @@ function openClient(key){
   });
   // Ссылки t.me открываем средствами Telegram — так чат откроется
   // прямо в приложении, а не во внешнем браузере
+  const cb = sheet.querySelector('#chatBtn');
+  if (cb) cb.onclick = async () => {
+    cb.disabled = true; cb.textContent = 'Загружаю…';
+    await fetchMessages();
+    const list = chatOf(c.user_id);
+    const box = sheet.querySelector('#chatBlock');
+    if (!MSGS){ cb.disabled = false; cb.textContent = 'Показать переписку';
+      box.insertAdjacentHTML('beforeend','<p class="sh-note">Не удалось загрузить переписку.</p>'); return; }
+    if (!list.length){ box.innerHTML = '<h4>Переписка с ботом</h4><p class="sh-note" style="margin:0">Сообщений нет.</p>'; return; }
+    const bubbles = list.slice(-60).map(m => {
+      const when = esc(String(m.ts).slice(0,16));
+      let out = '';
+      if (m.role !== 'bot' && m.text) out += `<div class="msg them"><i>${when}</i>${esc(m.text)}</div>`;
+      const botText = m.role === 'bot' ? m.text : m.reply;
+      if (botText) out += `<div class="msg us">${esc(botText)}</div>`;
+      return out;
+    }).join('');
+    box.innerHTML = `<h4>Переписка с ботом · ${list.length} ${plural(list.length,'сообщение','сообщения','сообщений')}</h4>
+      <div class="chat">${bubbles}</div>
+      ${list.length > 60 ? '<p class="sh-note" style="margin:8px 0 0">Показаны последние 60.</p>' : ''}`;
+    box.querySelector('.chat').scrollTop = box.querySelector('.chat').scrollHeight;
+  };
+
   const ab = sheet.querySelector('#archBtn');
   if (ab) ab.onclick = async () => {
     const was = ab.textContent; ab.disabled = true; ab.textContent = 'Сохраняю…';
