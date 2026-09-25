@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-24-1828 booked-when -->
+<!-- admin-build 2026-09-25-0845 pay-amount -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -231,7 +231,10 @@
   .proc{background:#F7F9FB;border:1px solid var(--line-soft);border-radius:12px;padding:10px;margin-bottom:8px;}
   .proc .svc{margin-bottom:8px;}
   .pp{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .pp-txt{font-size:12.5px;color:var(--muted);flex:1;min-width:110px;}
+  .pp-txt{font-size:12.5px;color:var(--muted);flex:1;min-width:130px;}
+  .pp-txt .pay{font-size:17px;font-weight:700;color:var(--ink);}
+  .pp-txt s{margin-left:6px;opacity:.7;}
+  .pp-txt span{margin-left:6px;}
   .pp-input{height:38px;width:120px;flex:none;text-align:right;}
   .pp-edit,.pp-reset{border:1px solid var(--line);background:#fff;border-radius:8px;height:34px;padding:0 10px;
     font:600 12.5px 'Manrope',sans-serif;color:var(--steel-dk);cursor:pointer;flex:none;}
@@ -257,7 +260,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-24-1828</p>
+  <p class="ver">версия 2026-09-25-0845</p>
 </header>
 
 <nav class="tabs">
@@ -400,20 +403,35 @@ function procRowHTML(duration){
     </div>
   </div>`;
 }
+// Сколько взять с клиента: цена по прайсу минус его скидка по карте
+function toPay(label, disc){
+  const p = priceOf(label, new Date().toISOString().slice(0,10));
+  if (typeof p !== 'number') return null;
+  const d = +disc || 0;
+  return { base: p, pay: d ? Math.floor(p * (100 - d) / 100 / 10) * 10 : p, disc: d };
+}
+function paintProcPrice(row){
+  const sel = row.querySelector('.svc'), txt = row.querySelector('.pp-txt');
+  const disc = +(row.closest('[data-disc]')?.dataset.disc || 0);
+  if (!sel.value) { txt.innerHTML = 'выберите процедуру'; return; }
+  const t = toPay(sel.value, disc);
+  if (!t) { txt.innerHTML = 'нет в прайсе'; return; }
+  txt.innerHTML = t.disc
+    ? `<b class="pay">${rub(t.pay)}</b> <s>${rub(t.base)}</s> <span>скидка ${t.disc}%</span>`
+    : `<b class="pay">${rub(t.pay)}</b> <span>по прайсу</span>`;
+}
+// пересчитать все открытые карточки — когда подгрузились скидки клиентов
+function repaintProcPrices(){ document.querySelectorAll('.proc').forEach(paintProcPrice); }
+
 function wireProc(row, onChange){
   const sel = row.querySelector('.svc'), txt = row.querySelector('.pp-txt');
   const edit = row.querySelector('.pp-edit'), inp = row.querySelector('.pp-input');
   const reset = row.querySelector('.pp-reset'), del = row.querySelector('.proc-x');
-  const today = new Date().toISOString().slice(0,10);
-  const refresh = () => {
-    if (!sel.value) { txt.textContent = 'выберите процедуру'; return; }
-    const p = priceOf(sel.value, today);
-    txt.textContent = (typeof p === 'number') ? `по прайсу ${rub(p)}` : 'нет в прайсе';
-  };
+  const refresh = () => paintProcPrice(row);
   sel.onchange = () => { refresh(); onChange(); };
   edit.onclick = () => {
-    const p = priceOf(sel.value, today);
-    if (typeof p === 'number' && !inp.value) inp.value = p;
+    const t = toPay(sel.value, +(row.closest('[data-disc]')?.dataset.disc || 0));
+    if (t && !inp.value) inp.value = t.pay;
     inp.classList.remove('hidden'); reset.classList.remove('hidden');
     edit.classList.add('hidden'); txt.classList.add('hidden'); inp.focus(); onChange();
   };
@@ -497,7 +515,7 @@ function render(){
     BOOKINGS.forEach(b=>{
       if(b.date!==last){ html += `<p class="day">${dayTitle(b.date)}</p>`; last=b.date; }
       html += `
-      <div class="card" data-row="${b.row_number}" data-dur="${b.duration_min||0}" data-p="${esc(String(b.phone||'').replace(/\D/g,'').slice(-10))}">
+      <div class="card" data-row="${b.row_number}" data-dur="${b.duration_min||0}" data-disc="0" data-p="${esc(String(b.phone||'').replace(/\D/g,'').slice(-10))}">
         <div class="meta">${esc(b.time)}${b.duration_min?` · ${b.duration_min} мин`:''}</div>
         <div class="name">${esc(b.client_name||'Без имени')}</div>
         ${b.phone?`<a class="phone" href="tel:+${esc(b.phone)}">${esc(fmtPhone(b.phone))}</a>`:''}
@@ -563,7 +581,7 @@ let walkSeq = 0;
 function addWalk(){
   const id = ++walkSeq;
   const el = document.createElement('div');
-  el.className='card walk'; el.dataset.walk=id;
+  el.className='card walk'; el.dataset.walk=id; el.dataset.disc='0';
   el.innerHTML = `
     <span class="wtitle">Клиент без записи</span><button class="x" type="button" aria-label="Убрать">×</button>
     <div class="row2">
@@ -578,6 +596,13 @@ function addWalk(){
     <input class="w-date" type="date" value="${todayISO()}" max="${todayISO()}">
     <div class="err">Нужны телефон и процедура</div>`;
   el.querySelector('.x').onclick = ()=>{ el.remove(); updateCount(); };
+  // как только введён телефон — подставляем скидку этого клиента
+  el.querySelector('.w-phone').addEventListener('input', () => {
+    const digits = el.querySelector('.w-phone').value.replace(/\D/g,'').slice(-10);
+    const c = (CLIENTS || []).find(x => String(x.phone||'').slice(-10) === digits);
+    el.dataset.disc = (c && c.discount) || 0;
+    el.querySelectorAll('.proc').forEach(paintProcPrice);
+  });
   el.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',()=>{
     i.classList.remove('invalid'); el.querySelector('.err').classList.remove('show'); updateCount();
   }));
@@ -881,6 +906,8 @@ function paintLevels(){
   CLIENTS.forEach(c => { if (c.phone) by[String(c.phone).slice(-10)] = c; });
   document.querySelectorAll('.lvl[data-p]').forEach(el => {
     const c = by[el.dataset.p];
+    const card = el.closest('[data-disc]');
+    if (card) card.dataset.disc = (c && c.discount) || 0;
     if (!c) { el.innerHTML = ''; return; }
     let t;
     if (c.discount)           t = `<span class="lv lv-disc">${esc(c.level)} · скидка ${c.discount}%</span>`;
@@ -889,6 +916,7 @@ function paintLevels(){
     if (c.no_shows)           t += `<span class="lv lv-warn">неявок ранее: ${c.no_shows}</span>`;
     el.innerHTML = t;
   });
+  repaintProcPrices();
   // клиенты подгрузились — уточняем, у кого спрашивать источник
   document.querySelectorAll('.card[data-row]').forEach(paintSource);
 }
