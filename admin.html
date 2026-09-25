@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-25-0845 pay-amount -->
+<!-- admin-build 2026-09-25-0859 referral -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -241,6 +241,15 @@
   .proc-x{margin-left:auto;flex:none;width:34px;height:34px;border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;}
   .add-proc{width:100%;height:42px;border:1.5px dashed var(--line);border-radius:12px;background:transparent;
     color:var(--steel-dk);font:600 13.5px 'Manrope',sans-serif;cursor:pointer;margin-bottom:6px;}
+  .invbox{margin-top:10px;}
+  .inv-find{height:42px;}
+  .inv-hit{display:block;width:100%;text-align:left;border:1px solid var(--line-soft);background:#fff;border-radius:10px;
+    padding:8px 10px;margin-top:6px;font:600 14px 'Manrope',sans-serif;color:var(--ink);cursor:pointer;}
+  .inv-hit:disabled{opacity:.45;}
+  .inv-hit i{display:block;font-style:normal;font-size:12px;font-weight:500;color:var(--muted);}
+  .inv-picked{margin-top:8px;font-size:13.5px;color:#2F5A3D;background:var(--ok-bg);border-radius:10px;padding:8px 10px;}
+  .inv-x{border:none;background:none;color:var(--muted);font-size:18px;cursor:pointer;float:right;line-height:1;}
+  .bonusbox{margin-bottom:6px;}
   .srcbox{margin-top:10px;}
   .src-chips{display:flex;flex-wrap:wrap;gap:6px;}
   .src-chip{min-height:34px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:#fff;
@@ -260,7 +269,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-25-0845</p>
+  <p class="ver">версия 2026-09-25-0859</p>
 </header>
 
 <nav class="tabs">
@@ -373,11 +382,58 @@ function serviceSelect(duration){
 }
 
 // Откуда пришёл клиент — спрашиваем только у новых
-const SOURCES = ['Instagram','Рекомендация','Прямая ссылка','Визитка','Сам в боте','Другое'];
+const SOURCES = ['По приглашению','Instagram','Рекомендация','Прямая ссылка','Визитка','Сам в боте','Другое'];
+const FRIEND_OFF = 1000;      // скидка подруге на первый визит
+const INVITE_LIMIT = 3;       // сколько приглашённых в месяц даёт бонус
+// Бонусы «приведи подругу»
+async function postReferral(body){
+  try{
+    const r = await fetch(`${API}/admin-referral`, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, ...body }) });
+    const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+    return (d && d.ok) ? d : null;
+  }catch(e){ return null; }
+}
+// по карточкам: кому начислить за подругу и у кого списать бонус
+function readBonusActions(){
+  const out = { accrue: [], spend: [] };
+  document.querySelectorAll('.card[data-row], [data-walk]').forEach(card => {
+    const list = card.querySelector('.proc-list');
+    const procs = list ? readProcs(list) : [];
+    if (!procs.length) return;
+    const row = card.dataset.row;
+    if (row && marks[row]?.came !== true) return;              // только пришедшие
+    const disc = +(card.dataset.disc || 0);
+    let sum = 0;
+    procs.forEach(pr => {
+      if (typeof pr.price === 'number') { sum += pr.price; return; }
+      const t = toPay(pr.service, disc); if (t) sum += t.pay;
+    });
+    const phone = card.dataset.p || String(card.querySelector('.w-phone')?.value || '').replace(/\D/g,'');
+    if (card.dataset.inviter){
+      const [invPhone, invName] = card.dataset.inviter.split('|');
+      out.accrue.push({ phone: invPhone, inviter_name: invName,
+        friend_phone: phone,
+        friend_name: (card.querySelector('.name')?.textContent || card.querySelector('.w-name')?.value || '').trim(),
+        visit_sum: Math.max(0, sum - FRIEND_OFF) });
+    }
+    const bonus = +(card.dataset.bonus || 0);
+    if (bonus > 0 && card.querySelector('.use-bonus')?.checked && phone)
+      out.spend.push({ phone, amount: Math.min(bonus, sum) });
+  });
+  return out;
+}
+
 function sourceBox(){
   return `<div class="srcbox">
     <label class="f">Откуда пришёл клиент?</label>
     <div class="src-chips">${SOURCES.map(s => `<button type="button" class="src-chip" data-src="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+    <div class="invbox hidden">
+      <label class="f">Кто привёл</label>
+      <input class="inv-find" type="search" placeholder="имя или телефон" autocomplete="off">
+      <div class="inv-hits"></div>
+      <div class="inv-picked hidden"></div>
+    </div>
   </div>`;
 }
 function wireSource(host, onChange){
@@ -385,8 +441,21 @@ function wireSource(host, onChange){
     const on = b.classList.contains('on');
     host.querySelectorAll('.src-chip').forEach(x => x.classList.remove('on'));
     if (!on) b.classList.add('on');
+    // «По приглашению» — показываем поиск того, кто привёл
+    const box = host.querySelector('.invbox');
+    const byInvite = !on && b.dataset.src === 'По приглашению';
+    if (box){
+      box.classList.toggle('hidden', !byInvite);
+      if (!byInvite){
+        const card = host.closest('[data-disc]');
+        if (card){ delete card.dataset.inviter; card.dataset.ref = '0'; }
+        box.querySelector('.inv-picked').classList.add('hidden');
+        repaintProcPrices();
+      }
+    }
     onChange();
   });
+  wireInviter(host);
 }
 const readSource = host => host?.querySelector('.src-chip.on')?.dataset.src || '';
 
@@ -412,13 +481,23 @@ function toPay(label, disc){
 }
 function paintProcPrice(row){
   const sel = row.querySelector('.svc'), txt = row.querySelector('.pp-txt');
-  const disc = +(row.closest('[data-disc]')?.dataset.disc || 0);
+  const card = row.closest('[data-disc]');
+  const disc = +(card?.dataset.disc || 0);
   if (!sel.value) { txt.innerHTML = 'выберите процедуру'; return; }
   const t = toPay(sel.value, disc);
   if (!t) { txt.innerHTML = 'нет в прайсе'; return; }
-  txt.innerHTML = t.disc
-    ? `<b class="pay">${rub(t.pay)}</b> <s>${rub(t.base)}</s> <span>скидка ${t.disc}%</span>`
-    : `<b class="pay">${rub(t.pay)}</b> <span>по прайсу</span>`;
+  // скидка подруге и списание бонуса — только на первой процедуре визита
+  const first = card && card.querySelector('.proc') === row;
+  let pay = t.pay, notes = [];
+  if (t.disc) notes.push(`скидка ${t.disc}%`);
+  if (first && card?.dataset.ref === '1'){ pay = Math.max(0, pay - FRIEND_OFF); notes.push(`минус ${rub(FRIEND_OFF)} по приглашению`); }
+  if (first && +(card?.dataset.bonus || 0) > 0 && card.querySelector('.use-bonus')?.checked){
+    const used = Math.min(+card.dataset.bonus, pay);
+    pay -= used; notes.push(`бонус −${rub(used)}`);
+  }
+  txt.innerHTML = `<b class="pay">${rub(pay)}</b>` +
+    (pay !== t.base ? ` <s>${rub(t.base)}</s>` : '') +
+    (notes.length ? ` <span>${notes.join(' · ')}</span>` : ' <span>по прайсу</span>');
 }
 // пересчитать все открытые карточки — когда подгрузились скидки клиентов
 function repaintProcPrices(){ document.querySelectorAll('.proc').forEach(paintProcPrice); }
@@ -452,6 +531,37 @@ function addProc(host, duration, onChange){
   wireProc(host.lastElementChild, onChange);
   onChange();
 }
+// Поиск того, кто привёл: по имени или телефону среди клиентов
+function wireInviter(host){
+  const box = host.querySelector('.invbox'); if (!box) return;
+  const card = host.closest('[data-disc]') || host;
+  const find = box.querySelector('.inv-find'), hits = box.querySelector('.inv-hits'), picked = box.querySelector('.inv-picked');
+  find.addEventListener('input', () => {
+    const q = find.value.trim().toLowerCase(), qd = q.replace(/\D/g,'');
+    if (q.length < 2){ hits.innerHTML = ''; return; }
+    const list = (CLIENTS || []).filter(c => !c.archived && c.phone &&
+        ((qd.length >= 3 && String(c.phone).includes(qd)) || shownName(c).toLowerCase().includes(q)))
+      .slice(0, 6);
+    hits.innerHTML = list.map(c => {
+      const over = c.invited_month >= INVITE_LIMIT;
+      return `<button type="button" class="inv-hit" data-ph="${esc(c.phone)}" data-nm="${esc(shownName(c))}"${over ? ' disabled' : ''}>
+        ${esc(shownName(c))}<i>${c.invited_month ? `привела ${c.invited_month} в этом месяце` : 'ещё никого не приводила'}${
+        over ? ' · лимит' : ''}</i></button>`;
+    }).join('') || '<p class="sh-note" style="margin:6px 2px">Никого не нашлось</p>';
+    hits.querySelectorAll('.inv-hit').forEach(b => b.onclick = () => {
+      card.dataset.inviter = b.dataset.ph + '|' + b.dataset.nm;
+      card.dataset.ref = '1';
+      picked.innerHTML = `Привела <b>${esc(b.dataset.nm)}</b> · подруге минус ${rub(FRIEND_OFF)} <button type="button" class="inv-x">×</button>`;
+      picked.classList.remove('hidden'); hits.innerHTML = ''; find.value = '';
+      picked.querySelector('.inv-x').onclick = () => {
+        delete card.dataset.inviter; card.dataset.ref = '0';
+        picked.classList.add('hidden'); repaintProcPrices(); updateCount();
+      };
+      repaintProcPrices(); updateCount();
+    });
+  });
+}
+
 // что выбрано: [{service, price}] — price null значит «по прайсу»
 function readProcs(host){
   return [...host.querySelectorAll('.proc')].map(r => ({
@@ -525,6 +635,7 @@ function render(){
           <button type="button" data-act="no">Не пришла</button>
         </div>
         <div class="svcbox hidden">
+          <div class="bonusbox hidden"></div>
           <label class="f">Процедуры</label>
           <div class="proc-list"></div>
           <button type="button" class="add-proc">+ Было несколько процедур</button>
@@ -692,6 +803,15 @@ document.getElementById('saveBtn').onclick = async ()=>{
     if(d.walkins) bits.push(`${d.walkins} без записи`);
     toast('ok', '✅ Сохранено: ' + (bits.join(', ')||'изменений нет'));
     try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+
+    // Бонусы: начисляем пригласившей, списываем у того, кто пришёл
+    const acts = readBonusActions();
+    acts.accrue.forEach(a => postReferral({ kind:'начисление', ...a }));
+    acts.spend.forEach(s  => postReferral({ kind:'списание', phone:s.phone, amount:s.amount, note:'визит' }));
+    if (acts.accrue.length || acts.spend.length)
+      toast('ok', '✅ Сохранено. ' + [
+        acts.accrue.length ? `Бонус начислен за ${acts.accrue.length} ${plural(acts.accrue.length,'подругу','подруг','подруг')}` : '',
+        acts.spend.length ? `Бонус списан` : ''].filter(Boolean).join(' · '));
 
     // Памятки клиентам — тем, кто пришёл. Отдельный запрос: если он
     // не пройдёт, отметки всё равно уже сохранены.
@@ -907,7 +1027,16 @@ function paintLevels(){
   document.querySelectorAll('.lvl[data-p]').forEach(el => {
     const c = by[el.dataset.p];
     const card = el.closest('[data-disc]');
-    if (card) card.dataset.disc = (c && c.discount) || 0;
+    if (card){
+      card.dataset.disc = (c && c.discount) || 0;
+      card.dataset.bonus = (c && c.bonus) || 0;
+      const bb = card.querySelector('.bonusbox');
+      if (bb && c && c.bonus > 0){
+        bb.innerHTML = `<label class="chk"><input type="checkbox" class="use-bonus" checked> Списать бонус ${rub(c.bonus)}</label>`;
+        bb.classList.remove('hidden');
+        bb.querySelector('.use-bonus').onchange = () => { repaintProcPrices(); };
+      } else if (bb){ bb.innerHTML = ''; bb.classList.add('hidden'); }
+    }
     if (!c) { el.innerHTML = ''; return; }
     let t;
     if (c.discount)           t = `<span class="lv lv-disc">${esc(c.level)} · скидка ${c.discount}%</span>`;
