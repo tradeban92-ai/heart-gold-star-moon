@@ -160,11 +160,23 @@
   .rv-colbar{width:100%;max-width:34px;background:#C9D3DC;border-radius:6px 6px 2px 2px;}
   .rv-col.on .rv-colbar{background:var(--steel-dk);} .rv-col.on em{color:var(--ink);font-weight:700;}
   .rv-col span{font-size:11.5px;color:var(--muted);}
-  .tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin:0 16px 6px;padding:4px;
+  .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 16px 6px;padding:4px;
         background:#DCE3E9;border-radius:12px;}
   .tabs button{height:38px;border:none;border-radius:9px;background:transparent;color:var(--steel-dk);
-        font:600 14px 'Manrope',sans-serif;cursor:pointer;}
+        font:600 13px 'Manrope',sans-serif;cursor:pointer;padding:0 2px;}
   .tabs button.on{background:#fff;box-shadow:0 1px 3px rgba(43,54,66,.12);}
+
+  .chat-row{width:100%;text-align:left;background:var(--panel);border:1px solid var(--line-soft);border-radius:14px;
+        padding:13px 14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:10px;}
+  .chat-row .av{flex:none;width:38px;height:38px;border-radius:50%;background:#EEF2F5;color:var(--steel-dk);
+        display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;}
+  .chat-row .body{flex:1;min-width:0;}
+  .chat-row .top{display:flex;justify-content:space-between;gap:8px;}
+  .chat-row .nm{font-size:15px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .chat-row .when{flex:none;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .chat-row .prev{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+  .chat-row.unread .nm{color:var(--steel-dk);}
+  .chat-row .dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--steel);}
 
   .sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px;}
   .sum-card{background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px;
@@ -276,6 +288,7 @@
   <button type="button" data-tab="visits" class="on">Визиты</button>
   <button type="button" data-tab="clients">Клиенты</button>
   <button type="button" data-tab="revenue">Выручка</button>
+  <button type="button" data-tab="chats">Чаты</button>
 </nav>
 
 <div id="tabVisits">
@@ -321,6 +334,14 @@
   <div id="rMain" class="wrap hidden"></div>
 </div>
 
+<div id="tabChats" class="hidden">
+  <div id="chState" class="state"><b>Загружаю…</b></div>
+  <div id="chMain" class="wrap hidden">
+    <p class="cfound" id="chFound"></p>
+    <div id="chList"></div>
+  </div>
+</div>
+
 <div class="sheet-bg hidden" id="sheetBg"><div class="sheet" id="sheet"></div></div>
 
 <script>
@@ -338,6 +359,27 @@ async function loadChat(clientId){
     _chatCache[id] = d.messages || [];
     return _chatCache[id];
   }catch(e){ return null; }
+}
+// Разметка переписки — используется и в карточке клиента, и во вкладке «Чаты»
+function chatBubblesHtml(list){
+  const bubbles = list.slice(-60).map(m => {
+    const when = esc(String(m.ts));
+    // В строках бота поле text — копия вопроса клиента,
+    // сам ответ лежит в отдельной колонке
+    if (m.role === 'bot'){
+      const t = m.reply || m.text;
+      // метку ставим только на то, что отправили мы сами
+      const mark = ['рассылка','памятка','напоминание'].includes(String(m.intent||'').toLowerCase())
+        ? `<i class="tagline">${esc(m.intent)}</i>` : '';
+      return t ? `<div class="msg us">${esc(t)}${mark}</div>` : '';
+    }
+    let out = m.text ? `<div class="msg them"><i>${when}</i>${esc(m.text)}</div>` : '';
+    if (m.reply) out += `<div class="msg us">${esc(m.reply)}</div>`;
+    return out;
+  }).join('');
+  return `<h4>Переписка с ботом · ${list.length} ${plural(list.length,'сообщение','сообщения','сообщений')}</h4>
+    <div class="chat">${bubbles}</div>
+    ${list.length > 60 ? '<p class="sh-note" style="margin:8px 0 0">Показаны последние 60.</p>' : ''}`;
 }
 const SERVICES = [{"l": "Ботулинотерапия Rentox — Лоб+Межбровье+Глаза", "d": 20, "p": 8500}, {"l": "Ботулинотерапия Релатокс — Лоб+Межбровье+Глаза", "d": 20, "p": 14000}, {"l": "Ботулинотерапия Rentox — Лоб+Межбровье", "d": 20, "p": 7500}, {"l": "Ботулинотерапия Релатокс — Лоб+Межбровье", "d": 20, "p": 12000}, {"l": "Ботулинотерапия Rentox — Зона Межбровья", "d": 15, "p": 4500}, {"l": "Ботулинотерапия Релатокс — Зона Межбровья", "d": 15, "p": 6000}, {"l": "Ботулинотерапия Rentox — Зона Глаз", "d": 15, "p": 3500}, {"l": "Ботулинотерапия Релатокс — Зона Глаз", "d": 15, "p": 5000}, {"l": "Ботулинотерапия Rentox — Гипертонус подбородка", "d": 15, "p": 3500}, {"l": "Ботулинотерапия Rentox — Коррекция десневой улыбки", "d": 15, "p": 4000}, {"l": "Ботулинотерапия — Лечение гипергидроза \"Сухие подмышки\"", "d": 45, "p": 18000}, {"l": "Ботулинотерапия — Нижняя треть лица (платизма шеи)", "d": 30, "p": 9000}, {"l": "Ботулинотерапия — Гипертонус жевательных мышц", "d": 30, "p": 9000}, {"l": "Ботулинотерапия — Коррекция прошлых процедур", "d": 10, "p": 0}, {"l": "Бланширование — Белатеро софт", "d": 60, "p": 16000}, {"l": "Коллагенотерапия — Коллост микро", "d": 60, "p": 20000}, {"l": "Коллагенотерапия — Коллост 7%", "d": 60, "p": 16000}, {"l": "Коллагенотерапия — Коллост 15%", "d": 60, "p": 17000}, {"l": "Липолитики — Липолитик Lipolong", "d": 30, "p": 10000}, {"l": "Биоревитализация — Мезо волос", "d": 30, "p": 5000}, {"l": "Биоревитализация — Пентакле", "d": 60, "p": 10000}, {"l": "Биоревитализация — Реви Стронг/Силк 1 мл", "d": 60, "p": 15000}, {"l": "Биоревитализация — Мезовартон", "d": 60, "p": 16000}, {"l": "Филлер — Губы. Южная Корея Eptg 300", "d": 60, "p": 15000}, {"l": "Филлер — Губы. Франция Stylage M,L", "d": 60, "p": 18000}, {"l": "Филлер — Скулы Tesoro sab", "d": 60, "p": 15000}, {"l": "Филлер — Скулы Stylage L", "d": 60, "p": 18000}, {"l": "Филлер — Подбородок Tesoro sab", "d": 45, "p": 15000}, {"l": "Филлер — Подбородок Stylage L", "d": 45, "p": 18000}, {"l": "Филлер — Углы НЧ 3 мл", "d": 60, "p": 30000}, {"l": "Филлер — Выведение геля", "d": 45, "p": 7000}, {"l": "Филлер — Заполнение носогубных складок", "d": 60, "p": 15000}, {"l": "Филлер — Коррекция губ", "d": 10, "p": 1000}, {"l": "Чистка лица — Комбинированная чистка", "d": 90, "p": 5000}, {"l": "Чистка лица+пилинг — Комбинированная чистка+пилинг", "d": 100, "p": 6500}, {"l": "Пилинг — Пилинг Джесснера", "d": 30, "p": 5500}, {"l": "Пилинг — Пилинг Bio Re Pill", "d": 30, "p": 4500}, {"l": "Пилинг — Пилинг Peach Peel", "d": 30, "p": 5000}, {"l": "Консультация — Консультация косметолога", "d": 20, "p": 0}];
 
@@ -853,9 +895,11 @@ function showTab(t){
   document.getElementById('tabVisits').classList.toggle('hidden', t !== 'visits');
   document.getElementById('tabClients').classList.toggle('hidden', t !== 'clients');
   document.getElementById('tabRevenue').classList.toggle('hidden', t !== 'revenue');
-  document.getElementById('pageTitle').textContent = { visits:'Отметка визитов', clients:'Клиенты', revenue:'Выручка' }[t];
+  document.getElementById('tabChats').classList.toggle('hidden', t !== 'chats');
+  document.getElementById('pageTitle').textContent = { visits:'Отметка визитов', clients:'Клиенты', revenue:'Выручка', chats:'Чаты' }[t];
   if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
   if (t === 'revenue') loadRevenue();
+  if (t === 'chats') loadChats();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
@@ -885,6 +929,21 @@ function bookedWhen(c, k){
   if (k === 'today')    return n === 0;
   if (k === 'tomorrow') return n === 1;
   if (k === 'week')     return n >= 0 && n <= 7;
+  return true;
+}
+
+let TG_WHEN = 'all';            // сегодня / неделя / все — внутри фильтра «TG», по дате подписки
+const TG_WHENS = [
+  { k:'all',   l:'Все' },
+  { k:'today', l:'Сегодня' },
+  { k:'week',  l:'Неделя' },
+];
+// сколько дней назад клиент подписался на бота (по first_seen)
+function joinedWhen(c, k){
+  const n = daysTo(c.first_seen);
+  if (n === null) return false;
+  if (k === 'today') return n === 0;
+  if (k === 'week')  return n <= 0 && n >= -7;
   return true;
 }
 
@@ -974,7 +1033,7 @@ const inSeg = (c, k) => {
   if (c.archived)       return false;          // архивных не показываем нигде
   if (k === 'all')      return true;
   if (k === 'booked')   return c.upcoming.length > 0 && bookedWhen(c, BOOK_WHEN);
-  if (k === 'tg')       return !!c.can_message;      // зарегистрирован в боте
+  if (k === 'tg')       return !!c.can_message && joinedWhen(c, TG_WHEN);   // зарегистрирован в боте
   if (k === 'due')      return c.due && !c.upcoming.length;
   if (k === 'sleeping') return c.segment === 'sleeping' && !c.upcoming.length;
   if (k === 'consult')  return c.only_consult && !c.upcoming.length;
@@ -1151,6 +1210,9 @@ function renderClients(){
     list.sort((a,b) => String(a.upcoming[0]?.date || '').localeCompare(String(b.upcoming[0]?.date || ''))
                     || String(a.upcoming[0]?.time || '').localeCompare(String(b.upcoming[0]?.time || '')));
   }
+  else if (SEG === 'tg') {                       // последние подписавшиеся — сверху
+    list.sort((a,b) => String(b.first_seen || '').localeCompare(String(a.first_seen || '')));
+  }
   else if (SORT === 'count') list.sort((a,b) => (b.visits_count - a.visits_count) || lastSort(a,b));
   else if (SORT === 'name') list.sort((a,b) => shownName(a).localeCompare(shownName(b),'ru'));
   else list.sort(lastSort);
@@ -1172,7 +1234,15 @@ function renderClients(){
     }).join('');
     whenBar.classList.remove('hidden');
     whenBar.querySelectorAll('[data-when]').forEach(b => b.onclick = () => { BOOK_WHEN = b.dataset.when; renderClients(); });
-  } else { whenBar.innerHTML = ''; whenBar.classList.add('hidden'); BOOK_WHEN = 'all'; }
+  } else if (SEG === 'tg'){
+    whenBar.innerHTML = TG_WHENS.map(w => {
+      const n = CLIENTS.filter(c => !c.archived && c.can_message && joinedWhen(c, w.k)).length;
+      return `<button type="button" class="seg-chip${TG_WHEN === w.k ? ' on' : ''}" data-tgwhen="${w.k}">${w.l}<i>${n}</i></button>`;
+    }).join('');
+    whenBar.classList.remove('hidden');
+    whenBar.querySelectorAll('[data-tgwhen]').forEach(b => b.onclick = () => { TG_WHEN = b.dataset.tgwhen; renderClients(); });
+    BOOK_WHEN = 'all';
+  } else { whenBar.innerHTML = ''; whenBar.classList.add('hidden'); BOOK_WHEN = 'all'; TG_WHEN = 'all'; }
 
   document.getElementById('mailBar').innerHTML = list.length
     ? `<button type="button" class="mail-btn" id="mailBtn">✉️ Написать: «${esc(segName)}»${QUERY ? ' + поиск' : ''}<span>${reach} в Telegram</span></button>`
@@ -1189,6 +1259,9 @@ function renderClients(){
     if (c.visits_count){
       sub = `${daysAgo(c.days_since)}`;
       sub += c.discount ? ` · ${c.level} ${c.discount}%` : '';
+    } else if (SEG === 'tg' && c.first_seen){
+      const nd = -daysTo(c.first_seen);
+      sub = `в боте ${daysAgo(nd)}${c.phone ? '' : ' · номер не поделился(ась)'}`;
     } else sub = 'ещё не был(а)';
     if (c.no_shows) sub += ` · неявок ${c.no_shows}`;
     const nx = c.upcoming[0];
@@ -1210,7 +1283,7 @@ document.getElementById('cSort').addEventListener('change', e => { SORT = e.targ
 
 const SEG_LABEL = { none:'Без визитов', active:'Был(а) 1–2 раза', regular:'Постоянный клиент', sleeping:'Давно не был(а)' };
 
-function openClient(key){
+function openClient(key, opts){
   const c = CLIENTS.find(x => x.key === key); if (!c) return;
   const ph = c.phone ? fmtPhone(c.phone) : 'телефон не указан';
   const tags = [];
@@ -1308,26 +1381,10 @@ function openClient(key){
     if (!list){ cb.disabled = false; cb.textContent = 'Показать переписку';
       box.insertAdjacentHTML('beforeend','<p class="sh-note">Не удалось загрузить переписку. Проверьте, что воркфлоу Admin Messages API включён.</p>'); return; }
     if (!list.length){ box.innerHTML = '<h4>Переписка с ботом</h4><p class="sh-note" style="margin:0">Сообщений нет.</p>'; return; }
-    const bubbles = list.slice(-60).map(m => {
-      const when = esc(String(m.ts));
-      // В строках бота поле text — копия вопроса клиента,
-      // сам ответ лежит в отдельной колонке
-      if (m.role === 'bot'){
-        const t = m.reply || m.text;
-        // метку ставим только на то, что отправили мы сами
-        const mark = ['рассылка','памятка','напоминание'].includes(String(m.intent||'').toLowerCase())
-          ? `<i class="tagline">${esc(m.intent)}</i>` : '';
-        return t ? `<div class="msg us">${esc(t)}${mark}</div>` : '';
-      }
-      let out = m.text ? `<div class="msg them"><i>${when}</i>${esc(m.text)}</div>` : '';
-      if (m.reply) out += `<div class="msg us">${esc(m.reply)}</div>`;
-      return out;
-    }).join('');
-    box.innerHTML = `<h4>Переписка с ботом · ${list.length} ${plural(list.length,'сообщение','сообщения','сообщений')}</h4>
-      <div class="chat">${bubbles}</div>
-      ${list.length > 60 ? '<p class="sh-note" style="margin:8px 0 0">Показаны последние 60.</p>' : ''}`;
+    box.innerHTML = chatBubblesHtml(list);
     box.querySelector('.chat').scrollTop = box.querySelector('.chat').scrollHeight;
   };
+  if (opts && opts.openChat && cb) cb.click();
 
   const ab = sheet.querySelector('#archBtn');
   if (ab) ab.onclick = async () => {
@@ -1353,6 +1410,68 @@ function openClient(key){
   });
 }
 function closeClient(){ document.getElementById('sheetBg').classList.add('hidden'); }
+
+// ============================================================
+// ЧАТЫ — все, кто писал боту, сверху самые свежие
+// ============================================================
+// Сортируем по updated_at — времени последнего действия клиента из таблицы.
+// Если поле почему-то не пришло с бэкенда, откатываемся на first_seen
+// (дату подписки), чтобы список не разваливался.
+function timeAgo(iso){
+  if (!iso) return '';
+  const t = new Date(String(iso).replace(' ', 'T'));
+  if (isNaN(t)) return '';
+  const diffMin = Math.round((Date.now() - t.getTime()) / 60000);
+  if (diffMin < 1)   return 'только что';
+  if (diffMin < 60)  return `${diffMin} ${plural(diffMin,'минуту','минуты','минут')} назад`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24)    return `${diffH} ${plural(diffH,'час','часа','часов')} назад`;
+  const diffD = Math.round(diffH / 24);
+  if (diffD === 1)   return 'вчера';
+  if (diffD < 7)     return `${diffD} ${plural(diffD,'день','дня','дней')} назад`;
+  return fmtIso(String(iso).slice(0,10));
+}
+function initials(name){
+  const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0]||'') + (parts[1]?.[0]||'')).toUpperCase() || '?';
+}
+async function loadChats(){
+  if (!tgUser){ document.getElementById('chState').innerHTML = '<b>Откройте через бота</b>Раздел работает только внутри Telegram.'; return; }
+  await fetchClientsData();
+  if (!CLIENTS){
+    document.getElementById('chState').innerHTML = '<b>Нет связи с сервисом</b>Проверьте, что воркфлоу <b style="display:inline;font:inherit;color:inherit">Admin Clients API</b> включён.';
+    return;
+  }
+  document.getElementById('chState').classList.add('hidden');
+  document.getElementById('chMain').classList.remove('hidden');
+  renderChats();
+}
+function renderChats(){
+  // К переписке относим всех, кто зарегистрирован в боте (can_message);
+  // если понадобится показывать только тех, кто реально писал (а не просто
+  // нажал /start), можно дополнительно фильтровать по c.updated_at (истина).
+  const list = CLIENTS.filter(c => c.can_message && !c.archived)
+    .slice()
+    .sort((a,b) => new Date(String(b.updated_at || b.first_seen || 0).replace(' ','T'))
+                 - new Date(String(a.updated_at || a.first_seen || 0).replace(' ','T')));
+
+  document.getElementById('chFound').textContent =
+    `${list.length} ${plural(list.length,'диалог','диалога','диалогов')}`;
+
+  const box = document.getElementById('chList');
+  if (!list.length){ box.innerHTML = '<div class="state" style="padding:24px 8px"><b>Пока пусто</b>Никто ещё не писал боту.</div>'; return; }
+
+  box.innerHTML = list.map(c => `
+    <button type="button" class="chat-row" data-k="${esc(c.key)}">
+      <div class="av">${esc(initials(c.tg_name || c.name))}</div>
+      <div class="body">
+        <div class="top"><span class="nm">${esc(c.tg_name || shownName(c))}</span>
+          <span class="when">${esc(timeAgo(c.updated_at || c.first_seen))}</span></div>
+        <div class="prev">${c.phone ? esc(fmtPhone(c.phone)) : 'телефон не указан'}</div>
+      </div>
+    </button>`).join('');
+  box.querySelectorAll('.chat-row').forEach(b => b.onclick = () => openClient(b.dataset.k, { openChat:true }));
+}
 
 // ============================================================
 // РАССЫЛКА
@@ -1958,7 +2077,7 @@ function renderRevenue(){
 document.getElementById('sheetBg').addEventListener('click', e => { if (e.target.id === 'sheetBg') closeClient(); });
 
 // Открыть сразу нужную вкладку: admin.html?tab=clients
-{ const t0 = new URLSearchParams(location.search).get('tab'); if (t0 === 'clients' || t0 === 'revenue') showTab(t0); }
+{ const t0 = new URLSearchParams(location.search).get('tab'); if (t0 === 'clients' || t0 === 'revenue' || t0 === 'chats') showTab(t0); }
 </script>
 </body>
 </html>
