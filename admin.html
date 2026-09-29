@@ -267,6 +267,14 @@
   .src-chip{min-height:34px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:#fff;
     color:var(--steel-dk);font:600 12.5px 'Manrope',sans-serif;cursor:pointer;}
   .src-chip.on{background:var(--steel-dk);border-color:var(--steel-dk);color:#fff;}
+  .vh-row{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-top:1px solid #EEF2F5;font-size:13.5px;}
+  .vh-row:first-of-type{border-top:none;}
+  .vh-row.on{background:#F5F8FA;border-radius:8px;padding-left:6px;margin-left:-6px;}
+  .vh-row .vh-d{flex:none;width:66px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .vh-row .vh-s{flex:1;min-width:0;color:var(--ink);}
+  .vh-row .vh-p{flex:none;font-weight:700;font-variant-numeric:tabular-nums;}
+  .danger-btn{width:100%;margin-top:8px;height:40px;border-radius:10px;border:1px solid #E3B8B0;background:#FBEEEC;
+        color:#A23B2C;font:600 14px 'Manrope',sans-serif;cursor:pointer;}
   .rv-src{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-top:1px solid #EEF2F5;font-size:14px;}
   .rv-src:first-of-type{border-top:none;}
   .rv-src b{flex:1;font-weight:600;}
@@ -288,7 +296,7 @@
   <button type="button" data-tab="visits" class="on">Визиты</button>
   <button type="button" data-tab="clients">Клиенты</button>
   <button type="button" data-tab="revenue">Выручка</button>
-  <button type="button" data-tab="chats">Чаты</button>
+  <button type="button" data-tab="chats">TG</button>
 </nav>
 
 <div id="tabVisits">
@@ -335,6 +343,10 @@
 </div>
 
 <div id="tabChats" class="hidden">
+  <div class="segs" id="tgSub">
+    <button type="button" class="seg-chip on" data-tgview="live">Чаты</button>
+    <button type="button" class="seg-chip" data-tgview="users">Пользователи</button>
+  </div>
   <div id="chState" class="state"><b>Загружаю…</b></div>
   <div id="chMain" class="wrap hidden">
     <p class="cfound" id="chFound"></p>
@@ -896,7 +908,7 @@ function showTab(t){
   document.getElementById('tabClients').classList.toggle('hidden', t !== 'clients');
   document.getElementById('tabRevenue').classList.toggle('hidden', t !== 'revenue');
   document.getElementById('tabChats').classList.toggle('hidden', t !== 'chats');
-  document.getElementById('pageTitle').textContent = { visits:'Отметка визитов', clients:'Клиенты', revenue:'Выручка', chats:'Чаты' }[t];
+  document.getElementById('pageTitle').textContent = { visits:'Отметка визитов', clients:'Клиенты', revenue:'Выручка', chats:'TG' }[t];
   if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
   if (t === 'revenue') loadRevenue();
   if (t === 'chats') loadChats();
@@ -1019,12 +1031,9 @@ const SEGS = [
   { k:'all',      l:'Все' },
   { k:'booked',   l:'Записаны' },
   { k:'due',      l:'Пора повторить' },
-  { k:'sleeping', l:'Давно не были' },
-  { k:'consult',  l:'Не вернулись после консультации' },
-  { k:'archived', l:'Скрытые' },
-  { k:'tg',       l:'TG' },
   { k:'active',   l:'1–2 визита' },
-  { k:'regular',  l:'Постоянные' },
+  { k:'archived', l:'Скрытые' },
+  { k:'consult',  l:'Не вернулись после консультации' },
 ];
 const shownName = c => c.name || (c.phone ? fmtPhone(c.phone) : 'Без имени');
 // Кто уже записан — тому «пора» и «давно не были» не пишем
@@ -1170,6 +1179,10 @@ function daysAgo(n){
   if (n === 0) return 'сегодня';
   if (n === 1) return 'вчера';
   return `${n} ${plural(n,'день','дня','дней')} назад`;
+}
+function fmtDM(iso){
+  const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return '';
+  return `${m[3]}/${m[2]}`;
 }
 function fmtIso(iso, withYear){
   const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return iso || '';
@@ -1435,6 +1448,12 @@ function initials(name){
   const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0]||'') + (parts[1]?.[0]||'')).toUpperCase() || '?';
 }
+let TG_VIEW = 'live';   // live — живые диалоги, users — все пользователи бота
+document.querySelectorAll('#tgSub [data-tgview]').forEach(b => b.onclick = () => {
+  TG_VIEW = b.dataset.tgview;
+  document.querySelectorAll('#tgSub [data-tgview]').forEach(x => x.classList.toggle('on', x === b));
+  renderChats();
+});
 async function loadChats(){
   if (!tgUser){ document.getElementById('chState').innerHTML = '<b>Откройте через бота</b>Раздел работает только внутри Telegram.'; return; }
   await fetchClientsData();
@@ -1447,10 +1466,34 @@ async function loadChats(){
   renderChats();
 }
 function renderChats(){
-  // К переписке относим всех, кто зарегистрирован в боте (can_message);
-  // если понадобится показывать только тех, кто реально писал (а не просто
-  // нажал /start), можно дополнительно фильтровать по c.updated_at (истина).
-  const list = CLIENTS.filter(c => c.can_message && !c.archived)
+  if (TG_VIEW === 'users'){
+    // Все, кто зарегистрирован в боте — сверху последние подписавшиеся
+    const list = CLIENTS.filter(c => c.can_message && !c.archived)
+      .slice()
+      .sort((a,b) => String(b.first_seen || '').localeCompare(String(a.first_seen || '')));
+
+    document.getElementById('chFound').textContent =
+      `${list.length} ${plural(list.length,'пользователь','пользователя','пользователей')}`;
+
+    const box = document.getElementById('chList');
+    if (!list.length){ box.innerHTML = '<div class="state" style="padding:24px 8px"><b>Пока пусто</b>Никто ещё не заходил в бота.</div>'; return; }
+
+    box.innerHTML = list.map(c => `
+      <button type="button" class="chat-row" data-k="${esc(c.key)}">
+        <div class="av">${esc(initials(c.tg_name || c.name))}</div>
+        <div class="body">
+          <div class="top"><span class="nm">${esc(c.tg_name || shownName(c))}</span>
+            <span class="when">${c.first_seen ? 'зарегистрирован(а) ' + esc(fmtDM(c.first_seen)) : ''}</span></div>
+          <div class="prev">${c.phone ? esc(fmtPhone(c.phone)) : 'телефон не указан'}</div>
+        </div>
+      </button>`).join('');
+    box.querySelectorAll('.chat-row').forEach(b => b.onclick = () => openClient(b.dataset.k));
+    return;
+  }
+
+  // «Чаты» — только живые диалоги: кто реально писал боту (msg_count > 0).
+  // Тех, кто просто нажал /start или только получал рассылки/уведомления, сюда не берём.
+  const list = CLIENTS.filter(c => c.can_message && !c.archived && (c.msg_count > 0))
     .slice()
     .sort((a,b) => new Date(String(b.updated_at || b.first_seen || 0).replace(' ','T'))
                  - new Date(String(a.updated_at || a.first_seen || 0).replace(' ','T')));
@@ -1838,12 +1881,47 @@ function openVisitEdit(v){
   const labels = v.labels && v.labels.length ? v.labels : [];
   const isOld = v.date < PRICE_FROM;
   const sheet = document.getElementById('sheet');
+  const client = (CLIENTS || []).find(x => x.key === v.key);
+  const hist = (client?.history || []).slice().sort((a,b) => String(b.date).localeCompare(String(a.date)));
+  const historyHtml = !hist.length ? '' : `
+    <div class="sh-block"><h4>История посещений · ${hist.length}</h4>
+      ${hist.map(h => `<div class="vh-row${h.row === v.row ? ' on' : ''}">
+        <span class="vh-d">${esc(fmtIso(h.date))}</span>
+        <span class="vh-s">${esc(h.service)}</span>
+        <span class="vh-p">${typeof h.price === 'number' ? rub(h.price) : '—'}</span>
+      </div>`).join('')}
+    </div>`;
+  const deleteBtnHtml = v.row
+    ? `<button type="button" id="vDelete" class="danger-btn">Этой процедуры не было</button>` : '';
+  function wireDelete(){
+    const db = sheet.querySelector('#vDelete'); if (!db) return;
+    db.onclick = async () => {
+      if (!(await confirmBox('Удалить этот визит из истории? Действие нельзя отменить.'))) return;
+      const was = db.textContent; db.disabled = true; db.textContent = 'Удаляю…';
+      try{
+        const r = await fetch(`${API}/admin-visit-delete`, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, row_number:v.row }) });
+        const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+        if (!d || d.ok === false) throw new Error();
+        CLIENTS = null; _clientsPromise = null;
+        await fetchClientsData();
+        closeClient(); renderRevenue();
+        try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+      }catch(e){
+        db.disabled = false; db.textContent = was;
+        sheet.insertAdjacentHTML('beforeend',
+          '<p class="bc-res bad">Не удалось удалить. Проверьте, что воркфлоу Admin Visit Delete включён.</p>');
+      }
+    };
+  }
   if (!labels.length){
     sheet.innerHTML = `<div class="sh-head"><div><div class="sh-name">${esc(v.who)}</div>
       <div class="sh-phone">${fmtIso(v.date, true)}</div></div>
       <button class="sh-x" type="button">×</button></div>
       <div class="sh-block"><h4>Процедура не распознана</h4><div class="sh-mem">${esc(v.service)}</div>
-      <p class="sh-note" style="margin:8px 0 0">Название не совпало с прайсом, поэтому цену подставить не из чего. Поправьте его в таблице визитов.</p></div>`;
+      <p class="sh-note" style="margin:8px 0 0">Название не совпало с прайсом, поэтому цену подставить не из чего. Поправьте его в таблице визитов.</p>
+      ${deleteBtnHtml}</div>${historyHtml}`;
+    wireDelete();
   } else {
     sheet.innerHTML = `
       <div class="sh-head"><div><div class="sh-name">${esc(v.who)}</div>
@@ -1864,7 +1942,8 @@ function openVisitEdit(v){
           <button type="button" id="vSave" class="primary">Сохранить</button>
         </div>
         <p class="sh-note" style="margin:8px 0 0">Меняется только этот визит — у остальных клиентов цена останется прежней.</p>
-      </div>
+        ${deleteBtnHtml}
+      </div>${historyHtml}
 
       <details class="ed-all"><summary>Изменить цену процедуры для всех</summary>
       ${labels.map((lbl, i) => {
@@ -1911,6 +1990,7 @@ function openVisitEdit(v){
     }
     sheet.querySelector('#vSave').onclick = () => pushVisit(+vP.value || 0, +vC.value || 0);
     sheet.querySelector('#vReset').onclick = () => pushVisit('', '');
+    wireDelete();
 
     const btnSave = sheet.querySelector('#edSave');
     async function pushPrices(getValues){
