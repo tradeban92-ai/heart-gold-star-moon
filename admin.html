@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-30-1015 date-format-fix -->
+<!-- admin-build 2026-09-30-1610 vip-kpd-date -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -149,8 +149,6 @@
   .ed-row b{font-size:16px;color:#2F5A3D;}
   .ed-svc{font-size:13px;line-height:1.5;color:var(--ink);background:#F7F9FB;border-radius:10px;padding:10px 12px;margin-bottom:10px;}
   .ed-svc i{font-style:normal;color:var(--muted);}
-  .ed-all{margin-top:4px;}
-  .ed-all summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--steel);padding:8px 2px;}
   .rv-sum .own{font-size:11px;font-weight:700;color:#7A5A1E;background:#F6EFDC;border-radius:5px;padding:1px 5px;margin-left:5px;} .rv-cat-top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px;}
   .rv-cat-top i{font-style:normal;color:var(--muted);} .rv-cat-top span:last-child{font-weight:700;font-variant-numeric:tabular-nums;}
   .rv-bar{height:7px;border-radius:4px;background:#EEF2F5;overflow:hidden;} .rv-bar div{height:100%;background:var(--steel);border-radius:4px;}
@@ -184,6 +182,8 @@
   .sum-card b{display:block;font-size:26px;font-weight:700;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;}
   .sum-card span{font-size:12.5px;color:var(--muted);}
   .sum-card.warn b{color:var(--no);}
+  .sum-card.vip{background:linear-gradient(135deg,#F7E7B0,#E8C468);border-color:#D8AF4A;}
+  .sum-card.vip b, .sum-card.vip span{color:#5B4009;}
 
   .segs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 10px;}
   .seg-chip{flex:0 0 auto;min-height:36px;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:#fff;
@@ -289,7 +289,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-30-1015</p>
+  <p class="ver">версия 2026-09-30-1610</p>
 </header>
 
 <nav class="tabs">
@@ -375,7 +375,7 @@ async function loadChat(clientId){
 // Разметка переписки — используется и в карточке клиента (полная история),
 // и во вкладке «TG → Чаты» (onlyDialog=true — без рассылок/уведомлений)
 const isBroadcastMsg = m => m.role === 'bot' &&
-  ['рассылка','памятка','напоминание'].includes(String(m.intent||'').toLowerCase());
+  ['рассылка','памятка','напоминание','чаевые'].includes(String(m.intent||'').toLowerCase());
 function chatBubblesHtml(list, onlyDialog){
   const src = onlyDialog ? list.filter(m => !isBroadcastMsg(m)) : list;
   const bubbles = src.slice(-60).map(m => {
@@ -1056,6 +1056,7 @@ const SEGS = [
 ];
 const shownName = c => c.name || (c.phone ? fmtPhone(c.phone) : 'Без имени');
 // Кто уже записан — тому «пора» и «давно не были» не пишем
+const totalRevenue = c => (c.history || []).reduce((s, h) => s + (typeof h.price === 'number' ? h.price : 0), 0);
 const inSeg = (c, k) => {
   if (k === 'archived') return !!c.archived;
   if (c.archived)       return false;          // архивных не показываем нигде
@@ -1065,6 +1066,7 @@ const inSeg = (c, k) => {
   if (k === 'due')      return c.due && !c.upcoming.length;
   if (k === 'sleeping') return c.segment === 'sleeping' && !c.upcoming.length;
   if (k === 'consult')  return c.only_consult && !c.upcoming.length;
+  if (k === 'vip')      return c.visits_count > 5;
   return c.segment === k;
 };
 
@@ -1174,11 +1176,11 @@ function renderSummary(){
   const s = SUMMARY;
   const card = (n, label, seg, warn) =>
     `<button type="button" class="sum-card${warn ? ' warn' : ''}" data-seg="${seg}"><b>${n ?? 0}</b><span>${label}</span></button>`;
-  const total = CLIENTS.length;
+  const vip   = CLIENTS.filter(c => inSeg(c,'vip')).length;
   const due   = CLIENTS.filter(c => inSeg(c,'due')).length;
   const sleep = CLIENTS.filter(c => inSeg(c,'sleeping')).length;
   document.getElementById('cSum').innerHTML =
-      card(total, `${plural(total,'клиент','клиента','клиентов')} всего`, 'all')
+      `<button type="button" class="sum-card vip" data-seg="vip"><b>${vip}</b><span>VIP · 5+ визитов</span></button>`
     + card(s.upcoming_7, `${plural(s.upcoming_7||0,'запись','записи','записей')} на неделю`, 'booked')
     + card(due,   'пора повторить', 'due')
     + card(sleep, 'давно не были', 'sleeping', sleep > 0);
@@ -1244,6 +1246,9 @@ function renderClients(){
   }
   else if (SEG === 'tg') {                       // последние подписавшиеся — сверху
     list.sort((a,b) => String(b.first_seen || '').localeCompare(String(a.first_seen || '')));
+  }
+  else if (SEG === 'vip') {                      // больше всех принесли денег — сверху
+    list.sort((a,b) => totalRevenue(b) - totalRevenue(a));
   }
   else if (SORT === 'count') list.sort((a,b) => (b.visits_count - a.visits_count) || lastSort(a,b));
   else if (SORT === 'name') list.sort((a,b) => shownName(a).localeCompare(shownName(b),'ru'));
@@ -1849,6 +1854,16 @@ function costOf(service){
   return known ? sum : undefined;
 }
 const PRICE = Object.fromEntries(SERVICES.map(s => [s.l, s.p]));
+const DURATION = Object.fromEntries(SERVICES.map(s => [s.l, s.d]));
+function durationOf(service){                    // суммарная длительность визита, мин
+  let sum = 0, known = false;
+  splitSvc(service).forEach(part => {
+    const lbl = labelOf(part); if (!lbl) return;
+    const d = DURATION[lbl];
+    if (typeof d === 'number') { sum += d; known = true; }
+  });
+  return known ? sum : undefined;
+}
 const MONTHS_NOM = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const MONTHS_SH  = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
 const MONTHS_DAT = ['январю','февралю','марту','апрелю','маю','июню','июлю','августу','сентябрю','октябрю','ноябрю','декабрю'];
@@ -1899,6 +1914,12 @@ function ymShift(off){ const d = new Date(); d.setDate(1); d.setMonth(d.getMonth
 function openVisitEdit(v){
   const labels = v.labels && v.labels.length ? v.labels : [];
   const isOld = v.date < PRICE_FROM;
+  const durMin = durationOf(v.service);
+  function kpdText(profit){
+    if (!durMin) return 'длительность процедуры неизвестна';
+    const perMin = profit / durMin;
+    return `${rub(perMin)}/мин · ${rub(perMin * 60)}/час`;
+  }
   const sheet = document.getElementById('sheet');
   const client = (CLIENTS || []).find(x => x.key === v.key);
   const hist = (client?.history || []).slice().sort((a,b) => String(b.date).localeCompare(String(a.date)));
@@ -1912,6 +1933,37 @@ function openVisitEdit(v){
     </div>`;
   const deleteBtnHtml = v.row
     ? `<button type="button" id="vDelete" class="danger-btn">Этой процедуры не было</button>` : '';
+  const dateBtnHtml = v.row ? `
+    <button type="button" id="vDateBtn" style="width:100%;margin-top:8px">Изменить дату</button>
+    <div id="vDateBox" class="hidden" style="margin-top:8px">
+      <div class="ed-row"><label>Новая дата</label><input id="vDateInput" type="date" value="${esc(String(v.date).slice(0,10))}"></div>
+      <div class="bc-actions"><button type="button" id="vDateSave" class="primary">Сохранить дату</button></div>
+    </div>` : '';
+  function wireDateChange(){
+    const btn = sheet.querySelector('#vDateBtn'); if (!btn) return;
+    const box = sheet.querySelector('#vDateBox');
+    btn.onclick = () => { box.classList.toggle('hidden'); };
+    sheet.querySelector('#vDateSave').onclick = async () => {
+      const newDate = sheet.querySelector('#vDateInput').value; if (!newDate) return;
+      const sb = sheet.querySelector('#vDateSave'); const was = sb.textContent;
+      sb.disabled = true; sb.textContent = 'Сохраняю…';
+      try{
+        const r = await fetch(`${API}/admin-visit-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, row_number:v.row, date:newDate,
+            price: v.known ? v.paid : '', cost: v.cost || '' }) });
+        const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+        if (!d || d.ok === false) throw new Error();
+        CLIENTS = null; _clientsPromise = null;
+        await fetchClientsData();
+        closeClient(); renderRevenue();
+        try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+      }catch(e){
+        sb.disabled = false; sb.textContent = was;
+        sheet.insertAdjacentHTML('beforeend',
+          '<p class="bc-res bad">Не удалось сохранить дату. Проверьте, что воркфлоу Admin Prices API умеет обновлять поле date.</p>');
+      }
+    };
+  }
   function wireDelete(){
     const db = sheet.querySelector('#vDelete'); if (!db) return;
     db.onclick = async () => {
@@ -1939,8 +1991,9 @@ function openVisitEdit(v){
       <button class="sh-x" type="button">×</button></div>
       <div class="sh-block"><h4>Процедура не распознана</h4><div class="sh-mem">${esc(v.service)}</div>
       <p class="sh-note" style="margin:8px 0 0">Название не совпало с прайсом, поэтому цену подставить не из чего. Поправьте его в таблице визитов.</p>
-      ${deleteBtnHtml}</div>${historyHtml}`;
+      ${deleteBtnHtml}${dateBtnHtml}</div>${historyHtml}`;
     wireDelete();
+    wireDateChange();
   } else {
     sheet.innerHTML = `
       <div class="sh-head"><div><div class="sh-name">${esc(v.who)}</div>
@@ -1956,36 +2009,21 @@ function openVisitEdit(v){
         <div class="ed-row"><label>Сумма, ₽</label><input id="vPrice" type="number" inputmode="numeric" value="${v.known ? v.paid : ''}"></div>
         <div class="ed-row"><label>Расходники, ₽</label><input id="vCost" type="number" inputmode="numeric" value="${v.cost || 0}"></div>
         <div class="ed-row"><label>Прибыль</label><b class="ed-profit" id="vProfit">${rub((v.known ? v.paid : 0) - (v.cost || 0))}</b></div>
+        <div class="ed-row"><label>КПД</label><b class="ed-profit" id="vKpd" style="font-size:14px">${kpdText((v.known ? v.paid : 0) - (v.cost || 0))}</b></div>
         <div class="bc-actions" style="margin-top:10px">
           <button type="button" id="vReset"${v.own ? '' : ' disabled'}>Вернуть по прайсу</button>
           <button type="button" id="vSave" class="primary">Сохранить</button>
         </div>
         <p class="sh-note" style="margin:8px 0 0">Меняется только этот визит — у остальных клиентов цена останется прежней.</p>
-        ${deleteBtnHtml}
-      </div>${historyHtml}
-
-      <details class="ed-all"><summary>Изменить цену процедуры для всех</summary>
-      ${labels.map((lbl, i) => {
-        const price = priceOf(lbl, v.date) || 0;
-        const cost  = costOf(lbl) ?? 0;
-        return `<div class="sh-block" data-lbl="${esc(lbl)}">
-          <h4>${esc(lbl)}</h4>
-          <div class="ed-row"><label>Цена, ₽</label><input class="ed-price" type="number" inputmode="numeric" value="${price}"></div>
-          <div class="ed-row"><label>Расходники, ₽</label><input class="ed-cost" type="number" inputmode="numeric" value="${cost}"></div>
-          <div class="ed-row"><label>Прибыль</label><b class="ed-profit">${rub(price - cost)}</b></div>
-        </div>`; }).join('')}
-      <p class="sh-note">Это изменит прайс${isOld ? ' до 01.10.2026' : ' с 01.10.2026'} для всех визитов с этой процедурой.</p>
-      <div class="bc-actions"><button type="button" id="edReset">Вернуть как было</button>
-        <button type="button" id="edSave" class="primary">Изменить у всех</button></div>
-      </details>`;
-    const recalc = () => sheet.querySelectorAll('[data-lbl]').forEach(box => {
-      const p = +box.querySelector('.ed-price').value || 0, c = +box.querySelector('.ed-cost').value || 0;
-      box.querySelector('.ed-profit').textContent = rub(p - c);
-    });
-    sheet.querySelectorAll('.ed-price,.ed-cost').forEach(i => i.addEventListener('input', recalc));
+        ${deleteBtnHtml}${dateBtnHtml}
+      </div>${historyHtml}`;
     // ---- сумма этого визита ----
     const vP = sheet.querySelector('#vPrice'), vC = sheet.querySelector('#vCost');
-    const vProfit = () => sheet.querySelector('#vProfit').textContent = rub((+vP.value || 0) - (+vC.value || 0));
+    const vProfit = () => {
+      const profit = (+vP.value || 0) - (+vC.value || 0);
+      sheet.querySelector('#vProfit').textContent = rub(profit);
+      sheet.querySelector('#vKpd').textContent = kpdText(profit);
+    };
     vP.addEventListener('input', vProfit); vC.addEventListener('input', vProfit);
     async function pushVisit(price, cost){
       const btn = sheet.querySelector('#vSave'); const was = btn.textContent;
@@ -2010,41 +2048,7 @@ function openVisitEdit(v){
     sheet.querySelector('#vSave').onclick = () => pushVisit(+vP.value || 0, +vC.value || 0);
     sheet.querySelector('#vReset').onclick = () => pushVisit('', '');
     wireDelete();
-
-    const btnSave = sheet.querySelector('#edSave');
-    async function pushPrices(getValues){
-      btnSave.disabled = true; btnSave.textContent = 'Сохраняю…';
-      const rows = [...sheet.querySelectorAll('[data-lbl]')].map(box => {
-        const lbl = box.dataset.lbl;
-        const known = (PRICES && PRICES[lbl]) || {};
-        const v = getValues(box, lbl);
-        return {
-          label: lbl,
-          old:  isOld ? v.price : (typeof known.old === 'number' ? known.old : (OLD_PRICE[lbl] ?? PRICE_FULL[normSvc(lbl)] ?? 0)),
-          new: !isOld ? v.price : (typeof known.new === 'number' ? known.new : (PRICE_FULL[normSvc(lbl)] ?? 0)),
-          cost: v.cost,
-        };
-      });
-      try{
-        const r = await fetch(`${API}/admin-price-save`, { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, rows }) });
-        const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
-        if (!d || d.ok === false) throw new Error('forbidden');
-        await fetchPrices(true);
-        closeClient(); renderRevenue();
-        try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
-      }catch(e){
-        btnSave.disabled = false; btnSave.textContent = 'Сохранить';
-        sheet.insertAdjacentHTML('beforeend',
-          '<p class="bc-res bad">Не удалось сохранить в таблицу. Проверьте, что воркфлоу Admin Prices API включён.</p>');
-      }
-    }
-    btnSave.onclick = () => pushPrices(box => ({
-      price: +box.querySelector('.ed-price').value || 0,
-      cost:  +box.querySelector('.ed-cost').value  || 0 }));
-    sheet.querySelector('#edReset').onclick = () => pushPrices((box, lbl) => ({
-      price: (isOld ? (OLD_PRICE[lbl] ?? PRICE_FULL[normSvc(lbl)]) : PRICE_FULL[normSvc(lbl)]) || 0,
-      cost:  costOne(lbl) ?? 0 }));
+    wireDateChange();
   }
   sheet.querySelector('.sh-x').onclick = closeClient;
   sheet.scrollTop = 0;
@@ -2099,7 +2103,7 @@ function renderRevenue(){
   // полгода
   inM.forEach((v, i) => v._i = i);
   const shown = (REV_CAT ? inM.filter(v => v.cat === REV_CAT) : inM)
-    .slice().sort((a,b) => a.date.localeCompare(b.date));
+    .slice().sort((a,b) => b.date.localeCompare(a.date));
 
   // Откуда пришли клиенты: выручка за всё время, число людей и доля вернувшихся
   const bySrc = {};
