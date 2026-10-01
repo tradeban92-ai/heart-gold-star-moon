@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-30-1610 vip-kpd-date -->
+<!-- admin-build 2026-09-30-1715 vip-sort-fix -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -289,7 +289,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-30-1610</p>
+  <p class="ver">версия 2026-09-30-1715</p>
 </header>
 
 <nav class="tabs">
@@ -1056,7 +1056,6 @@ const SEGS = [
 ];
 const shownName = c => c.name || (c.phone ? fmtPhone(c.phone) : 'Без имени');
 // Кто уже записан — тому «пора» и «давно не были» не пишем
-const totalRevenue = c => (c.history || []).reduce((s, h) => s + (typeof h.price === 'number' ? h.price : 0), 0);
 const inSeg = (c, k) => {
   if (k === 'archived') return !!c.archived;
   if (c.archived)       return false;          // архивных не показываем нигде
@@ -1248,7 +1247,7 @@ function renderClients(){
     list.sort((a,b) => String(b.first_seen || '').localeCompare(String(a.first_seen || '')));
   }
   else if (SEG === 'vip') {                      // больше всех принесли денег — сверху
-    list.sort((a,b) => totalRevenue(b) - totalRevenue(a));
+    list.sort((a,b) => clientProfit(b) - clientProfit(a));
   }
   else if (SORT === 'count') list.sort((a,b) => (b.visits_count - a.visits_count) || lastSort(a,b));
   else if (SORT === 'name') list.sort((a,b) => shownName(a).localeCompare(shownName(b),'ru'));
@@ -1372,6 +1371,7 @@ function openClient(key, opts){
   if (c.no_shows)    stats.push(['Не пришёл(а)', String(c.no_shows)]);
   if (c.cancels)     stats.push(['Отменял(а)', String(c.cancels)]);
   if (c.first_seen)  stats.push(['Впервые появился(ась)', fmtIso(c.first_seen, true)]);
+  if (c.history.length) stats.push(['Чистая прибыль за всё время', rub(clientProfit(c))]);
   html += `<div class="sh-block"><h4>Сводка</h4>${rows(stats)}</div>`;
 
   if (c.history.length){
@@ -1906,6 +1906,29 @@ function revVisits(){
     });
   });
   return out;
+}
+// Чистая прибыль клиента за всё время — та же логика цен, что и в «Выручке»:
+// своя сумма визита важнее прайса, скидка по карте лояльности — только когда
+// сумма не задана вручную, расходники — свои или из прайса.
+function clientProfit(c){
+  const h = (c.history || []).slice().sort((a,b) => String(a.date).localeCompare(String(b.date)));
+  const seenDays = [];
+  h.forEach(v => { const dd = String(v.date).slice(0,10);
+    if (countsForLoyalty(v.service) && !seenDays.includes(dd)) seenDays.push(dd); });
+  let profit = 0;
+  h.forEach(v => {
+    const dd = String(v.date).slice(0,10);
+    const iSeen = seenDays.indexOf(dd);
+    const idx = iSeen === -1 ? seenDays.filter(d2 => d2 < dd).length : iSeen;
+    const ownPrice = typeof v.price === 'number';
+    const base  = ownPrice ? v.price : priceOf(v.service, v.date);
+    const known = typeof base === 'number';
+    const pct   = (ownPrice || String(v.date) < DISCOUNT_FROM) ? 0 : pctOf(idx);
+    const paid  = known ? (pct ? Math.floor(base * (100 - pct) / 100 / 10) * 10 : base) : 0;
+    const cst   = (typeof v.cost === 'number') ? v.cost : costOf(v.service);
+    profit += paid - (cst || 0);
+  });
+  return profit;
 }
 function ymShift(off){ const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - off);
   return { ym: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, m: d.getMonth(), y: d.getFullYear() }; }
