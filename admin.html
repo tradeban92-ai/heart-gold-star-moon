@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-30-1715 vip-sort-fix -->
+<!-- admin-build 2026-09-30-1800 sort-dropdown-fix -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -289,7 +289,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-30-1715</p>
+  <p class="ver">версия 2026-09-30-1800</p>
 </header>
 
 <nav class="tabs">
@@ -327,6 +327,7 @@
       <select id="cSort" aria-label="Сортировка">
         <option value="last">Недавние</option>
         <option value="count">Больше визитов</option>
+        <option value="money">Принесли денег</option>
         <option value="name">По имени</option>
       </select>
     </div>
@@ -1183,7 +1184,11 @@ function renderSummary(){
     + card(s.upcoming_7, `${plural(s.upcoming_7||0,'запись','записи','записей')} на неделю`, 'booked')
     + card(due,   'пора повторить', 'due')
     + card(sleep, 'давно не были', 'sleeping', sleep > 0);
-  document.querySelectorAll('.sum-card').forEach(b => b.onclick = () => { SEG = b.dataset.seg; renderSegs(); renderClients(); });
+  document.querySelectorAll('.sum-card').forEach(b => b.onclick = () => {
+    SEG = b.dataset.seg;
+    if (SEG === 'vip') { SORT = 'money'; const sel = document.getElementById('cSort'); if (sel) sel.value = 'money'; }
+    renderSegs(); renderClients();
+  });
 }
 
 function renderSegs(){
@@ -1246,9 +1251,7 @@ function renderClients(){
   else if (SEG === 'tg') {                       // последние подписавшиеся — сверху
     list.sort((a,b) => String(b.first_seen || '').localeCompare(String(a.first_seen || '')));
   }
-  else if (SEG === 'vip') {                      // больше всех принесли денег — сверху
-    list.sort((a,b) => clientProfit(b) - clientProfit(a));
-  }
+  else if (SORT === 'money') list.sort((a,b) => (clientProfit(b) - clientProfit(a)) || lastSort(a,b));
   else if (SORT === 'count') list.sort((a,b) => (b.visits_count - a.visits_count) || lastSort(a,b));
   else if (SORT === 'name') list.sort((a,b) => shownName(a).localeCompare(shownName(b),'ru'));
   else list.sort(lastSort);
