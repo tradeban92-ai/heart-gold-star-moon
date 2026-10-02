@@ -1,4 +1,4 @@
-<!-- admin-build 2026-09-30-1800 sort-dropdown-fix -->
+<!-- admin-build 2026-09-30-1915 private-notes -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -203,6 +203,7 @@
   .cl-name{font-size:15.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .cl-name .tg{font-size:11px;color:var(--steel);margin-left:5px;font-weight:700;}
   .cl-sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .cl-note{font-size:12.5px;color:var(--steel-dk);font-style:italic;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cl-sub.warn{color:var(--no);}
   .cl-next{font-size:12px;font-weight:700;color:#2F5A3D;background:var(--ok-bg);display:inline-block;
       border-radius:6px;padding:2px 7px;margin-top:5px;}
@@ -289,7 +290,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-09-30-1800</p>
+  <p class="ver">версия 2026-09-30-1915</p>
 </header>
 
 <nav class="tabs">
@@ -1236,7 +1237,7 @@ function renderClients(){
   let list = CLIENTS.filter(c => inSeg(c, SEG)).filter(c => {
     if (!q) return true;
     if (qDigits.length >= 3 && String(c.phone).includes(qDigits)) return true;
-    return (shownName(c) + ' ' + (c.tg_name||'')).toLowerCase().includes(q);
+    return (shownName(c) + ' ' + (c.tg_name||'') + ' ' + (c.note||'')).toLowerCase().includes(q);
   });
 
   const lastSort = (a,b) => {
@@ -1307,6 +1308,7 @@ function renderClients(){
     return `<button type="button" class="cl" data-k="${esc(c.key)}">
       <div class="cl-main">
         <div class="cl-name">${esc(shownName(c))}${c.can_message ? '<span class="tg">TG</span>' : ''}</div>
+        ${c.note ? `<div class="cl-note">${esc(c.note)}</div>` : ''}
         <div class="cl-sub${sleeping ? ' warn' : ''}">${esc(sub)}</div>
         ${nx ? `<div class="cl-next">записан(а) ${dayWord(nx.date)} в ${esc(nx.time)}</div>` : ''}
         ${!nx && c.due ? `<div class="cl-due">пора повторить · ${esc(CAT_TITLE[c.last_cat] || 'процедура')}</div>` : ''}
@@ -1338,7 +1340,20 @@ function openClient(key, opts){
       <div><div class="sh-name">${esc(shownName(c))}</div><div class="sh-phone">${esc(ph)}</div></div>
       <button class="sh-x" type="button" aria-label="Закрыть">×</button>
     </div>
-    <div class="sh-tags">${tags.join('')}</div>`;
+    <div class="sh-tags">${tags.join('')}</div>
+    <div class="sh-block" id="noteBlock">
+      <h4>Заметка <span style="font-weight:400;color:var(--muted);font-size:12.5px">— видна только вам</span></h4>
+      <p class="sh-note" id="noteView" style="margin:0 0 8px">${c.note ? esc(c.note) : 'Заметки нет'}</p>
+      <button type="button" class="as-link" id="noteEditBtn">${c.note ? 'Изменить' : 'Добавить заметку'}</button>
+      <div id="noteEditBox" class="hidden" style="margin-top:8px">
+        <textarea id="noteInput" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:8px;font:inherit;resize:vertical"
+          placeholder="Например: подруга дяди Пети из Нальчика">${esc(c.note || '')}</textarea>
+        <div class="bc-actions" style="margin-top:8px">
+          <button type="button" id="noteCancel">Отмена</button>
+          <button type="button" id="noteSave" class="primary">Сохранить</button>
+        </div>
+      </div>
+    </div>`;
 
   if (c.phone){
     html += `<div class="sh-actions">
@@ -1408,6 +1423,36 @@ function openClient(key, opts){
   sheet.scrollTop = 0;
   document.getElementById('sheetBg').classList.remove('hidden');
   sheet.querySelector('.sh-x').onclick = closeClient;
+  (() => {
+    const editBtn = sheet.querySelector('#noteEditBtn');
+    const box = sheet.querySelector('#noteEditBox');
+    const input = sheet.querySelector('#noteInput');
+    editBtn.onclick = () => { box.classList.remove('hidden'); input.focus(); };
+    sheet.querySelector('#noteCancel').onclick = () => box.classList.add('hidden');
+    sheet.querySelector('#noteSave').onclick = async () => {
+      if (!c.phone) {
+        sheet.querySelector('#noteBlock').insertAdjacentHTML('beforeend',
+          '<p class="bc-res bad">У клиента не указан телефон — заметку не к чему привязать.</p>');
+        return;
+      }
+      const sb = sheet.querySelector('#noteSave'); const was = sb.textContent;
+      sb.disabled = true; sb.textContent = 'Сохраняю…';
+      try{
+        const r = await fetch(`${API}/admin-note-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, phone:c.phone, note:input.value.trim() }) });
+        const d = await r.json();
+        if (!d || d.ok === false) throw new Error();
+        CLIENTS = null; _clientsPromise = null;
+        await fetchClientsData();
+        openClient(key, opts);
+        try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+      }catch(e){
+        sb.disabled = false; sb.textContent = was;
+        sheet.querySelector('#noteBlock').insertAdjacentHTML('beforeend',
+          '<p class="bc-res bad">Не удалось сохранить. Проверьте, что воркфлоу Admin Note Save включён.</p>');
+      }
+    };
+  })();
   sheet.querySelectorAll('a[data-ext]').forEach(a => a.onclick = (e) => {
     if (tg?.openLink){ e.preventDefault(); tg.openLink(a.href); }
   });
