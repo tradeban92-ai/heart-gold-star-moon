@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-05-1030 tg-activity-tab -->
+<!-- admin-build 2026-10-05-1120 fix-sleeping-broadcast-name -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -290,7 +290,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-05-1030</p>
+  <p class="ver">версия 2026-10-05-1120</p>
 </header>
 
 <nav class="tabs">
@@ -1057,6 +1057,11 @@ const SEGS = [
   { k:'archived', l:'Скрытые' },
   { k:'consult',  l:'Не вернулись после консультации' },
 ];
+// Сегменты, доступные не через чипы, а через карточки сверху (VIP, «давно не были») —
+// у них тоже должно быть название для кнопки рассылки «Написать: ...»
+const SEG_NAMES = Object.fromEntries(SEGS.map(s => [s.k, s.l]));
+SEG_NAMES.vip = 'VIP';
+SEG_NAMES.sleeping = 'Давно не были';
 const shownName = c => c.name || (c.phone ? fmtPhone(c.phone) : 'Без имени');
 // Кто уже записан — тому «пора» и «давно не были» не пишем
 const inSeg = (c, k) => {
@@ -1265,7 +1270,7 @@ function renderClients(){
   // Кнопка рассылки — по тому списку, что сейчас на экране
   CURRENT_LIST = list;
   const reach = list.filter(c => c.can_message).length;
-  const segName = (SEGS.find(s => s.k === SEG) || {}).l || 'Все';
+  const segName = SEG_NAMES[SEG] || 'Все';
   // подкнопки дня — только для «Записаны»
   const whenBar = document.getElementById('cWhen');
   if (SEG === 'booked'){
