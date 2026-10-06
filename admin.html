@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-05-1120 fix-sleeping-broadcast-name -->
+<!-- admin-build 2026-10-06-1440 booked-calendar-strip -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -290,7 +290,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-05-1120</p>
+  <p class="ver">версия 2026-10-06-1440</p>
 </header>
 
 <nav class="tabs">
@@ -943,13 +943,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab
 // ============================================================
 let CLIENTS = null, SUMMARY = null, SLEEP_DAYS = 130;
 let SEG = 'all', QUERY = '', SORT = 'last';
-let BOOK_WHEN = 'all';          // сегодня / завтра / неделя — внутри фильтра «Записаны»
-const BOOK_WHENS = [
-  { k:'all',      l:'Все' },
-  { k:'today',    l:'Сегодня' },
-  { k:'tomorrow', l:'Завтра' },
-  { k:'week',     l:'Неделя' },
-];
+let BOOK_DAY = null;             // null — «Все записи», иначе ISO-дата выбранного дня календаря
 // через сколько дней ближайшая запись
 function daysTo(iso){
   const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return null;
@@ -957,13 +951,20 @@ function daysTo(iso){
   const t = new Date(); t.setHours(0,0,0,0);
   return Math.round((d - t) / 86400000);
 }
-function bookedWhen(c, k){
-  const n = daysTo(c.upcoming[0] && c.upcoming[0].date);
-  if (n === null) return false;
-  if (k === 'today')    return n === 0;
-  if (k === 'tomorrow') return n === 1;
-  if (k === 'week')     return n >= 0 && n <= 7;
-  return true;
+const WEEKDAYS_SHORT = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+// подпись дня для чипа календаря: «Сегодня» / «Завтра» / «Пт 10.10»
+function calLabel(iso){
+  const n = daysTo(iso);
+  if (n === 0) return 'Сегодня';
+  if (n === 1) return 'Завтра';
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return iso;
+  const wd = WEEKDAYS_SHORT[new Date(+m[1], +m[2]-1, +m[3]).getDay()];
+  return `${wd} ${fmtShort(iso)}`;
+}
+// запись клиента именно в этот день (а не обязательно ближайшая вообще)
+function bookingOnDay(c, day){
+  return c.upcoming.find(u => u.date === day);
 }
 
 let TG_WHEN = 'all';            // сегодня / неделя / все — внутри фильтра «TG», по дате подписки
@@ -1068,7 +1069,7 @@ const inSeg = (c, k) => {
   if (k === 'archived') return !!c.archived;
   if (c.archived)       return false;          // архивных не показываем нигде
   if (k === 'all')      return true;
-  if (k === 'booked')   return c.upcoming.length > 0 && bookedWhen(c, BOOK_WHEN);
+  if (k === 'booked')   return c.upcoming.length > 0 && (!BOOK_DAY || bookingOnDay(c, BOOK_DAY));
   if (k === 'tg')       return !!c.can_message && joinedWhen(c, TG_WHEN);   // зарегистрирован в боте
   if (k === 'due')      return c.due && !c.upcoming.length;
   if (k === 'sleeping') return c.segment === 'sleeping' && !c.upcoming.length;
@@ -1251,9 +1252,13 @@ function renderClients(){
     if (da !== db) return da - db;
     return (b.upcoming.length - a.upcoming.length) || shownName(a).localeCompare(shownName(b),'ru');
   };
-  if (SEG === 'booked') {                       // ближайшая запись — сверху
-    list.sort((a,b) => String(a.upcoming[0]?.date || '').localeCompare(String(b.upcoming[0]?.date || ''))
-                    || String(a.upcoming[0]?.time || '').localeCompare(String(b.upcoming[0]?.time || '')));
+  if (SEG === 'booked') {                       // выбранный день (или ближайшая запись) — по времени
+    const relevant = c => (BOOK_DAY && bookingOnDay(c, BOOK_DAY)) || c.upcoming[0];
+    list.sort((a,b) => {
+      const ua = relevant(a), ub = relevant(b);
+      return String(ua?.date || '').localeCompare(String(ub?.date || ''))
+          || String(ua?.time || '').localeCompare(String(ub?.time || ''));
+    });
   }
   else if (SEG === 'tg') {                       // последние подписавшиеся — сверху
     list.sort((a,b) => String(b.first_seen || '').localeCompare(String(a.first_seen || '')));
@@ -1274,12 +1279,16 @@ function renderClients(){
   // подкнопки дня — только для «Записаны»
   const whenBar = document.getElementById('cWhen');
   if (SEG === 'booked'){
-    whenBar.innerHTML = BOOK_WHENS.map(w => {
-      const n = CLIENTS.filter(c => !c.archived && c.upcoming.length && bookedWhen(c, w.k)).length;
-      return `<button type="button" class="seg-chip${BOOK_WHEN === w.k ? ' on' : ''}" data-when="${w.k}">${w.l}<i>${n}</i></button>`;
-    }).join('');
+    // календарь-полоска: один чип на каждый день, где есть хоть одна запись
+    const counts = {};
+    CLIENTS.forEach(c => { if (c.archived) return; c.upcoming.forEach(u => { counts[u.date] = (counts[u.date] || 0) + 1; }); });
+    const days = Object.keys(counts).sort();
+    const totalAll = Object.values(counts).reduce((s,n) => s + n, 0);
+    whenBar.innerHTML =
+      `<button type="button" class="seg-chip${!BOOK_DAY ? ' on' : ''}" data-day="">Все<i>${totalAll}</i></button>` +
+      days.map(d => `<button type="button" class="seg-chip${BOOK_DAY === d ? ' on' : ''}" data-day="${d}">${calLabel(d)}<i>${counts[d]}</i></button>`).join('');
     whenBar.classList.remove('hidden');
-    whenBar.querySelectorAll('[data-when]').forEach(b => b.onclick = () => { BOOK_WHEN = b.dataset.when; renderClients(); });
+    whenBar.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { BOOK_DAY = b.dataset.day || null; renderClients(); });
   } else if (SEG === 'tg'){
     whenBar.innerHTML = TG_WHENS.map(w => {
       const n = CLIENTS.filter(c => !c.archived && c.can_message && joinedWhen(c, w.k)).length;
@@ -1287,8 +1296,8 @@ function renderClients(){
     }).join('');
     whenBar.classList.remove('hidden');
     whenBar.querySelectorAll('[data-tgwhen]').forEach(b => b.onclick = () => { TG_WHEN = b.dataset.tgwhen; renderClients(); });
-    BOOK_WHEN = 'all';
-  } else { whenBar.innerHTML = ''; whenBar.classList.add('hidden'); BOOK_WHEN = 'all'; TG_WHEN = 'all'; }
+    BOOK_DAY = null;
+  } else { whenBar.innerHTML = ''; whenBar.classList.add('hidden'); BOOK_DAY = null; TG_WHEN = 'all'; }
 
   document.getElementById('mailBar').innerHTML = list.length
     ? `<button type="button" class="mail-btn" id="mailBtn">✉️ Написать: «${esc(segName)}»${QUERY ? ' + поиск' : ''}<span>${reach} в Telegram</span></button>`
@@ -1310,7 +1319,7 @@ function renderClients(){
       sub = `в боте ${daysAgo(nd)}${c.phone ? '' : ' · номер не поделился(ась)'}`;
     } else sub = 'ещё не был(а)';
     if (c.no_shows) sub += ` · неявок ${c.no_shows}`;
-    const nx = c.upcoming[0];
+    const nx = (SEG === 'booked' && BOOK_DAY) ? (bookingOnDay(c, BOOK_DAY) || c.upcoming[0]) : c.upcoming[0];
     return `<button type="button" class="cl" data-k="${esc(c.key)}">
       <div class="cl-main">
         <div class="cl-name">${esc(shownName(c))}${c.can_message ? '<span class="tg">TG</span>' : ''}</div>
