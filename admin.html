@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-06-1440 booked-calendar-strip -->
+<!-- admin-build 2026-10-06-1455 booked-month-grid -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -192,6 +192,24 @@
   .seg-chip.on{background:var(--steel-dk);border-color:var(--steel-dk);color:#fff;}
   .seg-chip.on i{color:rgba(255,255,255,.7);}
 
+  .cal-wrap{margin:12px 0 10px;}
+  .cal-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px;}
+  .cal-nav button{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:17px;color:var(--steel-dk);cursor:pointer;}
+  .cal-nav b{font-size:14px;color:var(--ink);text-transform:capitalize;min-width:120px;text-align:center;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-wd{text-align:center;font-size:10.5px;color:var(--muted);padding:2px 0 4px;}
+  .cal-day{position:relative;aspect-ratio:1/1;border:1px solid var(--line-soft);border-radius:10px;background:#fff;
+        display:flex;align-items:center;justify-content:center;font:600 13px 'Manrope',sans-serif;color:var(--steel-dk);cursor:pointer;padding:0;}
+  .cal-day.empty{visibility:hidden;cursor:default;border:none;}
+  .cal-day.today{border-color:var(--steel);border-width:2px;}
+  .cal-day.has{color:var(--ink);font-weight:700;}
+  .cal-day i{font-style:normal;position:absolute;bottom:2px;right:2px;font-size:9px;font-weight:700;color:#fff;background:var(--steel-dk);
+        border-radius:999px;min-width:14px;height:14px;line-height:14px;padding:0 3px;}
+  .cal-day.on{background:var(--steel-dk);border-color:var(--steel-dk);color:#fff;}
+  .cal-day.on i{background:#fff;color:var(--steel-dk);}
+  .cal-reset{margin-top:10px;text-align:center;}
+  .cal-reset button{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--steel-dk);font:600 12.5px 'Manrope',sans-serif;cursor:pointer;}
+
   .ctools{display:grid;grid-template-columns:1fr auto;gap:8px;}
   .ctools input{height:42px;}
   .ctools select{height:42px;width:auto;font-size:13.5px;}
@@ -290,7 +308,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-06-1440</p>
+  <p class="ver">версия 2026-10-06-1455</p>
 </header>
 
 <nav class="tabs">
@@ -944,6 +962,8 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab
 let CLIENTS = null, SUMMARY = null, SLEEP_DAYS = 130;
 let SEG = 'all', QUERY = '', SORT = 'last';
 let BOOK_DAY = null;             // null — «Все записи», иначе ISO-дата выбранного дня календаря
+let CAL_MONTH = null;            // { y, m } — какой месяц сейчас открыт в календаре (m: 0-11)
+const MONTH_NAMES = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
 // через сколько дней ближайшая запись
 function daysTo(iso){
   const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return null;
@@ -951,20 +971,42 @@ function daysTo(iso){
   const t = new Date(); t.setHours(0,0,0,0);
   return Math.round((d - t) / 86400000);
 }
-const WEEKDAYS_SHORT = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-// подпись дня для чипа календаря: «Сегодня» / «Завтра» / «Пт 10.10»
-function calLabel(iso){
-  const n = daysTo(iso);
-  if (n === 0) return 'Сегодня';
-  if (n === 1) return 'Завтра';
-  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return iso;
-  const wd = WEEKDAYS_SHORT[new Date(+m[1], +m[2]-1, +m[3]).getDay()];
-  return `${wd} ${fmtShort(iso)}`;
-}
 // запись клиента именно в этот день (а не обязательно ближайшая вообще)
 function bookingOnDay(c, day){
   return c.upcoming.find(u => u.date === day);
+}
+// сетка месяца: counts — { 'ГГГГ-ММ-ДД': число записей }
+function buildCalendar(counts){
+  const t0 = new Date(); t0.setHours(0,0,0,0);
+  if (!CAL_MONTH) CAL_MONTH = { y: t0.getFullYear(), m: t0.getMonth() };
+  const { y, m } = CAL_MONTH;
+  const startOffset = (new Date(y, m, 1).getDay() + 6) % 7;   // Пн = 0
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const todayIso = `${t0.getFullYear()}-${pad(t0.getMonth()+1)}-${pad(t0.getDate())}`;
+  let cells = '';
+  for (let i = 0; i < startOffset; i++) cells += `<div class="cal-day empty"></div>`;
+  for (let d = 1; d <= daysInMonth; d++){
+    const iso = `${y}-${pad(m+1)}-${pad(d)}`;
+    const n = counts[iso] || 0;
+    const cls = ['cal-day'];
+    if (iso === todayIso) cls.push('today');
+    if (n) cls.push('has');
+    if (BOOK_DAY === iso) cls.push('on');
+    cells += `<button type="button" class="${cls.join(' ')}" data-day="${iso}"><b>${d}</b>${n ? `<i>${n}</i>` : ''}</button>`;
+  }
+  const total = Object.values(counts).reduce((s,n) => s + n, 0);
+  return `<div class="cal-wrap">
+    <div class="cal-nav">
+      <button type="button" id="calPrev">‹</button>
+      <b>${MONTH_NAMES[m]} ${y}</b>
+      <button type="button" id="calNext">›</button>
+    </div>
+    <div class="cal-grid">
+      ${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(w => `<span class="cal-wd">${w}</span>`).join('')}
+      ${cells}
+    </div>
+    <div class="cal-reset"><button type="button" id="calAll">${BOOK_DAY ? 'Показать все записи' : 'Все записи'} · ${total}</button></div>
+  </div>`;
 }
 
 let TG_WHEN = 'all';            // сегодня / неделя / все — внутри фильтра «TG», по дате подписки
@@ -1279,16 +1321,24 @@ function renderClients(){
   // подкнопки дня — только для «Записаны»
   const whenBar = document.getElementById('cWhen');
   if (SEG === 'booked'){
-    // календарь-полоска: один чип на каждый день, где есть хоть одна запись
+    // сетка месяца: в каждой клетке — число записей на этот день
     const counts = {};
     CLIENTS.forEach(c => { if (c.archived) return; c.upcoming.forEach(u => { counts[u.date] = (counts[u.date] || 0) + 1; }); });
-    const days = Object.keys(counts).sort();
-    const totalAll = Object.values(counts).reduce((s,n) => s + n, 0);
-    whenBar.innerHTML =
-      `<button type="button" class="seg-chip${!BOOK_DAY ? ' on' : ''}" data-day="">Все<i>${totalAll}</i></button>` +
-      days.map(d => `<button type="button" class="seg-chip${BOOK_DAY === d ? ' on' : ''}" data-day="${d}">${calLabel(d)}<i>${counts[d]}</i></button>`).join('');
+    whenBar.innerHTML = buildCalendar(counts);
     whenBar.classList.remove('hidden');
-    whenBar.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { BOOK_DAY = b.dataset.day || null; renderClients(); });
+    whenBar.querySelector('#calPrev').onclick = () => {
+      CAL_MONTH.m--; if (CAL_MONTH.m < 0) { CAL_MONTH.m = 11; CAL_MONTH.y--; }
+      renderClients();
+    };
+    whenBar.querySelector('#calNext').onclick = () => {
+      CAL_MONTH.m++; if (CAL_MONTH.m > 11) { CAL_MONTH.m = 0; CAL_MONTH.y++; }
+      renderClients();
+    };
+    whenBar.querySelector('#calAll').onclick = () => { BOOK_DAY = null; renderClients(); };
+    whenBar.querySelectorAll('.cal-day[data-day]').forEach(b => b.onclick = () => {
+      BOOK_DAY = (BOOK_DAY === b.dataset.day) ? null : b.dataset.day;
+      renderClients();
+    });
   } else if (SEG === 'tg'){
     whenBar.innerHTML = TG_WHENS.map(w => {
       const n = CLIENTS.filter(c => !c.archived && c.can_message && joinedWhen(c, w.k)).length;
