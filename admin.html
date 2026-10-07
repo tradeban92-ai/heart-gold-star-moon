@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-06-1500 cal-full-width-fix -->
+<!-- admin-build 2026-10-07-0925 tg-blue-highlight -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -217,6 +217,7 @@
 
   .cl{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid var(--line-soft);
       border-radius:14px;padding:12px 14px;margin-bottom:8px;font-family:'Manrope',sans-serif;color:var(--ink);cursor:pointer;}
+  .cl.in-tg{background:#EEF4FB;border-color:#B9D3EC;border-left:4px solid #3B82C4;padding-left:11px;}
   .cl-main{flex:1;min-width:0;}
   .cl-name{font-size:15.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .cl-name .tg{font-size:11px;color:var(--steel);margin-left:5px;font-weight:700;}
@@ -308,7 +309,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-06-1500</p>
+  <p class="ver">версия 2026-10-07-0925</p>
 </header>
 
 <nav class="tabs">
@@ -1370,7 +1371,7 @@ function renderClients(){
     } else sub = 'ещё не был(а)';
     if (c.no_shows) sub += ` · неявок ${c.no_shows}`;
     const nx = (SEG === 'booked' && BOOK_DAY) ? (bookingOnDay(c, BOOK_DAY) || c.upcoming[0]) : c.upcoming[0];
-    return `<button type="button" class="cl" data-k="${esc(c.key)}">
+    return `<button type="button" class="cl${c.can_message ? ' in-tg' : ''}" data-k="${esc(c.key)}">
       <div class="cl-main">
         <div class="cl-name">${esc(shownName(c))}${c.can_message ? '<span class="tg">TG</span>' : ''}</div>
         ${c.note ? `<div class="cl-note">${esc(c.note)}</div>` : ''}
