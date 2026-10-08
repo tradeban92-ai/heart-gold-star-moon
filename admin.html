@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-08-0920 prep-reminders -->
+<!-- admin-build 2026-10-08-1415 murmansk-folder -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -221,6 +221,7 @@
   .cl-main{flex:1;min-width:0;}
   .cl-name{font-size:15.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .cl-name .tg{font-size:11px;color:var(--steel);margin-left:5px;font-weight:700;}
+  .cl-name .tg.murm{color:#B5680A;}
   .cl-sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
   .cl-note{font-size:12.5px;color:var(--steel-dk);font-style:italic;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cl-sub.warn{color:var(--no);}
@@ -312,7 +313,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-08-0920</p>
+  <p class="ver">версия 2026-10-08-1415</p>
 </header>
 
 <nav class="tabs">
@@ -1113,6 +1114,7 @@ const SEGS = [
   { k:'booked',   l:'Записаны' },
   { k:'due',      l:'Пора повторить' },
   { k:'active',   l:'1–2 визита' },
+  { k:'murmansk', l:'Мурманск' },
   { k:'archived', l:'Скрытые' },
   { k:'consult',  l:'Не вернулись после консультации' },
 ];
@@ -1126,6 +1128,7 @@ const shownName = c => c.name || (c.phone ? fmtPhone(c.phone) : 'Без имен
 const inSeg = (c, k) => {
   if (k === 'archived') return !!c.archived;
   if (c.archived)       return false;          // архивных не показываем нигде
+  if (k === 'murmansk') return !!c.murmansk;   // отдельная папка — сами клиенты остаются и в обычных списках
   if (k === 'all')      return true;
   if (k === 'booked')   return c.upcoming.length > 0 && (!BOOK_DAY || bookingOnDay(c, BOOK_DAY));
   if (k === 'tg')       return !!c.can_message && joinedWhen(c, TG_WHEN);   // зарегистрирован в боте
@@ -1388,7 +1391,7 @@ function renderClients(){
     const nx = (SEG === 'booked' && BOOK_DAY) ? (bookingOnDay(c, BOOK_DAY) || c.upcoming[0]) : c.upcoming[0];
     return `<button type="button" class="cl${c.can_message ? ' in-tg' : ''}" data-k="${esc(c.key)}">
       <div class="cl-main">
-        <div class="cl-name">${esc(shownName(c))}${c.can_message ? '<span class="tg">TG</span>' : ''}</div>
+        <div class="cl-name">${esc(shownName(c))}${c.can_message ? '<span class="tg">TG</span>' : ''}${c.murmansk && SEG !== 'murmansk' ? '<span class="tg murm">МУРМАНСК</span>' : ''}</div>
         ${c.note ? `<div class="cl-note">${esc(c.note)}</div>` : ''}
         <div class="cl-sub${sleeping ? ' warn' : ''}">${esc(sub)}</div>
         ${nx ? `<div class="cl-next">записан(а) ${dayWord(nx.date)} в ${esc(nx.time)}</div>` : ''}
@@ -1414,6 +1417,7 @@ function openClient(key, opts){
   if (c.due) tags.push('<span class="tag due">Пора повторить</span>');
   tags.push(c.can_message ? '<span class="tag ok">Есть в боте</span>' : '<span class="tag muted">Нет в боте</span>');
   if (c.archived) tags.push('<span class="tag muted">Скрыт</span>');
+  if (c.murmansk) tags.push('<span class="tag">Мурманск</span>');
 
   const rows = (arr) => arr.map(([a,b]) => `<div class="sh-row"><span>${a}</span><span>${b}</span></div>`).join('');
   let html = `
@@ -1506,6 +1510,11 @@ function openClient(key, opts){
   }
   if (c.phone){
     html += `<div class="bc-actions" style="grid-template-columns:1fr">
+      <button type="button" id="murmBtn">${c.murmansk ? 'Убрать из папки «Мурманск»' : 'Добавить в папку «Мурманск»'}</button></div>
+      <p class="sh-note">${c.murmansk
+        ? 'Клиент лежит в папке «Мурманск». Из обычных списков и рассылок он не убирается — просто помечен и виден отдельно, во вкладке «Мурманск».'
+        : 'Положит клиента в отдельную папку «Мурманск» — чтобы его было удобно найти отдельно. Из обычных списков и рассылок это его не уберёт.'}</p>`;
+    html += `<div class="bc-actions" style="grid-template-columns:1fr">
       <button type="button" id="archBtn">${c.archived ? 'Вернуть в кабинет' : 'Скрыть — больше не придёт'}</button></div>
       <p class="sh-note">${c.archived
         ? 'Клиент скрыт из списков и рассылок. Появится сам, если запишется, придёт на визит или напишет боту.'
@@ -1584,6 +1593,24 @@ function openClient(key, opts){
   };
   if (opts && opts.openChat && cb) cb.click();
 
+  const mub = sheet.querySelector('#murmBtn');
+  if (mub) mub.onclick = async () => {
+    const was = mub.textContent; mub.disabled = true; mub.textContent = 'Сохраняю…';
+    try{
+      const r = await fetch(`${API}/admin-murmansk`, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, phone:c.phone,
+                               in_murmansk: !c.murmansk }) });
+      const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+      if (!d || d.ok === false) throw new Error('fail');
+      CLIENTS = null; _clientsPromise = null;
+      await fetchClientsData();
+      openClient(key, opts);
+      try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+    }catch(e){
+      mub.disabled = false; mub.textContent = was;
+      sheet.insertAdjacentHTML('beforeend','<p class="bc-res bad">Не удалось сохранить. Проверьте, что воркфлоу Admin Murmansk Save включён.</p>');
+    }
+  };
   const ab = sheet.querySelector('#archBtn');
   if (ab) ab.onclick = async () => {
     const was = ab.textContent; ab.disabled = true; ab.textContent = 'Сохраняю…';
