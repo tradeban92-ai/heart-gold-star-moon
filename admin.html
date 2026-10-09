@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1815 tg-open-fallback -->
+<!-- admin-build 2026-10-09-1845 booked-prep-picker -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -138,6 +138,15 @@
   .rc-fail{display:block;width:100%;margin-top:8px;min-height:40px;border:0;border-radius:10px;background:#C9822B;color:#fff;font-size:13px;font-weight:700;padding:8px 12px;text-align:center;}
   .wa-btn.tg-retry{opacity:.55;font-size:12px;}
   .rc-note-no{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;color:#A23B2C;}
+  .pp-bg{position:fixed;inset:0;background:rgba(20,30,40,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;}
+  .pp{width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;}
+  .pp b{font-size:17px;} .pp i{font-style:normal;color:var(--muted);font-size:13px;margin-top:-4px;}
+  .pp label{font-size:13px;font-weight:700;margin-top:6px;}
+  .pp select{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 8px;font:inherit;font-size:14px;background:#fff;color:var(--ink);}
+  .pp .pp-note{margin:0;font-size:12.5px;color:var(--muted);min-height:16px;}
+  .pp button{min-height:46px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:14.5px;font-weight:600;color:var(--ink);}
+  .pp .pp-go{background:var(--steel-dk,#2F4A63);border-color:transparent;color:#fff;}
+  .pp .pp-go:disabled{background:#DDE3E8;color:#6B7884;}
   .rc-nophone{flex:none;font-size:12px;color:var(--muted);}
   .bc-who.already, .wa-row.already{background:#FFF8EE;border-radius:10px;padding-left:4px;}
   .bc-tools button{margin-left:6px;}
@@ -373,7 +382,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1815</p>
+  <p class="ver">версия 2026-10-09-1845</p>
 
 </header>
 
@@ -1168,6 +1177,13 @@ function prepTextFor(label, firstNameStr){
   if (!p) return '';
   const hello = firstNameStr ? `${firstNameStr}, ` : '';
   return `${hello}подготовка к процедуре «${label}» ${p.icon}\n\n` + p.items.map(x => '• ' + x).join('\n');
+}
+
+// Памятка без обращения — её добавляем после напоминания о записи
+function prepBodyFor(label){
+  const p = PREP_TEXTS[label];
+  if (!p) return '';
+  return `Как подготовиться к процедуре «${label}» ${p.icon}\n\n` + p.items.map(x => '• ' + x).join('\n');
 }
 
 // Визит засчитывается в карту лояльности, если была настоящая процедура.
@@ -2029,6 +2045,7 @@ function openComposer(only, title, initialText, aud){
   const nameFor = c => c.tg_name || (String(c.name||'').trim().split(/\s+/).length === 1 ? c.name : '');
   const sample = base[0] || null;
   const DIKIDI_BOOK = 'https://dikidi.net/ru/profile/katya_1788592';
+  const procOf = {};                               // «Кто записан»: ключ клиента → выбранная процедура ('' — без памятки)
   const sentNow = new Set();                       // кому уже нажали сейчас — строка не пропадает с экрана
   let hideSent = audKey === 'booked';              // «записаны»: кому уже напоминали — по умолчанию скрыты
   const gotN = aud ? base.filter(c => gotSameBroadcast(c, aud)).length : 0;
@@ -2043,7 +2060,7 @@ function openComposer(only, title, initialText, aud){
     <label class="f" for="bcText">Текст сообщения</label>
     <textarea id="bcText" rows="6" placeholder="{имя}, здравствуйте! …">${esc(initialText != null ? initialText : (aud ? (TEMPLATES[aud.k] || '') : ''))}</textarea>
     <p class="sh-note">{имя} — имя клиента, {процедура} — его последняя процедура${
-      audKey === 'booked' ? ', {дата} и {время} — его запись' : ''}</p>
+      audKey === 'booked' ? ', {дата} и {время} — его запись. Перед открытием чата спросим процедуру — к напоминанию добавится памятка по подготовке' : ''}</p>
     <label class="chk"><input type="checkbox" id="bcBtn"${(audKey === 'booked' || initialText != null) ? '' : ' checked'}> Добавить ссылку «Записаться» в конец сообщения</label>
     <div class="sh-block"><h4>Так увидит ${sample ? esc(firstName(nameFor(sample)) || 'клиент') : 'клиент'}</h4>
       <div class="bc-preview" id="bcPreview"></div></div>
@@ -2071,6 +2088,10 @@ function openComposer(only, title, initialText, aud){
     const text = ta.value.trim();
     if (!text) return null;
     let msg = personalize(text, { ...c, tg_name: nameFor(c) });
+    if (audKey === 'booked' && procOf[c.key]){
+      const pt = prepBodyFor(procOf[c.key]);
+      if (pt) msg += '\n\n' + pt;
+    }
     if (btnBox.checked) msg += '\n\nЗаписаться: ' + DIKIDI_BOOK;
     return msg;
   }
@@ -2151,6 +2172,40 @@ function openComposer(only, title, initialText, aud){
   }
   COMPOSER_FLUSH = confirmPending;
 
+  // «Кто записан»: перед открытием чата спрашиваем процедуру — к напоминанию добавится памятка
+  function askProc(c, go){
+    const u = (c.upcoming && c.upcoming[0]) || {};
+    const ov = document.createElement('div'); ov.className = 'pp-bg';
+    ov.innerHTML = `<div class="pp">
+      <b>${esc(shownName(c))}</b><i>${u.date ? esc(dayWord(u.date) + ' в ' + u.time) : ''}</i>
+      <label>Какая процедура?</label>
+      <select><option value="">— выбрать процедуру —</option>${SERVICES.map(x => `<option value="${esc(x.l)}"${u.service === x.l ? ' selected' : ''}>${esc(x.l)}</option>`).join('')}</select>
+      <p class="pp-note"></p>
+      <button type="button" class="pp-go" disabled>Продолжить</button>
+      <button type="button" class="pp-skip">Без памятки — только напоминание</button>
+      <button type="button" class="pp-x">Отмена</button></div>`;
+    document.body.appendChild(ov);
+    const sel = ov.querySelector('select'), go_ = ov.querySelector('.pp-go'), note = ov.querySelector('.pp-note');
+    const sync = () => {
+      go_.disabled = !sel.value;
+      note.textContent = !sel.value ? '' : (PREP_TEXTS[sel.value] ? 'К напоминанию добавится памятка по подготовке.' : 'Для этой процедуры памятки нет — уйдёт только напоминание.');
+    };
+    sel.onchange = sync; sync();
+    const close = () => ov.remove();
+    ov.querySelector('.pp-x').onclick = close;
+    ov.addEventListener('click', ev => { if (ev.target === ov) close(); });
+    ov.querySelector('.pp-skip').onclick = () => { procOf[c.key] = ''; close(); go(); };
+    go_.onclick = () => {
+      procOf[c.key] = sel.value;
+      if (sel.value !== u.service && u.row_number){        // запоминаем процедуру в записи
+        u.service = sel.value;
+        fetch(`${API}/admin-booking-service-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, row_number:u.row_number, service:sel.value }) }).catch(() => {});
+      }
+      close(); go();
+    };
+  }
+
   rcList.addEventListener('click', e => {
     const fail = e.target.closest('.rc-fail');
     if (fail){                                   // чат не открылся — нет Telegram
@@ -2167,6 +2222,10 @@ function openComposer(only, title, initialText, aud){
     const btn = e.target.closest('.wa-btn'); if (!btn) return;
     const row = btn.closest('.rc-row');
     const c = base.find(x => x.key === row.dataset.k); if (!c) return;
+    if (audKey === 'booked' && !(c.key in procOf)){
+      if (!ta.value.trim()){ result.innerHTML = '<p class="bc-res bad">Сначала напишите текст сообщения.</p>'; ta.focus(); return; }
+      askProc(c, () => btn.click()); return;
+    }
     const msg = composeMsg(c);
     if (msg === null){
       result.innerHTML = '<p class="bc-res bad">Сначала напишите текст сообщения.</p>';
