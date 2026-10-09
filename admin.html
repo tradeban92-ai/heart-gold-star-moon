@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1845 booked-prep-picker -->
+<!-- admin-build 2026-10-09-1900 prep-only-in-broadcast -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -382,7 +382,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1845</p>
+  <p class="ver">версия 2026-10-09-1900</p>
 
 </header>
 
@@ -1722,14 +1722,7 @@ function openClient(key, opts){
       c.upcoming.map((u, i) => {
         const w = dayWord(u.date);
         const when = /^(сегодня|завтра|послезавтра)$/.test(w) ? `${w[0].toUpperCase()}${w.slice(1)}, ${fmtIso(u.date)}` : fmtIso(u.date);
-        return `<div class="sh-row"><span>${esc(when)}</span><span>${esc(u.time)}${u.duration_min ? ' · ' + u.duration_min + ' мин' : ''}</span></div>
-        <div class="prep-row">
-          <select class="prep-select" data-ui="${i}">
-            <option value="">— выбрать процедуру —</option>
-            ${SERVICES.map(s => `<option value="${esc(s.l)}"${u.service === s.l ? ' selected' : ''}>${esc(s.l)}</option>`).join('')}
-          </select>
-          <button type="button" class="prep-btn as-link" data-ui="${i}">🗒 ${u.service ? 'Памятка перед процедурой' : 'Выбрать процедуру и отправить памятку'}</button>
-        </div>`;
+        return `<div class="sh-row"><span>${esc(when)}</span><span>${esc(u.time)}${u.duration_min ? ' · ' + u.duration_min + ' мин' : ''}</span></div>`;
       }).join('') + '</div>';
   }
 
@@ -1787,25 +1780,6 @@ function openClient(key, opts){
   sheet.scrollTop = 0;
   document.getElementById('sheetBg').classList.remove('hidden');
   sheet.querySelector('.sh-x').onclick = closeClient;
-  sheet.querySelectorAll('.prep-btn').forEach(btn => btn.onclick = async () => {
-    const i = +btn.dataset.ui;
-    const u = c.upcoming[i];
-    const sel = sheet.querySelector(`.prep-select[data-ui="${i}"]`);
-    const service = sel.value;
-    if (!service){ sel.focus(); return; }
-    const text = prepTextFor(service, firstName(c.tg_name));
-    if (!text){ return; }
-    if (service !== u.service && u.row_number){
-      btn.disabled = true; const was = btn.textContent; btn.textContent = 'Сохраняю процедуру…';
-      try{
-        await fetch(`${API}/admin-booking-service-save`, { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, row_number:u.row_number, service }) });
-        u.service = service;
-      }catch(e){ /* памятку всё равно откроем, попробует сохранить при следующей отправке */ }
-      btn.disabled = false; btn.textContent = was;
-    }
-    openComposer([c], `Памятка: ${service}`, text);
-  });
   (() => {
     const editBtn = sheet.querySelector('#noteEditBtn');
     const box = sheet.querySelector('#noteEditBox');
