@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-08-1430 broadcast-tg-fallback -->
+<!-- admin-build 2026-10-09-0920 broadcast-log -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -106,6 +106,9 @@
   .wa-row b{display:block;font-size:14px;font-weight:600;}
   .wa-row i{font-style:normal;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
   .wa-row.sent{opacity:.5;}
+  .bc-sent{display:block;color:#B5680A;}
+  .bc-who.already, .wa-row.already{background:#FFF8EE;border-radius:10px;padding-left:4px;}
+  .bc-tools button{margin-left:6px;}
   .wa-btn{flex:none;height:36px;padding:0 14px;border:1px solid var(--line);border-radius:9px;background:#fff;
     color:var(--steel-dk);font:700 13px 'Manrope',sans-serif;cursor:pointer;}
   .wa-btns{display:flex;gap:6px;flex:none;}
@@ -314,7 +317,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-08-1430</p>
+  <p class="ver">версия 2026-10-09-0920</p>
 </header>
 
 <nav class="tabs">
@@ -1657,6 +1660,20 @@ function timeAgo(iso){
   if (diffD < 7)     return `${diffD} ${plural(diffD,'день','дня','дней')} назад`;
   return fmtIso(String(iso).slice(0,10));
 }
+// Подпись «уже писали N дней назад» — чтобы видеть, кому уже отправляли рассылку
+function lastBcLabel(c){
+  if (!c.last_broadcast) return '';
+  const ch = { tg:'ботом', tg_manual:'в Telegram', wa:'в WhatsApp' }[c.last_broadcast.channel] || '';
+  return `уже писали ${timeAgo(c.last_broadcast.ts)}${ch ? ' · ' + ch : ''}`;
+}
+// Запомнить, кому отправили — чтобы в следующий раз было видно, кто уже получал
+async function logBroadcast(entries){
+  if (!entries || !entries.length) return;
+  try{
+    await fetch(`${API}/admin-broadcast-log`, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, entries }) });
+  }catch(e){ /* лог не критичен — сама рассылка уже ушла */ }
+}
 function initials(name){
   const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0]||'') + (parts[1]?.[0]||'')).toUpperCase() || '?';
@@ -1797,17 +1814,21 @@ function openComposer(only, title, initialText){
       <button class="sh-x" type="button" aria-label="Закрыть">×</button>
     </div>
     <div class="sh-block"><h4>Кому отправить</h4>
-      <div class="bc-tools"><span id="bcCount"></span><button type="button" id="bcAll">снять все</button></div>
-      <div class="bc-list">${reach.map((c,i) => `<label class="bc-who">
+      <div class="bc-tools"><span id="bcCount"></span>
+        <button type="button" id="bcAll">снять все</button>
+        ${reach.some(c => c.last_broadcast) ? `<button type="button" id="bcSkipSent">снять уже получивших</button>` : ''}</div>
+      <div class="bc-list">${reach.map((c,i) => `<label class="bc-who${c.last_broadcast ? ' already' : ''}">
         <input type="checkbox" class="bc-pick" data-i="${i}" checked>
         <span><b>${esc(shownName(c))}</b><i>${c.visits_count ? `${c.visits_count} ${plural(c.visits_count,'визит','визита','визитов')}` : 'без визитов'}${
-          c.last_cat ? ' · ' + esc(CAT_TITLE[c.last_cat] || '') : ''}${c.days_since !== null ? ' · ' + daysAgo(c.days_since) : ''}</i></span>
+          c.last_cat ? ' · ' + esc(CAT_TITLE[c.last_cat] || '') : ''}${c.days_since !== null ? ' · ' + daysAgo(c.days_since) : ''}</i>${
+          lastBcLabel(c) ? `<i class="bc-sent">${esc(lastBcLabel(c))}</i>` : ''}</span>
       </label>`).join('')}</div>
     </div>
     ${noTg.length ? `<div class="sh-block"><h4>Нет в боте — отправить в WhatsApp или Telegram (${noTg.length})</h4>
       <p class="sh-note" style="margin:0 0 8px">Бот пишет только тем, кто ему писал. Остальным — по кнопке: откроется чат с уже готовым текстом, останется нажать отправку. Telegram откроется, только если у клиента есть Telegram и он не закрыл поиск по номеру в настройках приватности.</p>
-      ${noTg.map((c,i) => `<div class="wa-row" data-wa="${i}">
-        <span><b>${esc(shownName(c))}</b><i>${c.phone ? esc(fmtPhone(c.phone)) : 'нет телефона'}</i></span>
+      ${noTg.map((c,i) => `<div class="wa-row${c.last_broadcast ? ' already' : ''}" data-wa="${i}">
+        <span><b>${esc(shownName(c))}</b><i>${c.phone ? esc(fmtPhone(c.phone)) : 'нет телефона'}</i>${
+          lastBcLabel(c) ? `<i class="bc-sent">${esc(lastBcLabel(c))}</i>` : ''}</span>
         ${c.phone ? `<span class="wa-btns">
           <button type="button" class="wa-btn tg-btn" data-i="${i}">Telegram</button>
           <button type="button" class="wa-btn" data-i="${i}">WhatsApp</button>
@@ -1840,6 +1861,11 @@ function openComposer(only, title, initialText){
   sheet.querySelector('#bcAll').onclick = () => {
     const on = picks().length === 0;
     sheet.querySelectorAll('.bc-pick').forEach(x => x.checked = on);
+    refreshPicks();
+  };
+  const skipSent = sheet.querySelector('#bcSkipSent');
+  if (skipSent) skipSent.onclick = () => {
+    sheet.querySelectorAll('.bc-pick').forEach(x => { if (reach[+x.dataset.i].last_broadcast) x.checked = false; });
     refreshPicks();
   };
   refreshPicks();
@@ -1881,6 +1907,7 @@ function openComposer(only, title, initialText){
     if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
     btn.closest('.wa-row').classList.add('sent');
     btn.textContent = 'открыт';
+    logBroadcast([{ phone:c.phone, channel:'wa', segment:segName, text:msg.slice(0,200) }]);
   });
   // Telegram: тот же текст, что и в WhatsApp — открываем чат по номеру с подставленным текстом
   sheet.querySelectorAll('.tg-btn').forEach(btn => btn.onclick = () => {
@@ -1896,6 +1923,7 @@ function openComposer(only, title, initialText){
     else window.open(url, '_blank');
     btn.closest('.wa-row').classList.add('sent');
     btn.textContent = 'открыт';
+    logBroadcast([{ phone:c.phone, channel:'tg_manual', segment:segName, text:msg.slice(0,200) }]);
   });
   async function send(test){
     const text = ta.value.trim();
@@ -1930,6 +1958,7 @@ function openComposer(only, title, initialText){
           ? `<br>Не дошло: ${d.failed} — обычно это значит, что человек удалил или заблокировал бота.` : ''}</p>`;
         btn.textContent = 'Отправлено';   // повторно не даём, чтобы не задвоить
         try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+        logBroadcast(picks().map(c => ({ phone:c.phone, channel:'tg', segment:segName, text })));
       }
     }catch(e){
       result.innerHTML = '<p class="bc-res bad">Не удалось отправить. Проверьте, что воркфлоу Admin Broadcast API включён, и попробуйте ещё раз.</p>';
