@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1150 fewer-presets -->
+<!-- admin-build 2026-10-09-1153 no-vip-card -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -352,7 +352,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1150</p>
+  <p class="ver">версия 2026-10-09-1153</p>
 </header>
 
 <nav class="tabs">
@@ -1327,17 +1327,16 @@ function renderSummary(){
   const s = SUMMARY;
   const card = (n, label, seg, warn) =>
     `<button type="button" class="sum-card${warn ? ' warn' : ''}" data-seg="${seg}"><b>${n ?? 0}</b><span>${label}</span></button>`;
-  const vip   = CLIENTS.filter(c => inSeg(c,'vip')).length;
+  const all   = CLIENTS.filter(c => inSeg(c,'all')).length;
   const due   = CLIENTS.filter(c => inSeg(c,'due')).length;
   const sleep = CLIENTS.filter(c => inSeg(c,'sleeping')).length;
   document.getElementById('cSum').innerHTML =
-      `<button type="button" class="sum-card vip" data-seg="vip"><b>${vip}</b><span>VIP · 5+ визитов</span></button>`
+      card(all, 'все клиенты', 'all')
     + card(s.upcoming_7, `${plural(s.upcoming_7||0,'запись','записи','записей')} на неделю`, 'booked')
     + card(due,   'пора повторить', 'due')
     + card(sleep, 'давно не были', 'sleeping', sleep > 0);
   document.querySelectorAll('.sum-card').forEach(b => b.onclick = () => {
     SEG = b.dataset.seg;
-    if (SEG === 'vip') { SORT = 'money'; const sel = document.getElementById('cSort'); if (sel) sel.value = 'money'; }
     renderSegs(); renderClients();
   });
 }
