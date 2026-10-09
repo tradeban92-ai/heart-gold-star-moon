@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-2130 mark-all-sent -->
+<!-- admin-build 2026-10-09-2110 simple-tg-send -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -378,7 +378,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-2130</p>
+  <p class="ver">версия 2026-10-09-2110</p>
 
 </header>
 
@@ -2040,7 +2040,6 @@ function openComposer(only, title, initialText, aud){
     <div class="sh-block">
       <h4>Кому написать</h4>
       <div id="newNote"></div>
-      ${aud ? `<button type="button" class="as-link" id="markAll" style="margin:4px 0 8px;width:100%"></button>` : ''}
       <div class="bc-summary-row"><span id="rcCount"></span>
         ${gotN ? `<button type="button" id="rcToggle"></button>` : ''}</div>
       <p class="sh-note" style="margin:6px 0 4px">Нажмите Telegram или WhatsApp напротив человека — откроется чат с готовым текстом, останется нажать «отправить». Сообщение запомнится в истории рассылок.</p>
@@ -2056,7 +2055,6 @@ function openComposer(only, title, initialText, aud){
   const rcList = sheet.querySelector('#rcList');
   const rcCount = sheet.querySelector('#rcCount');
   const rcToggle = sheet.querySelector('#rcToggle');
-  const markAll = sheet.querySelector('#markAll');
 
   // Один и тот же текст — что в WhatsApp, что в Telegram
   function composeMsg(c){
@@ -2101,11 +2099,6 @@ function openComposer(only, title, initialText, aud){
           : `<span class="rc-nophone">нет номера</span>`}
       </div>`).join('')
       : '<p class="sh-note" style="margin:8px 0">Некому писать — всем уже отправляли эту рассылку.</p>';
-    if (markAll){
-      const n = vis.filter(c => c.phone && !sentNow.has(c.key)).length;
-      markAll.classList.toggle('hidden', !n);
-      markAll.textContent = `✓ Отправила всем (${n}) — отметить без открытия чатов`;
-    }
     if (typeof updateNext === 'function') updateNext();
   }
   // «Следующий»: открывает чат с первым ещё не открытым человеком (Telegram) и сам отмечает его
@@ -2132,24 +2125,6 @@ function openComposer(only, title, initialText, aud){
     row.querySelector('.tg-btn').click();
   };
   if (rcToggle) rcToggle.onclick = () => { hideSent = !hideSent; renderRows(); };
-  // «Отправила всем»: в историю рассылок записывается, что всем из списка написали сегодня.
-  // Сообщения не отправляются и чаты не открываются — отметка нужна, если рассылка уже ушла вне приложения.
-  if (markAll) markAll.onclick = async () => {
-    const list = visible().filter(c => c.phone && !sentNow.has(c.key));
-    if (!list.length) return;
-    const ok = await confirmBox(`Отметить ${list.length} ${plural(list.length,'человека','человек','человек')} как получивших «${aud.l}» сегодня? Сообщения не отправятся, в историю рассылок просто запишется отметка.`);
-    if (!ok) return;
-    const ts = new Date().toISOString();
-    const entries = list.map(c => {
-      const text = (composeMsg(c) || '').slice(0, 200);
-      sentNow.add(c.key);
-      c.last_broadcast = { ts, channel: 'manual', segment: logSeg, text };
-      return { phone: c.phone, channel: 'manual', segment: logSeg, text };
-    });
-    logBroadcast(entries);
-    renderRows();
-    result.innerHTML = `<p class="bc-res ok">Готово: отмечено ${entries.length} ${plural(entries.length,'человек','человека','человек')} — «${esc(aud.l)}», сегодня.</p>`;
-  };
   renderRows();
 
   // Нажатие Telegram/WhatsApp: чат открывается с готовым текстом, человек сразу попадает в историю рассылок.
