@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1750 no-tg-memory-refresh -->
+<!-- admin-build 2026-10-09-1815 tg-open-fallback -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -373,7 +373,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1750</p>
+  <p class="ver">версия 2026-10-09-1815</p>
 
 </header>
 
@@ -2177,9 +2177,15 @@ function openComposer(only, title, initialText, aud){
     const viaTg = btn.classList.contains('tg-btn');
     if (viaTg){
       const url = `https://t.me/+${c.phone}?text=${encodeURIComponent(msg)}`;
-      if (tg?.openTelegramLink) tg.openTelegramLink(url);
-      else if (tg?.openLink) tg.openLink(url);
-      else window.open(url, '_blank');
+      let opened = false, lastErr = '';
+      for (const open of [u => tg?.openTelegramLink?.(u), u => tg?.openLink?.(u), u => window.open(u, '_blank')]){
+        try{ open(url); opened = true; break; }catch(err){ lastErr = String(err && err.message || err); }
+      }
+      if (!opened){
+        pending = null;
+        result.innerHTML = `<p class="bc-res bad">Не удалось открыть чат с ${esc(shownName(c))}${lastErr ? ' (' + esc(lastErr) + ')' : ''}. Попробуйте WhatsApp.</p>`;
+        return;
+      }
       row.classList.remove('nots'); const old = row.querySelector('.rc-note-no'); if (old) old.remove();
       btn.classList.remove('tg-retry');
       row.classList.add('sent', 'pend');
