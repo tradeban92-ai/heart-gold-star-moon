@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-2210 invest-tab -->
+<!-- admin-build 2026-10-09-2330 car-loan-tab -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -144,6 +144,25 @@
   .pp .pp-go{background:var(--steel-dk,#2F4A63);border-color:transparent;color:#fff;}
   .pp .pp-go:disabled{background:#DDE3E8;color:#6B7884;}
 
+  .ln-actions{display:flex;gap:8px;margin:0 0 8px;}
+  .ln-actions button{flex:1;min-height:46px;border-radius:12px;border:1px solid var(--line);background:#fff;font:700 14px 'Manrope',sans-serif;color:var(--ink);}
+  .ln-actions button.primary{background:var(--steel-dk);border-color:transparent;color:#fff;}
+  .ln-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
+  .ln-chip{height:36px;padding:0 12px;border-radius:18px;border:1px solid var(--line);background:#fff;font:600 13px 'Manrope',sans-serif;color:var(--steel-dk);}
+  .ln-chip.on{background:var(--steel-dk);border-color:transparent;color:#fff;}
+  .ln-cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .ln-col{background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:10px 11px;}
+  .ln-col.acc{border-color:#9FE0B4;background:#F4FBF6;}
+  .ln-col h5{margin:0 0 6px;font-size:13px;color:var(--steel-dk);}
+  .ln-col span{display:block;font-size:11.5px;color:var(--muted);margin-top:5px;}
+  .ln-col b{display:block;font-size:14.5px;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .ln-win{margin-top:8px;background:#F4FBF6;border-color:#9FE0B4;}
+  .ln-wide{width:100%;min-height:44px;margin-top:6px;border-radius:12px;border:0;background:var(--steel-dk);color:#fff;font:700 14px 'Manrope',sans-serif;}
+  .ln-warn{font-size:12.5px;color:#8A5A00;background:#FFF8EE;border-radius:10px;padding:8px 10px;margin:0 0 8px;}
+  .ln-log{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line-soft);}
+  .ln-log b{display:block;font-size:15px;font-variant-numeric:tabular-nums;}
+  .ln-log span{font-size:12px;color:var(--muted);}
+  .ln-log button{flex:none;width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#fff;font-size:18px;color:var(--muted);}
   .inv-goal{background:var(--steel-dk);color:#fff;border-radius:16px;padding:16px 18px;margin:10px 0 8px;}
   .inv-goal span{display:block;font-size:12.5px;opacity:.75;}
   .inv-goal b{display:block;font-size:30px;font-weight:700;margin:4px 0 8px;font-variant-numeric:tabular-nums;}
@@ -218,10 +237,10 @@
   .rv-colbar{width:100%;max-width:34px;background:#C9D3DC;border-radius:6px 6px 2px 2px;}
   .rv-col.on .rv-colbar{background:var(--steel-dk);} .rv-col.on em{color:var(--ink);font-weight:700;}
   .rv-col span{font-size:11.5px;color:var(--muted);}
-  .tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:0 16px 6px;padding:4px;
+  .tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin:0 16px 6px;padding:4px;
         background:#DCE3E9;border-radius:12px;}
   .tabs button{height:38px;border:none;border-radius:9px;background:transparent;color:var(--steel-dk);
-        font:600 13px 'Manrope',sans-serif;cursor:pointer;padding:0 2px;}
+        font:600 11.5px 'Manrope',sans-serif;cursor:pointer;padding:0;}
   .tabs button.on{background:#fff;box-shadow:0 1px 3px rgba(43,54,66,.12);}
 
   .chat-row{width:100%;text-align:left;background:var(--panel);border:1px solid var(--line-soft);border-radius:14px;
@@ -397,7 +416,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-2210</p>
+  <p class="ver">версия 2026-10-09-2330</p>
 
 </header>
 
@@ -407,6 +426,7 @@
   <button type="button" data-tab="revenue">Выручка</button>
   <button type="button" data-tab="chats">TG</button>
   <button type="button" data-tab="invest">Инвест</button>
+  <button type="button" data-tab="loan">Кредит</button>
 </nav>
 
 <div id="tabVisits">
@@ -463,6 +483,11 @@
 <div id="tabInvest" class="hidden">
   <div id="iState" class="state"><b>Загружаю…</b></div>
   <div id="iMain" class="wrap hidden"></div>
+</div>
+
+<div id="tabLoan" class="hidden">
+  <div id="lState" class="state"><b>Загружаю…</b></div>
+  <div id="lMain" class="wrap hidden"></div>
 </div>
 
 <div id="tabChats" class="hidden">
@@ -1088,12 +1113,14 @@ function showTab(t){
   document.getElementById('tabRevenue').classList.toggle('hidden', t !== 'revenue');
   document.getElementById('tabChats').classList.toggle('hidden', t !== 'chats');
   document.getElementById('tabInvest').classList.toggle('hidden', t !== 'invest');
-  document.getElementById('pageTitle').textContent = { visits:'Сегодня', clients:'Клиенты', revenue:'Выручка', chats:'TG', invest:'Инвест' }[t];
+  document.getElementById('tabLoan').classList.toggle('hidden', t !== 'loan');
+  document.getElementById('pageTitle').textContent = { visits:'Сегодня', clients:'Клиенты', revenue:'Выручка', chats:'TG', invest:'Инвест', loan:'Машина кредит' }[t];
   if (t === 'visits' && Date.now() - _clientsAt > 60000) { CLIENTS = null; _clientsPromise = null; fetchClientsData().then(renderTodayActivity); }  // не чаще раза в минуту — не грузим Google Sheets лишний раз
   if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
   if (t === 'revenue') loadRevenue();
   if (t === 'chats') loadChats();
   if (t === 'invest') loadInvest();
+  if (t === 'loan') loadLoan();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
@@ -2814,13 +2841,14 @@ function invCompute(rows){
     return { ...r, invest, total, income };
   });
 }
+// Цель — накопить миллион на РЕМОНТ (проценты на него не начисляются).
 function invPlan(rows, cur){
-  const comp = invCompute(rows), end = rows.length - 1;
-  const rate = INV_RATE / 100 / 12;
-  let k = 0;
-  for (let i = cur + 1; i <= end; i++) k += Math.pow(1 + rate, end - i);   // как вырастет каждый будущий рубль
-  const need = k > 0 ? Math.max(0, (INV_GOAL - comp[end].total) / k) : null;
-  return { comp, endTotal: comp[end].total, need };
+  const comp = invCompute(rows);
+  const saved = rows.reduce((t, r) => t + r.repair, 0);
+  // оставшиеся месяцы: с текущего, если в нём ремонт ещё не вносили, иначе со следующего
+  const left = Math.max(1, rows.length - cur - (rows[cur] && rows[cur].repair > 0 ? 1 : 0));
+  const need = Math.max(0, (INV_GOAL - saved) / left);
+  return { comp, saved, left, need };
 }
 function iState(title, text){
   const st = document.getElementById('iState');
@@ -2851,21 +2879,19 @@ function renderInvest(){
   const plan = invPlan(rows, cur), comp = plan.comp;
   const now = comp[Math.min(cur, comp.length - 1)];
   const sel = comp[INV_IDX];
-  const pct = Math.max(0, Math.min(100, now.total / INV_GOAL * 100));
+  const pct = Math.max(0, Math.min(100, plan.saved / INV_GOAL * 100));
   const lastLabel = invLabelTo(rows.length - 1);     // «сентябрю 2027»
-  const planText = plan.endTotal >= INV_GOAL
-    ? `К ${esc(lastLabel)} по текущему плану накопится <b>${rub(plan.endTotal)}</b> — цель достигается ✓`
-    : plan.need !== null
-      ? `К ${esc(lastLabel)} по текущему плану: <b>${rub(plan.endTotal)}</b>.<br>Чтобы дойти до цели, нужно вносить ≈ <b>${rub(plan.need)}</b> в месяц (вместе Саша + Катя) в оставшиеся месяцы.`
-      : `К ${esc(lastLabel)} накопится <b>${rub(plan.endTotal)}</b>.`;
+  const planText = plan.saved >= INV_GOAL
+    ? `На ремонт накоплено <b>${rub(plan.saved)}</b> — цель выполнена ✓`
+    : `Осталось накопить на ремонт <b>${rub(INV_GOAL - plan.saved)}</b>.<br>Чтобы успеть к ${esc(lastLabel)}, нужно откладывать ≈ <b>${rub(plan.need)}</b> в месяц (осталось ${plan.left} ${plural(plan.left,'месяц','месяца','месяцев')}).`;
   const field = (key, label) => `<div class="inv-row"><div><span>${label}</span><b>${rub(sel[key])}</b></div>
       <button type="button" data-f="${key}">+ Внести</button></div>`;
 
   document.getElementById('iMain').innerHTML = `
-    <div class="inv-goal"><span>Цель — ${rub(INV_GOAL)} к ${esc(lastLabel)}</span>
-      <b>${rub(now.total)}</b>
+    <div class="inv-goal"><span>Накопить на ремонт — ${rub(INV_GOAL)} к ${esc(lastLabel)}</span>
+      <b>${rub(plan.saved)}</b>
       <div class="inv-bar"><i style="width:${pct.toFixed(1)}%"></i></div>
-      <small>${pct.toFixed(1)}% от цели · ${esc(invLabel(Math.min(cur, comp.length - 1)))}</small></div>
+      <small>${pct.toFixed(1)}% от цели · инвестиции сейчас: ${rub(now.total)}</small></div>
     <div class="inv-plan">${planText}</div>
     <div class="rv-nav">
       <button type="button" id="ivPrev" aria-label="Предыдущий месяц" ${INV_IDX === 0 ? 'disabled' : ''}>‹</button>
@@ -2937,6 +2963,236 @@ function openInvestInput(fieldKey){
   sheet.scrollTop = 0;
   document.getElementById('sheetBg').classList.remove('hidden');
   setTimeout(() => input.focus(), 150);
+}
+// ============================================================
+// МАШИНА КРЕДИТ — расчёт
+// ============================================================
+const LN = { issue:'2026-09-29', principal:1779000, rate:10.6, term:84, pay:30093, day:12,
+             first:'2026-11-12', earlyFrom:'2027-01-12', moratoriumTo:'2026-12-28', ins:100000 };
+const LN_DAY = 864e5;
+function lnT(s){ const p = String(s).slice(0,10).split('-').map(Number); return Date.UTC(p[0], p[1]-1, p[2]); }
+function lnIso(t){ return new Date(t).toISOString().slice(0,10); }
+function lnToday(){ const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); }
+function lnAccrue(B, from, to){
+  let s = 0;
+  for (let t = from; t < to; t += LN_DAY){
+    const y = new Date(t).getUTCFullYear();
+    const dy = ((y%4===0 && y%100!==0) || y%400===0) ? 366 : 365;
+    s += B * LN.rate / 100 / dy;
+  }
+  return s;
+}
+function lnDues(n){
+  const f = lnT(LN.first), a = new Date(f), out = [];
+  for (let k = 0; k < n; k++) out.push(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + k, LN.day));
+  return out;
+}
+// rows: [{date,type,amount}], extra: ₽ сверху каждый месяц (с даты earlyFrom), today: ms
+function lnSim(rows, extra, today){
+  const dues = lnDues(130), evs = [];
+  const pays = rows.filter(r => r.type === 'payment').sort((a,b) => a.date < b.date ? -1 : 1);
+  const early = rows.filter(r => r.type === 'early');
+  const matched = new Set();
+  let assumed = 0;
+  dues.forEach((due, k) => {
+    const prev = k ? dues[k-1] : -Infinity;
+    const mine = pays.filter(p => { const t = lnT(p.date); return t > prev && t <= due; });
+    if (mine.length){ mine.forEach(p => evs.push({ t:lnT(p.date), amt:p.amount, ord:0, kind:'pay', logged:true })); matched.add(k); }
+    else if (due < today){ evs.push({ t:due, amt:LN.pay, ord:0, kind:'pay', assumed:true }); assumed++; }
+    else evs.push({ t:due, amt:LN.pay, ord:0, kind:'pay', future:true, k });
+    if (extra > 0 && due >= today && due >= lnT(LN.earlyFrom)) evs.push({ t:due, amt:extra, ord:1, kind:'extra', future:true });
+  });
+  early.forEach(e => evs.push({ t:lnT(e.date), amt:e.amount, ord:1, kind:'early', logged:true }));
+  evs.sort((a,b) => a.t - b.t || a.ord - b.ord);
+
+  let B = LN.principal, I = 0, last = lnT(LN.issue), snap = null, interest = 0, paid = 0, payoff = null, payments = 0;
+  const done = [];
+  for (const e of evs){
+    if (!snap && e.t > today){ snap = { B, I: I + lnAccrue(B, last, today) }; }
+    if (B <= 0.005) break;
+    I += lnAccrue(B, last, e.t); last = e.t;
+    const amt = Math.min(e.amt, B + I);
+    const pi = Math.min(I, amt);
+    I -= pi; B -= (amt - pi); interest += pi;
+    if (e.t <= today) paid += amt;
+    if (e.kind === 'pay') payments++;
+    payoff = e.t;
+    done.push({ t:e.t, amt, kind:e.kind, B });
+    if (B <= 0.005){ B = 0; break; }
+  }
+  if (!snap) snap = { B, I };
+  // страховка: каждый сентябрь, начиная с 2027, пока кредит жив
+  let insN = 0;
+  for (let y = 2027; payoff && Date.UTC(y, 8, 1) < payoff; y++) insN++;
+  const next = dues.find((d, k) => d >= today && !matched.has(k));
+  return { B:snap.B, I:snap.I, payoff, interest, paid, payments, insN, ins:insN * LN.ins,
+           cost: interest + insN * LN.ins, next, assumed, done };
+}
+
+// --- интерфейс вкладки «Машина кредит» ---
+let LN_ROWS = null, LN_EXTRA = null, LN_EXTRA_INIT = false;
+const LN_CHIPS = [0, 10000, 20000, 30000, 50000, 70000, 100000];
+const LN_MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+function lnDate(t){ const d = new Date(t); return `${d.getUTCDate()} ${LN_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; }
+function lnDay(t){ const d = new Date(t); return `${d.getUTCDate()} ${LN_MONTHS[d.getUTCMonth()]}`; }
+function lnSpan(months){ const y = Math.floor(months/12), m = months % 12; return [y ? `${y} ${plural(y,'год','года','лет')}` : '', m ? `${m} мес.` : ''].filter(Boolean).join(' ') || '0 мес.'; }
+function lnState(title, text){
+  const s = document.getElementById('lState');
+  if (!title){ s.classList.add('hidden'); return; }
+  s.classList.remove('hidden'); s.innerHTML = `<b>${title}</b>${text ? `<br>${text}` : ''}`;
+  document.getElementById('lMain').classList.add('hidden');
+}
+function lnPlanOf(rows){
+  const p = rows.filter(r => r.type === 'plan').sort((a,b) => a.row_number - b.row_number);
+  return p.length ? p[p.length-1].amount : 0;
+}
+async function loadLoan(){
+  if (!tgUser){ lnState('Откройте через бота', 'Раздел работает только внутри Telegram.'); return; }
+  if (!LN_ROWS) lnState('Загружаю…');
+  try{
+    const r = await fetch(`${API}/admin-loan?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`);
+    const raw = await r.json();
+    const d = Array.isArray(raw) ? raw[0] : raw;
+    if (!d || d.ok === false){ lnState('Нет доступа', 'Раздел только для администратора.'); return; }
+    LN_ROWS = d.rows || [];
+    if (!LN_EXTRA_INIT){ LN_EXTRA = lnPlanOf(LN_ROWS); LN_EXTRA_INIT = true; }
+    lnState('');
+    document.getElementById('lMain').classList.remove('hidden');
+    renderLoan();
+  }catch(e){
+    if (!LN_ROWS) lnState('Нет связи с сервисом', 'Включите воркфлоу <b style="display:inline;font:inherit;color:inherit">Admin Car Loan API</b> в n8n и проверьте, что лист называется «Кредит».');
+  }
+}
+function renderLoan(){
+  const today = lnToday();
+  const live = LN_ROWS.filter(r => r.type === 'payment' || r.type === 'early');
+  const base = lnSim(live, 0, today);
+  const plan = lnSim(live, LN_EXTRA, today);
+  const savedPlan = lnPlanOf(LN_ROWS);
+  const paidPct = Math.max(0, Math.min(100, (LN.principal - base.B) / LN.principal * 100));
+  const daysTo = base.next ? Math.round((base.next - today) / LN_DAY) : null;
+  const early0 = lnT(LN.earlyFrom);
+  const mor = today < early0
+    ? `🔒 Досрочно гасить пока нельзя: мораторий до ${lnDate(lnT(LN.moratoriumTo))}. Первый день досрочки — <b>${lnDate(early0)}</b> (через ${Math.round((early0 - today)/LN_DAY)} ${plural(Math.round((early0 - today)/LN_DAY),'день','дня','дней')}).`
+    : '✅ Мораторий закончился — досрочное погашение доступно.';
+  const monthsBase = base.payments, monthsPlan = plan.payments;
+  const saveInt = base.interest - plan.interest, saveIns = base.ins - plan.ins;
+  const col = (title, s, cls) => `<div class="ln-col ${cls||''}"><h5>${title}</h5>
+      <span>Закроется</span><b>${s.payoff ? lnDate(s.payoff) : '—'}</b>
+      <span>Проценты (переплата)</span><b>${rub(Math.round(s.interest))}</b>
+      <span>Страховка · ${s.insN} ${plural(s.insN,'раз','раза','раз')}</span><b>${rub(s.ins)}</b>
+      <span>Всего сверх долга</span><b>${rub(Math.round(s.cost))}</b></div>`;
+  const chips = LN_CHIPS.map(v => `<button type="button" class="ln-chip ${v === LN_EXTRA ? 'on' : ''}" data-x="${v}">${v ? (v/1000) + ' тыс' : 'без досрочки'}</button>`).join('')
+    + `<button type="button" class="ln-chip ${LN_CHIPS.includes(LN_EXTRA) ? '' : 'on'}" data-x="custom">${LN_CHIPS.includes(LN_EXTRA) ? 'Своя' : rub(LN_EXTRA)}</button>`;
+  const tbl = LN_CHIPS.filter(v => v).map(v => {
+    const s = lnSim(live, v, today);
+    return `<tr class="${v === LN_EXTRA ? 'on' : ''}" data-x="${v}"><td>+${(v/1000)} тыс</td><td>${lnDate(s.payoff).replace(/ (\d{4})$/, ' $1')}</td><td>−${lnSpan(Math.max(0, base.payments - s.payments))}</td><td>${Math.round((base.cost - s.cost)/1000).toLocaleString('ru-RU')} тыс</td></tr>`;
+  }).join('');
+  const logs = LN_ROWS.filter(r => r.type === 'payment' || r.type === 'early').sort((a,b) => a.date < b.date ? 1 : -1);
+  const logHtml = logs.length ? logs.map(r => `<div class="ln-log"><div><b>${rub(r.amount)}</b><span>${r.type === 'early' ? 'досрочно' : 'платёж'} · ${lnDay(lnT(r.date))} ${new Date(lnT(r.date)).getUTCFullYear()}${r.comment ? ' · ' + esc(r.comment) : ''}</span></div>
+      <button type="button" data-void="${r.row_number}" aria-label="Удалить запись">×</button></div>`).join('')
+    : '<p class="sh-note">Пока ничего не отмечено. Платёж 12 ноября — первый.</p>';
+  const warn = base.assumed ? `<p class="ln-warn">⚠️ ${base.assumed} ${plural(base.assumed,'платёж','платежа','платежей')} по графику уже прошло, но не отмечено — считаю, что оплачено по графику.</p>` : '';
+  const insNext = (() => { const t = new Date(today); let y = t.getUTCFullYear(); if (Date.UTC(y, 8, 30) < today) y++; if (y < 2027) y = 2027; return y; })();
+
+  const m = document.getElementById('lMain');
+  m.innerHTML = `
+    <div class="inv-goal"><span>Остаток долга</span><b>${rub(Math.round(base.B))}</b>
+      <div class="inv-bar"><i style="width:${paidPct.toFixed(1)}%"></i></div>
+      <small>погашено ${paidPct.toFixed(1)}% · набежавшие проценты с прошлого платежа ≈ ${rub(Math.round(base.I))}<br>
+      ${base.next ? `Ближайший платёж: <b style="display:inline;font-size:inherit">${lnDate(base.next)}</b> · ${rub(LN.pay)}${daysTo !== null ? ` · через ${daysTo} ${plural(daysTo,'день','дня','дней')}` : ''}` : 'Кредит закрыт 🎉'}</small></div>
+    <div class="inv-plan">${mor}</div>
+    <div class="ln-actions">
+      <button type="button" id="lnPay" class="primary">✓ Отметить платёж</button>
+      <button type="button" id="lnEarly">＋ Досрочный</button>
+    </div>
+    ${warn}
+    <div class="sh-block"><h4>Сколько вносить сверху каждый месяц</h4>
+      <p class="sh-note">Досрочка в день платежа (12-го), срок сокращается, платёж ${rub(LN.pay)} остаётся.</p>
+      <div class="ln-chips">${chips}</div>
+      <div class="ln-cmp">${col('По графику', base)}${col(LN_EXTRA ? `+${rub(LN_EXTRA)} в месяц` : 'Без досрочки', plan, 'acc')}</div>
+      ${LN_EXTRA ? `<div class="inv-plan ln-win">Закроете на <b>${lnSpan(Math.max(0, monthsBase - monthsPlan))}</b> раньше.<br>Сэкономите: проценты <b>${rub(Math.round(saveInt))}</b> + страховка <b>${rub(saveIns)}</b> = <b>${rub(Math.round(saveInt + saveIns))}</b>.</div>` : ''}
+      ${LN_EXTRA && LN_EXTRA !== savedPlan ? '<button type="button" id="lnSavePlan" class="ln-wide">Сохранить как мой план</button>' : ''}
+      ${savedPlan && LN_EXTRA === savedPlan ? `<p class="sh-note">Это ваш сохранённый план — напоминания приходят с ним.</p>` : ''}
+    </div>
+    <div class="sh-block"><h4>Сравнение сумм досрочки</h4>
+      <table class="inv-tbl"><thead><tr><th>Сверху</th><th>Закроется</th><th>Раньше на</th><th>Экономия</th></tr></thead><tbody>${tbl}</tbody></table></div>
+    <div class="sh-block"><h4>Отмеченные платежи</h4>${logHtml}</div>
+    <div class="sh-block"><h4>Важно помнить</h4>
+      <p class="sh-note">• Страховка ${rub(LN.ins)} каждый сентябрь (следующая — сентябрь ${insNext}), иначе ставка вырастет. Я считаю её в стоимости кредита.<br>
+      • Досрочка только с ${lnDate(early0)}. Платёж по графику ${rub(LN.pay)} — 12-го числа.<br>
+      • Расчёт приблизительный: проценты по дням, как у банка, но копейки и даты зачисления могут отличаться. Сверяйтесь с приложением банка.</p></div>`;
+  m.querySelectorAll('.ln-chip').forEach(b => b.onclick = () => {
+    if (b.dataset.x === 'custom') return lnAskAmount('Своя сумма досрочки в месяц', LN_EXTRA || '', v => { LN_EXTRA = v; renderLoan(); });
+    LN_EXTRA = +b.dataset.x; renderLoan();
+  });
+  m.querySelectorAll('.inv-tbl tbody tr').forEach(tr => tr.onclick = () => { LN_EXTRA = +tr.dataset.x; renderLoan(); });
+  m.querySelector('#lnPay').onclick = () => lnOpenAdd('payment', base);
+  m.querySelector('#lnEarly').onclick = () => lnOpenAdd('early', base);
+  const sp = m.querySelector('#lnSavePlan');
+  if (sp) sp.onclick = async () => {
+    sp.disabled = true;
+    try{ await lnSave({ action:'add', type:'plan', amount:LN_EXTRA, date:lnIso(today), comment:'план досрочки' });
+         try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+         await loadLoan(); LN_EXTRA = lnPlanOf(LN_ROWS); renderLoan();
+    }catch(e){ sp.disabled = false; sp.textContent = 'Не удалось сохранить — попробуйте ещё раз'; }
+  };
+  m.querySelectorAll('[data-void]').forEach(b => b.onclick = async () => {
+    if (!confirm('Удалить эту запись?')) return;
+    b.disabled = true;
+    try{ await lnSave({ action:'void', row_number:+b.dataset.void }); await loadLoan(); }
+    catch(e){ b.disabled = false; alert('Не удалось удалить'); }
+  });
+}
+async function lnSave(body){
+  const r = await fetch(`${API}/admin-loan-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, ...body }) });
+  const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+  if (!d || d.ok === false) throw new Error('fail');
+}
+function lnAskAmount(title, init, cb){
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sh-head"><div><div class="sh-name">${title}</div></div><button class="sh-x" type="button" aria-label="Закрыть">×</button></div>
+    <input class="inv-in" id="lnAmt" type="number" inputmode="decimal" min="0" step="any" value="${init}" placeholder="например 30000">
+    <div class="bc-actions" style="margin-top:10px"><button type="button" id="lnOk" class="primary" style="flex:1">Готово</button><button type="button" id="lnNo" style="flex:1">Отмена</button></div>`;
+  const inp = sheet.querySelector('#lnAmt');
+  sheet.querySelector('#lnOk').onclick = () => { const v = parseFloat(String(inp.value).replace(',', '.')); if (!isFinite(v) || v < 0){ inp.focus(); return; } closeClient(); cb(Math.round(v)); };
+  sheet.querySelector('#lnNo').onclick = closeClient; sheet.querySelector('.sh-x').onclick = closeClient;
+  sheet.scrollTop = 0; document.getElementById('sheetBg').classList.remove('hidden'); setTimeout(() => inp.focus(), 150);
+}
+function lnOpenAdd(type, base){
+  const today = lnToday(), early0 = lnT(LN.earlyFrom);
+  const isEarly = type === 'early';
+  const defDate = isEarly ? Math.max(today, early0) : (base.next && base.next - today < 20 * LN_DAY ? base.next : today);
+  const defAmt = isEarly ? (LN_EXTRA || lnPlanOf(LN_ROWS) || 10000) : LN.pay;
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sh-head"><div><div class="sh-name">${isEarly ? 'Досрочный платёж' : 'Платёж по графику'}</div>
+      <div class="sh-phone">${isEarly ? 'уменьшает срок кредита' : 'отметьте, когда списалось'}</div></div>
+      <button class="sh-x" type="button" aria-label="Закрыть">×</button></div>
+    <label class="f" for="lnA">Сумма, ₽</label>
+    <input class="inv-in" id="lnA" type="number" inputmode="decimal" min="0" step="any" value="${defAmt}">
+    <label class="f" for="lnD">Дата</label>
+    <input class="inv-in" id="lnD" type="date" value="${lnIso(defDate)}">
+    <div id="lnErr"></div>
+    <div class="bc-actions" style="margin-top:10px"><button type="button" id="lnOk" class="primary" style="flex:1">Сохранить</button><button type="button" id="lnNo" style="flex:1">Отмена</button></div>`;
+  const err = sheet.querySelector('#lnErr');
+  sheet.querySelector('#lnOk').onclick = async () => {
+    const amt = parseFloat(String(sheet.querySelector('#lnA').value).replace(',', '.'));
+    const dt = sheet.querySelector('#lnD').value;
+    if (!isFinite(amt) || amt <= 0){ err.innerHTML = '<p class="bc-res bad">Введите сумму.</p>'; return; }
+    if (!dt){ err.innerHTML = '<p class="bc-res bad">Выберите дату.</p>'; return; }
+    if (isEarly && lnT(dt) < early0){ err.innerHTML = `<p class="bc-res bad">Досрочно можно с ${lnDate(early0)} — сейчас мораторий (до ${lnDate(lnT(LN.moratoriumTo))}).</p>`; return; }
+    const btns = sheet.querySelectorAll('button'); btns.forEach(b => b.disabled = true);
+    try{
+      await lnSave({ action:'add', type, amount:amt, date:dt, comment:'' });
+      try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+      closeClient(); await loadLoan();
+    }catch(e){ btns.forEach(b => b.disabled = false); err.innerHTML = '<p class="bc-res bad">Не удалось сохранить. Проверьте, что воркфлоу Admin Car Loan API включён.</p>'; }
+  };
+  sheet.querySelector('#lnNo').onclick = closeClient; sheet.querySelector('.sh-x').onclick = closeClient;
+  sheet.scrollTop = 0; document.getElementById('sheetBg').classList.remove('hidden');
 }
 </script>
 </body>
