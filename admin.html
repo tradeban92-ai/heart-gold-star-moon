@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1039 today-tab-no-escalations -->
+<!-- admin-build 2026-10-09-1115 filter-labels -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -203,6 +203,18 @@
   .seg-chip.on{background:var(--steel-dk);border-color:var(--steel-dk);color:#fff;}
   .seg-chip.on i{color:rgba(255,255,255,.7);}
 
+  /* Метка-фильтр вместо ряда чипов: одна кнопка показывает текущий выбор,
+     по нажатию разворачивается панель со всеми вариантами, сгруппированными по смыслу. */
+  .filter-bar{margin:12px 0 0;}
+  .filter-pill{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:8px 14px;border-radius:999px;
+        border:1px solid var(--line);background:#fff;color:var(--steel-dk);font:700 14px 'Manrope',sans-serif;cursor:pointer;}
+  .filter-pill i{font-style:normal;color:var(--muted);font-weight:600;}
+  .filter-pill .caret{color:var(--muted);font-size:11px;margin-left:2px;}
+  .filter-panel{margin:8px 0 10px;padding:12px;background:#fff;border:1px solid var(--line-soft);border-radius:14px;}
+  .filter-group + .filter-group{margin-top:12px;}
+  .filter-group h5{margin:0 0 8px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);}
+  .filter-opts{display:flex;flex-wrap:wrap;gap:6px;}
+
   .cal-wrap{margin:12px 0 10px;width:100%;flex:1 1 100%;}
   .cal-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px;}
   .cal-nav button{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:17px;color:var(--steel-dk);cursor:pointer;}
@@ -324,7 +336,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1039</p>
+  <p class="ver">версия 2026-10-09-1115</p>
 </header>
 
 <nav class="tabs">
@@ -357,7 +369,10 @@
   <div id="cState" class="state"><b>Загружаю…</b></div>
   <div id="cMain" class="wrap hidden">
     <div class="sum" id="cSum"></div>
-    <div class="segs" id="cSegs"></div>
+    <div class="filter-bar">
+      <button type="button" class="filter-pill" id="filterBtn"></button>
+    </div>
+    <div class="filter-panel hidden" id="filterPanel"></div>
     <div class="ctools">
       <input id="cSearch" type="search" inputmode="search" placeholder="Имя или телефон">
       <select id="cSort" aria-label="Сортировка">
@@ -997,6 +1012,7 @@ function showTab(t){
   document.getElementById('tabRevenue').classList.toggle('hidden', t !== 'revenue');
   document.getElementById('tabChats').classList.toggle('hidden', t !== 'chats');
   document.getElementById('pageTitle').textContent = { visits:'Сегодня', clients:'Клиенты', revenue:'Выручка', chats:'TG' }[t];
+  if (t === 'visits') { CLIENTS = null; _clientsPromise = null; fetchClientsData().then(renderTodayActivity); }
   if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
   if (t === 'revenue') loadRevenue();
   if (t === 'chats') loadChats();
@@ -1160,7 +1176,14 @@ const SEGS = [
   { k:'archived', l:'Скрытые' },
   { k:'consult',  l:'Не вернулись после консультации' },
 ];
-// Сегменты, доступные не через чипы, а через карточки сверху (VIP, «давно не были») —
+// Группировка тех же сегментов для панели фильтра — чисто для отображения,
+// на сам список фильтров и inSeg() не влияет. «Пора повторить» сюда не включаем:
+// он уже есть карточкой-счётчиком сверху, дублировать не нужно.
+const FILTER_GROUPS = [
+  { title: 'Показать', keys: ['all','booked','active','consult'] },
+  { title: 'Папки',    keys: ['murmansk','archived'] },
+];
+// Сегменты, доступные не через панель, а через карточки сверху (VIP, «давно не были») —
 // у них тоже должно быть название для кнопки рассылки «Написать: ...»
 const SEG_NAMES = Object.fromEntries(SEGS.map(s => [s.k, s.l]));
 SEG_NAMES.vip = 'VIP';
@@ -1302,12 +1325,31 @@ function renderSummary(){
   });
 }
 
+// Метка вместо ряда чипов: одна кнопка с текущим выбором, по клику —
+// панель со всеми вариантами, сгруппированными по смыслу (а не вперемешку).
 function renderSegs(){
-  document.getElementById('cSegs').innerHTML = SEGS.map(s => {
-    const n = CLIENTS.filter(c => inSeg(c, s.k)).length;
-    return `<button type="button" class="seg-chip${SEG === s.k ? ' on' : ''}" data-k="${s.k}">${s.l}<i>${n}</i></button>`;
-  }).join('');
-  document.querySelectorAll('#cSegs .seg-chip').forEach(b => b.onclick = () => { SEG = b.dataset.k; renderSegs(); renderClients(); });
+  const label = SEG_NAMES[SEG] || 'Все';
+  const curN = CLIENTS.filter(c => inSeg(c, SEG)).length;
+  const pill = document.getElementById('filterBtn');
+  pill.innerHTML = `${esc(label)} <i>${curN}</i><span class="caret">▾</span>`;
+
+  const panel = document.getElementById('filterPanel');
+  panel.innerHTML = FILTER_GROUPS.map(g => `
+    <div class="filter-group">
+      <h5>${esc(g.title)}</h5>
+      <div class="filter-opts">${g.keys.map(k => {
+        const s = SEGS.find(x => x.k === k); if (!s) return '';
+        const n = CLIENTS.filter(c => inSeg(c, k)).length;
+        return `<button type="button" class="seg-chip${SEG === k ? ' on' : ''}" data-k="${k}">${esc(s.l)}<i>${n}</i></button>`;
+      }).join('')}</div>
+    </div>`).join('');
+  panel.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+    SEG = b.dataset.k;
+    panel.classList.add('hidden');
+    renderSegs(); renderClients();
+  });
+
+  pill.onclick = () => panel.classList.toggle('hidden');
 }
 
 function daysAgo(n){
