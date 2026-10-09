@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-0920 broadcast-log -->
+<!-- admin-build 2026-10-09-1039 today-tab-no-escalations -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -50,6 +50,13 @@
   .err.show{display:block;}
 
   .section{font-size:13px;font-weight:700;color:var(--steel-dk);margin:24px 4px 8px;}
+  .act-row{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#F5F8FA;border-radius:12px;padding:10px 12px;margin-bottom:8px;}
+  .act-row .act-info{min-width:0;}
+  .act-row .act-top{display:flex;gap:8px;align-items:baseline;}
+  .act-row .act-top b{font-size:14px;}
+  .act-row .act-top span{font-size:12px;color:var(--muted);}
+  .act-row .act-text{font-size:13px;color:var(--ink);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .act-btn{flex:none;height:32px;padding:0 12px;border-radius:8px;border:none;background:var(--steel-dk);color:#fff;font:600 13px 'Manrope',sans-serif;cursor:pointer;}
   .add{width:100%;height:50px;border:1.5px dashed var(--line);border-radius:14px;background:transparent;
        color:var(--steel-dk);font:600 15px 'Manrope',sans-serif;cursor:pointer;}
   .walk{position:relative;padding-top:40px;}
@@ -317,11 +324,11 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-0920</p>
+  <p class="ver">версия 2026-10-09-1039</p>
 </header>
 
 <nav class="tabs">
-  <button type="button" data-tab="visits" class="on">Визиты</button>
+  <button type="button" data-tab="visits" class="on">Сегодня</button>
   <button type="button" data-tab="clients">Клиенты</button>
   <button type="button" data-tab="revenue">Выручка</button>
   <button type="button" data-tab="chats">TG</button>
@@ -337,6 +344,7 @@
   <p class="section">Без записи в DIKIDI</p>
   <div id="walkins"></div>
   <button class="add" id="addWalk" type="button">+ Был ещё кто-то</button>
+  <div id="actBox"></div>
 </div>
 
 <div class="bar hidden" id="bar">
@@ -778,7 +786,37 @@ function render(){
   });
   updateCount();
   paintLevels();
-  fetchClientsData();
+  fetchClientsData().then(renderTodayActivity);
+}
+
+// Лента активности в мини-аппе за последние сутки — по всем клиентам сразу,
+// чтобы было видно, кто чем интересовался, не заходя в каждую карточку.
+function renderTodayActivity(){
+  const box = document.getElementById('actBox');
+  if (!box) return;
+  const cutoff = Date.now() - 24*3600*1000;
+  const rows = [];
+  (CLIENTS || []).forEach(c => {
+    (c.activity || []).forEach(a => {
+      const t = Date.parse(a.ts);
+      if (!isNaN(t) && t >= cutoff) rows.push({ c, a, t });
+    });
+  });
+  rows.sort((x,y) => y.t - x.t);
+  if (!rows.length){ box.innerHTML = ''; return; }
+  box.innerHTML = `<p class="section">Активность в приложении · за сутки</p>` +
+    rows.slice(0, 20).map((r,i) => `
+    <div class="act-row" data-i="${i}">
+      <div class="act-info">
+        <div class="act-top"><b>${esc(shownName(r.c))}</b><span>${esc(timeAgo(r.a.ts))}</span></div>
+        <div class="act-text">${esc(r.a.text)}</div>
+      </div>
+      <button type="button" class="act-btn" data-i="${i}">Написать</button>
+    </div>`).join('');
+  box.querySelectorAll('.act-btn').forEach(btn => btn.onclick = () => {
+    const r = rows[+btn.dataset.i];
+    openComposer([r.c], shownName(r.c));
+  });
 }
 
 function paintCard(card){
@@ -958,7 +996,7 @@ function showTab(t){
   document.getElementById('tabClients').classList.toggle('hidden', t !== 'clients');
   document.getElementById('tabRevenue').classList.toggle('hidden', t !== 'revenue');
   document.getElementById('tabChats').classList.toggle('hidden', t !== 'chats');
-  document.getElementById('pageTitle').textContent = { visits:'Отметка визитов', clients:'Клиенты', revenue:'Выручка', chats:'TG' }[t];
+  document.getElementById('pageTitle').textContent = { visits:'Сегодня', clients:'Клиенты', revenue:'Выручка', chats:'TG' }[t];
   if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
   if (t === 'revenue') loadRevenue();
   if (t === 'chats') loadChats();
