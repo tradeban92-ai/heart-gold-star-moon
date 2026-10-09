@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1315 throttle-refetch -->
+<!-- admin-build 2026-10-09-1420 clients-merge-fallback -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -361,7 +361,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1315</p>
+  <p class="ver">версия 2026-10-09-1420</p>
 
 </header>
 
@@ -794,6 +794,7 @@ function render(){
           <div class="proc-list"></div>
           <button type="button" class="add-proc">+ Было несколько процедур</button>
           <div class="src-host"></div>
+          <label class="chk murm-chk"><input type="checkbox" class="murm-cb"> Мурманск</label>
           <div class="err">Выберите процедуру</div>
         </div>
       </div>`;
@@ -887,6 +888,7 @@ function addWalk(){
     <div class="proc-list"></div>
     <button type="button" class="add-proc">+ Было несколько процедур</button>
     <div class="src-host"></div>
+    <label class="chk murm-chk"><input type="checkbox" class="murm-cb"> Мурманск</label>
     <label class="f">Дата визита</label>
     <input class="w-date" type="date" value="${todayISO()}" max="${todayISO()}">
     <div class="err">Нужны телефон и процедура</div>`;
@@ -896,6 +898,7 @@ function addWalk(){
     const digits = el.querySelector('.w-phone').value.replace(/\D/g,'').slice(-10);
     const c = (CLIENTS || []).find(x => String(x.phone||'').slice(-10) === digits);
     el.dataset.disc = (c && c.discount) || 0;
+    if (c && c.murmansk) el.querySelector('.murm-cb').checked = true;
     el.querySelectorAll('.proc').forEach(paintProcPrice);
   });
   el.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',()=>{
@@ -921,6 +924,7 @@ function collectWalkins(){
     name:  el.querySelector('.w-name').value.trim(),
     services: readProcs(el.querySelector('.proc-list')),
     source: readSource(el.querySelector('.src-host')),
+    murmansk: !!el.querySelector('.murm-cb')?.checked,
     date:  el.querySelector('.w-date').value || todayISO()
   }));
 }
@@ -971,8 +975,9 @@ document.getElementById('saveBtn').onclick = async ()=>{
     .filter(b=>marks[b.row_number] && marks[b.row_number].came!==undefined)
     .map(b=>({ row_number:b.row_number, date:b.date, time:b.time, client_name:b.client_name, phone:b.phone,
                came:marks[b.row_number].came, services:marks[b.row_number].services||[],
-               source:marks[b.row_number].source||'' }));
-  const walkins = walks.map(w=>({ phone:w.phone, name:w.name, services:w.services, date:w.date, source:w.source||'' }));
+               source:marks[b.row_number].source||'',
+               murmansk: !!document.querySelector(`.card[data-row="${b.row_number}"] .murm-cb`)?.checked }));
+  const walkins = walks.map(w=>({ phone:w.phone, name:w.name, services:w.services, date:w.date, source:w.source||'', murmansk:w.murmansk }));
 
   const btn=document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='Сохраняю…';
   try{
@@ -1019,6 +1024,7 @@ document.getElementById('saveBtn').onclick = async ()=>{
 
     Object.keys(marks).forEach(k=>delete marks[k]);
     document.getElementById('walkins').innerHTML='';
+    CLIENTS = null; _clientsPromise = null;      // визиты изменились — клиентов перечитаем
     await load();
   }catch(e){
     toast('bad','Не удалось сохранить. Ничего не потерялось — попробуйте ещё раз.');
@@ -1241,17 +1247,41 @@ function cState(title, text){
 // ---- Уровень клиента на карточках визитов: Катя видит скидку до оплаты ----
 let _clientsPromise = null;
 let _clientsAt = 0;   // когда клиенты последний раз успешно загружены
+let CLIENTS_EP_USED = '';
+// Сначала пробуем быстрый (параллельный) воркфлоу admin-clients-merge,
+// если его нет / он упал / завис — берём обычный admin-clients
+async function clientsRequest(){
+  const q = `init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`;
+  const tryEp = async (ep, ms) => {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), ms);
+    try{
+      const r = await fetch(`${API}/${ep}?${q}`, { signal: ctl.signal });
+      const raw = await r.json();
+      const d = Array.isArray(raw) ? raw[0] : raw;
+      return d;
+    } finally { clearTimeout(t); }
+  };
+  try{
+    const d = await tryEp('admin-clients-merge', 45000);
+    if (d && d.ok !== false && Array.isArray(d.clients)) { CLIENTS_EP_USED = 'merge'; return d; }
+    if (d && d.ok === false && d.error === 'forbidden') return d;
+  }catch(e){}
+  const d = await tryEp('admin-clients', 180000);
+  CLIENTS_EP_USED = 'classic';
+  return d;
+}
 function fetchClientsData(){
   if (_clientsPromise || !tgUser) return _clientsPromise;
-  _clientsPromise = fetch(`${API}/admin-clients?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`)
-    .then(r => r.json())
-    .then(raw => {
-      const d = Array.isArray(raw) ? raw[0] : raw;
+  _clientsPromise = clientsRequest()
+    .then(d => {
       if (d && d.ok !== false && Array.isArray(d.clients)) {
         CLIENTS = d.clients; SUMMARY = d.summary || {}; SLEEP_DAYS = d.sleeping_after || 130;
         _clientsAt = Date.now();
         enrichClients();
         paintLevels();
+        const v = document.querySelector('.ver');
+        if (v) v.textContent = v.textContent.replace(/ · (merge|classic)$/, '') + ' · ' + CLIENTS_EP_USED;
       }
       return d;
     })
@@ -1280,6 +1310,8 @@ function paintLevels(){
     const c = by[el.dataset.p];
     const card = el.closest('[data-disc]');
     if (card){
+      const mcb = card.querySelector('.murm-cb');
+      if (mcb && c && c.murmansk && !mcb.dataset.preset){ mcb.checked = true; mcb.dataset.preset = '1'; }
       card.dataset.disc = (c && c.discount) || 0;
       card.dataset.bonus = (c && c.bonus) || 0;
       const bb = card.querySelector('.bonusbox');
@@ -1666,11 +1698,6 @@ function openClient(key, opts){
   }
   if (c.phone){
     html += `<div class="bc-actions" style="grid-template-columns:1fr">
-      <button type="button" id="murmBtn">${c.murmansk ? 'Убрать из папки «Мурманск»' : 'Добавить в папку «Мурманск»'}</button></div>
-      <p class="sh-note">${c.murmansk
-        ? 'Клиент лежит в папке «Мурманск». Из обычных списков и рассылок он не убирается — просто помечен и виден отдельно, во вкладке «Мурманск».'
-        : 'Положит клиента в отдельную папку «Мурманск» — чтобы его было удобно найти отдельно. Из обычных списков и рассылок это его не уберёт.'}</p>`;
-    html += `<div class="bc-actions" style="grid-template-columns:1fr">
       <button type="button" id="archBtn">${c.archived ? 'Вернуть в кабинет' : 'Скрыть — больше не придёт'}</button></div>
       <p class="sh-note">${c.archived
         ? 'Клиент скрыт из списков и рассылок. Появится сам, если запишется, придёт на визит или напишет боту.'
@@ -1749,24 +1776,6 @@ function openClient(key, opts){
   };
   if (opts && opts.openChat && cb) cb.click();
 
-  const mub = sheet.querySelector('#murmBtn');
-  if (mub) mub.onclick = async () => {
-    const was = mub.textContent; mub.disabled = true; mub.textContent = 'Сохраняю…';
-    try{
-      const r = await fetch(`${API}/admin-murmansk`, { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, phone:c.phone,
-                               in_murmansk: !c.murmansk }) });
-      const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
-      if (!d || d.ok === false) throw new Error('fail');
-      CLIENTS = null; _clientsPromise = null;
-      await fetchClientsData();
-      openClient(key, opts);
-      try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
-    }catch(e){
-      mub.disabled = false; mub.textContent = was;
-      sheet.insertAdjacentHTML('beforeend','<p class="bc-res bad">Не удалось сохранить. Проверьте, что воркфлоу Admin Murmansk Save включён.</p>');
-    }
-  };
   const ab = sheet.querySelector('#archBtn');
   if (ab) ab.onclick = async () => {
     const was = ab.textContent; ab.disabled = true; ab.textContent = 'Сохраняю…';
