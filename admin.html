@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1115 filter-labels -->
+<!-- admin-build 2026-10-09-1125 unified-write -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -267,10 +267,10 @@
   .tag.warn{color:var(--no);background:var(--no-bg);border-color:transparent;}
   .tag.ok{color:#2F5A3D;background:var(--ok-bg);border-color:transparent;}
   .tag.muted{color:var(--muted);}
-  .sh-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px;}
+  .sh-actions{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin-bottom:6px;}
   .sh-note{font-size:11.5px;color:var(--muted);line-height:1.4;margin:0 4px 14px;}
-  .sh-actions a{height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:#fff;
-      border:1px solid var(--line);color:var(--steel-dk);font-weight:700;font-size:14px;text-decoration:none;}
+  .sh-actions a, .sh-actions button{height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:#fff;
+      border:1px solid var(--line);color:var(--steel-dk);font-weight:700;font-size:14px;text-decoration:none;font-family:'Manrope',sans-serif;cursor:pointer;}
   .sh-block{background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px;margin-bottom:10px;}
   .sh-block h4{margin:0 0 8px;font-size:12px;font-weight:700;color:var(--muted);text-transform:none;}
   .sh-row{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:6px 0;border-top:1px solid #EEF2F5;}
@@ -336,7 +336,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1115</p>
+  <p class="ver">версия 2026-10-09-1125</p>
 </header>
 
 <nav class="tabs">
@@ -1524,15 +1524,11 @@ function openClient(key, opts){
       </div>
     </div>`;
 
-  if (c.phone){
+  if (c.phone || c.can_message){
     html += `<div class="sh-actions">
-      <a href="tel:+${esc(c.phone)}">Позвонить</a>
-      ${c.can_message
-        ? `<button type="button" class="as-link" id="msgBot">Написать в боте</button>`
-        : `<a href="https://t.me/+${esc(c.phone)}" data-tg="1">Telegram</a>`}
-      <a href="https://wa.me/${esc(c.phone)}" data-ext="1">WhatsApp</a>
-    </div>
-    ${c.can_message ? '' : '<p class="sh-note">Telegram откроется, если клиент не закрыл поиск по номеру в настройках приватности.</p>'}`;
+      ${c.phone ? `<a href="tel:+${esc(c.phone)}">Позвонить</a>` : ''}
+      <button type="button" class="as-link" id="msgBtn">Написать</button>
+    </div>`;
   }
 
   if (c.upcoming.length){
@@ -1712,11 +1708,8 @@ function openClient(key, opts){
       sheet.insertAdjacentHTML('beforeend','<p class="bc-res bad">Не удалось сохранить. Проверьте, что воркфлоу Admin Prices API включён.</p>');
     }
   };
-  const mb = sheet.querySelector('#msgBot');
-  if (mb) mb.onclick = () => openComposer([c], 'личное сообщение');
-  sheet.querySelectorAll('a[data-tg]').forEach(a => a.onclick = (e) => {
-    if (tg?.openTelegramLink){ e.preventDefault(); tg.openTelegramLink(a.href); }
-  });
+  const mb = sheet.querySelector('#msgBtn');
+  if (mb) mb.onclick = () => openComposer([c], shownName(c));
 }
 function closeClient(){ document.getElementById('sheetBg').classList.add('hidden'); }
 
