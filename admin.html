@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-2040 tg-long-url-diag -->
+<!-- admin-build 2026-10-09-2110 simple-tg-send -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -134,10 +134,6 @@
   .next-btn{width:100%;min-height:52px;border:0;border-radius:14px;background:var(--steel-dk,#2F4A63);color:#fff;font-size:15.5px;font-weight:700;padding:8px 14px;line-height:1.25;}
   .next-btn small{display:block;font-size:12px;font-weight:500;opacity:.85;margin-top:2px;}
   .next-btn:disabled{background:#DDE3E8;color:#6B7884;}
-  .rc-row.nots{opacity:.75;}
-  .rc-fail{display:block;width:100%;margin-top:8px;min-height:40px;border:0;border-radius:10px;background:#C9822B;color:#fff;font-size:13px;font-weight:700;padding:8px 12px;text-align:center;}
-  .wa-btn.tg-retry{opacity:.55;font-size:12px;}
-  .rc-note-no{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;color:#A23B2C;}
   .pp-bg{position:fixed;inset:0;background:rgba(20,30,40,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;}
   .pp{width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;}
   .pp b{font-size:17px;} .pp i{font-style:normal;color:var(--muted);font-size:13px;margin-top:-4px;}
@@ -147,9 +143,6 @@
   .pp button{min-height:46px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:14.5px;font-weight:600;color:var(--ink);}
   .pp .pp-go{background:var(--steel-dk,#2F4A63);border-color:transparent;color:#fff;}
   .pp .pp-go:disabled{background:#DDE3E8;color:#6B7884;}
-  .rc-tools{display:flex;gap:6px;margin-top:6px;}
-  .rc-tools a{flex:1;display:flex;align-items:center;justify-content:center;min-height:36px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12.5px;font-weight:600;color:var(--ink);text-decoration:none;}
-  .rc-tools button{flex:1;min-height:36px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12.5px;font-weight:600;color:var(--ink);}
   .rc-nophone{flex:none;font-size:12px;color:var(--muted);}
   .bc-who.already, .wa-row.already{background:#FFF8EE;border-radius:10px;padding-left:4px;}
   .bc-tools button{margin-left:6px;}
@@ -385,7 +378,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-2040</p>
+  <p class="ver">версия 2026-10-09-2110</p>
 
 </header>
 
@@ -1856,7 +1849,7 @@ function openClient(key, opts){
   const mb = sheet.querySelector('#msgBtn');
   if (mb) mb.onclick = () => openComposer([c], shownName(c));
 }
-function closeClient(){ if (typeof COMPOSER_FLUSH === 'function' && COMPOSER_FLUSH){ try{ COMPOSER_FLUSH(); }catch(e){} COMPOSER_FLUSH = null; } LIVE_COMPOSER = null; document.getElementById('sheetBg').classList.add('hidden'); }
+function closeClient(){ LIVE_COMPOSER = null; document.getElementById('sheetBg').classList.add('hidden'); }
 
 // ============================================================
 // ЧАТЫ — все, кто писал боту, сверху самые свежие
@@ -2014,9 +2007,7 @@ function confirmBox(msg){
   });
 }
 
-let COMPOSER_FLUSH = null;
 function openComposer(only, title, initialText, aud){
-  if (COMPOSER_FLUSH) { try{ COMPOSER_FLUSH(); }catch(e){} COMPOSER_FLUSH = null; }
   // aud — рассылка, выбранная в «Сделать рассылку» ({k, l}). У сообщения одному клиенту её нет.
   // Отправка только вручную: у каждого человека свои кнопки Telegram / WhatsApp.
   const base   = only ? only.slice() : [];
@@ -2049,7 +2040,6 @@ function openComposer(only, title, initialText, aud){
     <div class="sh-block">
       <h4>Кому написать</h4>
       <div id="newNote"></div>
-      <div id="noTgBox"></div>
       <div class="bc-summary-row"><span id="rcCount"></span>
         ${gotN ? `<button type="button" id="rcToggle"></button>` : ''}</div>
       <p class="sh-note" style="margin:6px 0 4px">Нажмите Telegram или WhatsApp напротив человека — откроется чат с готовым текстом, останется нажать «отправить». Сообщение запомнится в истории рассылок.</p>
@@ -2097,28 +2087,15 @@ function openComposer(only, title, initialText, aud){
   // Плашка: какая именно рассылка и когда уходила этому человеку
   const badgeOf = c => c.last_broadcast
     ? `<span class="rc-badge${aud && gotSameBroadcast(c, aud) ? ' same' : ''}">${esc(lastBcLabel(c))}</span>` : '';
-  function renderNoTg(){
-    const box = sheet.querySelector('#noTgBox'); if (!box) return;
-    const n = base.filter(c => c.no_tg).length;
-    box.innerHTML = n ? `<div class="new-note" style="background:#FFF1DA;color:#8A5A0B"><span>У ${n} ${plural(n,'человека','человек','человек')} стоит отметка «нет Telegram» — «Следующий» их пропускает</span><button type="button" id="noTgReset" style="background:#8A5A0B">Снять</button></div>` : '';
-    const b = box.querySelector('#noTgReset');
-    if (b) b.onclick = () => {
-      const list = base.filter(c => c.no_tg);
-      list.forEach(c => { c.no_tg = false; });
-      logBroadcast(list.filter(c => c.phone).map(c => ({ phone:c.phone, channel:'tg_reset', segment:logSeg, text:'' })));
-      renderRows();
-    };
-  }
   function renderRows(){
-    renderNoTg();
     const vis = visible();
     rcCount.textContent = `${vis.length} ${plural(vis.length,'человек','человека','человек')}`;
     if (rcToggle) rcToggle.textContent = hideSent ? `Показать тех, кому уже писали (${gotN})` : `Скрыть тех, кому уже писали (${gotN})`;
     rcList.innerHTML = vis.length ? vis.map(c => `
       <div class="rc-row${sentNow.has(c.key) ? ' sent' : ''}" data-k="${esc(c.key)}">
-        <div class="rc-info"><b>${esc(shownName(c))}</b><i>${esc(subOf(c))}</i><span class="rc-badge-box">${badgeOf(c)}</span>${c.no_tg ? '<span class="rc-note-no">нет Telegram — пишите в WhatsApp</span>' : ''}</div>
+        <div class="rc-info"><b>${esc(shownName(c))}</b><i>${esc(subOf(c))}</i><span class="rc-badge-box">${badgeOf(c)}</span></div>
         ${c.phone
-          ? `<span class="wa-btns"><button type="button" class="wa-btn tg-btn${c.no_tg ? ' tg-retry' : ''}">${c.no_tg ? 'Telegram?' : 'Telegram'}</button><button type="button" class="wa-btn">WhatsApp</button></span>`
+          ? `<span class="wa-btns"><button type="button" class="wa-btn tg-btn">Telegram</button><button type="button" class="wa-btn">WhatsApp</button></span>`
           : `<span class="rc-nophone">нет номера</span>`}
       </div>`).join('')
       : '<p class="sh-note" style="margin:8px 0">Некому писать — всем уже отправляли эту рассылку.</p>';
@@ -2126,7 +2103,7 @@ function openComposer(only, title, initialText, aud){
   }
   // «Следующий»: открывает чат с первым ещё не открытым человеком (Telegram) и сам отмечает его
   const nextBtn = sheet.querySelector('#nextBtn');
-  const pendingRows = () => Array.from(rcList.querySelectorAll('.rc-row:not(.sent):not(.nots)')).filter(r => r.querySelector('.tg-btn:not(.tg-retry)'));
+  const pendingRows = () => Array.from(rcList.querySelectorAll('.rc-row:not(.sent)')).filter(r => r.querySelector('.tg-btn'));
   let nextBusy = false;
   function startBusy(){ nextBusy = true; setTimeout(() => { nextBusy = false; updateNext(); }, 3000); }
   function updateNext(){
@@ -2135,9 +2112,7 @@ function openComposer(only, title, initialText, aud){
     const rows = pendingRows();
     if (!rows.length){
       nextBtn.disabled = true;
-      const waOnly = Array.from(rcList.querySelectorAll('.rc-row:not(.sent)')).filter(r => r.querySelector('.wa-btn')).length;
-      nextBtn.innerHTML = waOnly ? `Telegram закончился ✓<small>осталось ${waOnly} — только через WhatsApp</small>`
-        : (sentNow.size ? `Готово — открыто ${sentNow.size} ✓` : 'Некому писать');
+      nextBtn.innerHTML = sentNow.size ? `Готово — открыто ${sentNow.size} ✓` : 'Некому писать';
       return;
     }
     const c = base.find(x => x.key === rows[0].dataset.k);
@@ -2152,24 +2127,14 @@ function openComposer(only, title, initialText, aud){
   if (rcToggle) rcToggle.onclick = () => { hideSent = !hideSent; renderRows(); };
   renderRows();
 
-  // Telegram: «отправлено» записываем не при нажатии, а когда подтверждено —
-  // следующим нажатием или закрытием окна. Если у человека нет Telegram, чат не откроется,
-  // и под строкой есть кнопка «не открылось» — тогда человек в историю не попадёт.
-  let pending = null;   // { c, msg, channel, row }
+  // Нажатие Telegram/WhatsApp: чат открывается с готовым текстом, человек сразу попадает в историю рассылок.
+  // Если Telegram чат не открыл — просто нажмите WhatsApp в той же строке; в следующий раз Telegram снова доступен.
   function commit(c, msg, channel, row){
     sentNow.add(c.key);
-    if (channel === 'tg_manual') c.no_tg = false;
     c.last_broadcast = { ts: new Date().toISOString(), channel, segment: logSeg, text: msg.slice(0, 200) };
     const bb = row && row.querySelector('.rc-badge-box'); if (bb) bb.innerHTML = badgeOf(c);
     logBroadcast([{ phone:c.phone, channel, segment:logSeg, text:msg.slice(0, 200) }]);
   }
-  function confirmPending(){
-    if (!pending) return;
-    const { c, msg, channel, row } = pending; pending = null;
-    if (row){ row.classList.remove('pend'); const f = row.querySelector('.rc-fail'); if (f) f.remove(); const tl = row.querySelector('.rc-tools'); if (tl) tl.remove(); }
-    commit(c, msg, channel, row);
-  }
-  COMPOSER_FLUSH = confirmPending;
 
   // «Кто записан»: перед открытием чата спрашиваем процедуру — к напоминанию добавится памятка
   function askProc(c, go){
@@ -2206,41 +2171,6 @@ function openComposer(only, title, initialText, aud){
   }
 
   rcList.addEventListener('click', e => {
-    const again = e.target.closest('.rc-again');
-    if (again && again.tagName === 'A') return;   // обычная ссылка — Telegram откроет её сам
-    if (again){                                    // открыть чат другим способом
-      const row = again.closest('.rc-row'); const ph = row.dataset.phone, m = row.dataset.msg || '';
-      const n = +row.dataset.tries || 0; row.dataset.tries = String(n + 1);
-      const variants = [
-        `https://t.me/+${ph}?text=${encodeURIComponent(m)}`,
-        `tg://resolve?phone=${ph}&text=${encodeURIComponent(m)}`,
-        `https://t.me/+${ph}`
-      ];
-      const u = variants[n % variants.length];
-      try{ if (n % variants.length === 1) { const a = document.createElement('a'); a.href = u; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); } else if (tg?.openTelegramLink) tg.openTelegramLink(u); else window.open(u, '_blank'); }catch(err){}
-      return;
-    }
-    const copy = e.target.closest('.rc-copy');
-    if (copy){                                     // текст в буфер — можно вставить в чат вручную
-      const row = copy.closest('.rc-row'); const m = row.dataset.msg || '';
-      const done = () => { copy.textContent = '✓ Скопировано'; setTimeout(() => { copy.textContent = '📋 Скопировать текст'; }, 2000); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(m).then(done, () => fallbackCopy());
-      else fallbackCopy();
-      function fallbackCopy(){ const t = document.createElement('textarea'); t.value = m; t.style.position='fixed'; t.style.opacity='0'; document.body.appendChild(t); t.select(); try{ document.execCommand('copy'); done(); }catch(err){} t.remove(); }
-      return;
-    }
-    const fail = e.target.closest('.rc-fail');
-    if (fail){                                   // чат не открылся — нет Telegram
-      const row = fail.closest('.rc-row');
-      if (pending && pending.row === row) pending = null;
-      row.classList.remove('sent', 'pend'); row.classList.add('nots');
-      fail.remove(); const tl2 = row.querySelector('.rc-tools'); if (tl2) tl2.remove();
-      const tgb = row.querySelector('.tg-btn'); if (tgb){ tgb.textContent = 'Telegram?'; tgb.classList.add('tg-retry'); }
-      row.querySelector('.rc-info').insertAdjacentHTML('beforeend', '<span class="rc-note-no">нет Telegram — пишите в WhatsApp</span>');
-      const fc = base.find(x => x.key === row.dataset.k);
-      if (fc){ fc.no_tg = true; logBroadcast([{ phone:fc.phone, channel:'no_tg', segment:logSeg, text:'' }]); }   // запомнить на будущее
-      updateNext(); return;
-    }
     const btn = e.target.closest('.wa-btn'); if (!btn) return;
     const row = btn.closest('.rc-row');
     const c = base.find(x => x.key === row.dataset.k); if (!c) return;
@@ -2254,44 +2184,24 @@ function openComposer(only, title, initialText, aud){
       ta.focus(); return;
     }
     result.innerHTML = '';
-    confirmPending();                             // предыдущий считаем отправленным
     const viaTg = btn.classList.contains('tg-btn');
     if (viaTg){
-      let url = `https://t.me/+${c.phone}?text=${encodeURIComponent(msg)}`;
-      // Слишком длинную ссылку Telegram может молча не открыть — тогда открываем чат без текста,
-      // а сообщение кладём в буфер обмена
-      const fullLen = url.length;
-      let copiedInstead = false;
-      if (fullLen > 2000){
-        copiedInstead = true;
-        url = `https://t.me/+${c.phone}`;
-        try{ navigator.clipboard?.writeText(msg)?.catch(() => {}); }catch(err){}
-      }
+      const url = `https://t.me/+${c.phone}?text=${encodeURIComponent(msg)}`;
       let opened = false, lastErr = '';
       for (const open of [u => tg?.openTelegramLink?.(u), u => tg?.openLink?.(u), u => window.open(u, '_blank')]){
         try{ open(url); opened = true; break; }catch(err){ lastErr = String(err && err.message || err); }
       }
       if (!opened){
-        pending = null;
         result.innerHTML = `<p class="bc-res bad">Не удалось открыть чат с ${esc(shownName(c))}${lastErr ? ' (' + esc(lastErr) + ')' : ''}. Попробуйте WhatsApp.</p>`;
         return;
       }
-      result.innerHTML = `<p class="sh-note" style="margin:6px 0">${copiedInstead
-        ? 'Сообщение длинное, поэтому оно скопировано — вставьте его в чат (долгое нажатие → «Вставить»).'
-        : ''}Диагностика: Telegram ${esc(tg?.version || '?')} ${esc(tg?.platform || '')} · ссылка ${fullLen} симв. · ${esc(new Date().toLocaleTimeString('ru-RU'))}</p>`;
-      row.classList.remove('nots'); const old = row.querySelector('.rc-note-no'); if (old) old.remove();
-      btn.classList.remove('tg-retry');
-      row.classList.add('sent', 'pend');
+      row.classList.add('sent');
       btn.textContent = 'открыт';
-      row.dataset.msg = msg; row.dataset.phone = c.phone; row.dataset.tries = '0';
-      if (!row.querySelector('.rc-tools')) row.querySelector('.rc-info').insertAdjacentHTML('beforeend', `<div class="rc-tools"><a class="rc-again" href="${esc(url)}" target="_blank" rel="noopener">↗ Открыть чат ссылкой</a><button type="button" class="rc-copy">📋 Скопировать текст</button></div>`);
-      if (!row.querySelector('.rc-fail')) row.querySelector('.rc-info').insertAdjacentHTML('beforeend', '<button type="button" class="rc-fail">✗ Чат не открылся — у человека нет Telegram</button>');
-      pending = { c, msg, channel:'tg_manual', row };
+      commit(c, msg, 'tg_manual', row);
       startBusy();
     } else {
       const url = `https://wa.me/${c.phone}?text=${encodeURIComponent(msg)}`;
       if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
-      row.classList.remove('nots'); const old = row.querySelector('.rc-note-no'); if (old) old.remove();
       row.classList.add('sent');
       btn.textContent = 'открыт';
       commit(c, msg, 'wa', row);
