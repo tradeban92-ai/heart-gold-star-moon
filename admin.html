@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1900 prep-only-in-broadcast -->
+<!-- admin-build 2026-10-09-1920 net-latency-busy -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -382,7 +382,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1900</p>
+  <p class="ver">версия 2026-10-09-1920</p>
 
 </header>
 
@@ -1276,12 +1276,15 @@ function cState(title, text){
 // ---- Уровень клиента на карточках визитов: Катя видит скидку до оплаты ----
 let _clientsPromise = null;
 let _clientsAt = 0;   // когда клиенты последний раз успешно загружены
+let CLIENTS_MS = 0;
 async function clientsRequest(){
+  const t0 = performance.now();
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 180000);
   try{
     const r = await fetch(`${API}/admin-clients?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`, { signal: ctl.signal });
     const raw = await r.json();
+    CLIENTS_MS = performance.now() - t0;
     return Array.isArray(raw) ? raw[0] : raw;
   } finally { clearTimeout(t); }
 }
@@ -1321,6 +1324,8 @@ function fetchClientsData(){
         enrichClients();
         paintLevels();
         setStaleNote('');
+        const v = document.querySelector('.ver');
+        if (v) v.textContent = v.textContent.replace(/ · ответ .*$/, '') + ` · ответ ${(CLIENTS_MS/1000).toFixed(1)} с`;
         if (wasStale){
           if (!document.getElementById('cMain').classList.contains('hidden')){ renderSummary(); renderSegs(); renderClients(); }
           if (!document.getElementById('tabVisits').classList.contains('hidden')) renderTodayActivity();
@@ -2105,8 +2110,11 @@ function openComposer(only, title, initialText, aud){
   // «Следующий»: открывает чат с первым ещё не открытым человеком (Telegram) и сам отмечает его
   const nextBtn = sheet.querySelector('#nextBtn');
   const pendingRows = () => Array.from(rcList.querySelectorAll('.rc-row:not(.sent):not(.nots)')).filter(r => r.querySelector('.tg-btn:not(.tg-retry)'));
+  let nextBusy = false;
+  function startBusy(){ nextBusy = true; setTimeout(() => { nextBusy = false; updateNext(); }, 3000); }
   function updateNext(){
     if (!nextBtn) return;
+    if (nextBusy){ nextBtn.disabled = true; nextBtn.innerHTML = 'Открываю чат…<small>подождите пару секунд — при плохой сети чат открывается с задержкой</small>'; return; }
     const rows = pendingRows();
     if (!rows.length){
       nextBtn.disabled = true;
@@ -2225,6 +2233,7 @@ function openComposer(only, title, initialText, aud){
       btn.textContent = 'открыт';
       if (!row.querySelector('.rc-fail')) row.querySelector('.rc-info').insertAdjacentHTML('beforeend', '<button type="button" class="rc-fail">✗ Чат не открылся — у человека нет Telegram</button>');
       pending = { c, msg, channel:'tg_manual', row };
+      startBusy();
     } else {
       const url = `https://wa.me/${c.phone}?text=${encodeURIComponent(msg)}`;
       if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
