@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1125 unified-write -->
+<!-- admin-build 2026-10-09-1145 broadcast-clarity -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -102,6 +102,11 @@
   .chk input{-webkit-appearance:checkbox;appearance:auto;width:20px;height:20px;padding:0;margin:0;flex:none;accent-color:var(--steel-dk);}
   .bc-tools{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:12.5px;color:var(--muted);}
   .bc-tools button{border:none;background:none;color:var(--steel);font:600 12.5px 'Manrope',sans-serif;cursor:pointer;padding:4px;}
+  .bc-summary-row{display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;color:var(--ink);}
+  .bc-summary-row button{border:none;background:none;color:var(--steel);font:600 12.5px 'Manrope',sans-serif;cursor:pointer;padding:4px;}
+  .bc-already-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 0;font-size:12.5px;color:#A23B2C;}
+  .bc-already-line button{border:none;background:#FBEEEC;color:#A23B2C;font:700 11.5px 'Manrope',sans-serif;cursor:pointer;
+        padding:4px 8px;border-radius:999px;}
   .bc-list{max-height:240px;overflow-y:auto;margin:0 -4px;}
   .bc-who{display:flex;align-items:center;gap:10px;padding:8px 4px;border-top:1px solid #EEF2F5;}
   .bc-who:first-child{border-top:none;}
@@ -186,6 +191,17 @@
   .chat-row .prev{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
   .chat-row.unread .nm{color:var(--steel-dk);}
   .chat-row .dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--steel);}
+
+  .aud-trigger{width:100%;height:46px;margin-top:10px;border:none;border-radius:12px;background:var(--steel-dk);
+        color:#fff;font:700 15px 'Manrope',sans-serif;cursor:pointer;}
+  .aud-list{display:flex;flex-direction:column;gap:8px;}
+  .aud-row{width:100%;text-align:left;background:#fff;border:1px solid var(--line-soft);border-radius:14px;
+        padding:12px 14px;cursor:pointer;font-family:'Manrope',sans-serif;}
+  .aud-row:disabled{opacity:.45;cursor:default;}
+  .aud-main{display:flex;justify-content:space-between;align-items:baseline;}
+  .aud-main b{font-size:15px;color:var(--ink);}
+  .aud-main span{font-size:13px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;}
+  .aud-sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
 
   .sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px;}
   .sum-card{background:#fff;border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px;
@@ -336,7 +352,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1125</p>
+  <p class="ver">версия 2026-10-09-1145</p>
 </header>
 
 <nav class="tabs">
@@ -368,6 +384,7 @@
 <div id="tabClients" class="hidden">
   <div id="cState" class="state"><b>Загружаю…</b></div>
   <div id="cMain" class="wrap hidden">
+    <button type="button" class="aud-trigger" id="audBtn">📣 Сделать рассылку</button>
     <div class="sum" id="cSum"></div>
     <div class="filter-bar">
       <button type="button" class="filter-pill" id="filterBtn"></button>
@@ -1325,6 +1342,50 @@ function renderSummary(){
   });
 }
 
+// Рассылка «по цели», а не «по фильтру»: вместо того, чтобы сперва
+// подобрать в основном списке нужную метку, а потом нажать «Написать»,
+// сразу спрашиваем, кому хотим написать — понятными словами и с тем,
+// скольким из них уже писали, чтобы не слать повторно всем подряд.
+const BROADCAST_PRESETS = [
+  { k:'all',      l:'Все клиенты' },
+  { k:'booked',   l:'Кто записан' },
+  { k:'due',      l:'Пора повторить' },
+  { k:'sleeping', l:'Давно не были' },
+  { k:'vip',      l:'VIP' },
+  { k:'murmansk', l:'Мурманск' },
+];
+function openAudiencePicker(){
+  const rows = BROADCAST_PRESETS.map(p => {
+    const list = CLIENTS.filter(c => inSeg(c, p.k));
+    const already = list.filter(c => c.last_broadcast).length;
+    const sub = !list.length ? 'никого по этому фильтру'
+      : already === 0 ? 'рассылки ещё не было'
+      : already === list.length ? 'уже писали всем'
+      : `уже писали ${already} из ${list.length}`;
+    return `<button type="button" class="aud-row" data-k="${p.k}"${list.length ? '' : ' disabled'}>
+      <div class="aud-main"><b>${esc(p.l)}</b><span>${list.length}</span></div>
+      <div class="aud-sub">${esc(sub)}</div>
+    </button>`;
+  }).join('');
+
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sh-head">
+      <div><div class="sh-name">Кому написать?</div><div class="sh-phone">Выберите аудиторию — дальше текст и получатели</div></div>
+      <button class="sh-x" type="button" aria-label="Закрыть">×</button>
+    </div>
+    <div class="aud-list">${rows}</div>`;
+  sheet.querySelector('.sh-x').onclick = closeClient;
+  sheet.querySelectorAll('.aud-row[data-k]').forEach(b => b.onclick = () => {
+    const p = BROADCAST_PRESETS.find(x => x.k === b.dataset.k);
+    const list = CLIENTS.filter(c => inSeg(c, p.k));
+    openComposer(list, null, null, p.l);
+  });
+  sheet.scrollTop = 0;
+  document.getElementById('sheetBg').classList.remove('hidden');
+}
+document.getElementById('audBtn').onclick = openAudiencePicker;
+
 // Метка вместо ряда чипов: одна кнопка с текущим выбором, по клику —
 // панель со всеми вариантами, сгруппированными по смыслу (а не вперемешку).
 function renderSegs(){
@@ -1872,41 +1933,22 @@ function confirmBox(msg){
   });
 }
 
-function openComposer(only, title, initialText){
+function openComposer(only, title, initialText, groupLabel){
   const list  = only ? only.slice() : CURRENT_LIST.slice();
   const reach = list.filter(c => c.can_message);
   const noTg  = list.filter(c => !c.can_message);
-  const segName = title || (SEGS.find(s => s.k === SEG) || {}).l || 'Все';
+  const segName = groupLabel || title || (SEGS.find(s => s.k === SEG) || {}).l || 'Все';
   const sample = reach[0] || null;
+  const alreadyReach = reach.filter(c => c.last_broadcast).length;
+  const alreadyNoTg  = noTg.filter(c => c.last_broadcast).length;
 
   const sheet = document.getElementById('sheet');
   sheet.innerHTML = `
     <div class="sh-head">
-      <div><div class="sh-name">${title ? esc(shownName(list[0])) : 'Рассылка'}</div>
-        <div class="sh-phone">${title ? 'Сообщение через бота' : `Фильтр: «${esc(segName)}»${QUERY ? ' + поиск' : ''}`}</div></div>
+      <div><div class="sh-name">${title ? esc(shownName(list[0])) : (groupLabel || 'Рассылка')}</div>
+        <div class="sh-phone">${title ? 'Сообщение через бота' : (groupLabel ? `Аудитория: «${esc(segName)}»` : `Фильтр: «${esc(segName)}»${QUERY ? ' + поиск' : ''}`)}</div></div>
       <button class="sh-x" type="button" aria-label="Закрыть">×</button>
     </div>
-    <div class="sh-block"><h4>Кому отправить</h4>
-      <div class="bc-tools"><span id="bcCount"></span>
-        <button type="button" id="bcAll">снять все</button>
-        ${reach.some(c => c.last_broadcast) ? `<button type="button" id="bcSkipSent">снять уже получивших</button>` : ''}</div>
-      <div class="bc-list">${reach.map((c,i) => `<label class="bc-who${c.last_broadcast ? ' already' : ''}">
-        <input type="checkbox" class="bc-pick" data-i="${i}" checked>
-        <span><b>${esc(shownName(c))}</b><i>${c.visits_count ? `${c.visits_count} ${plural(c.visits_count,'визит','визита','визитов')}` : 'без визитов'}${
-          c.last_cat ? ' · ' + esc(CAT_TITLE[c.last_cat] || '') : ''}${c.days_since !== null ? ' · ' + daysAgo(c.days_since) : ''}</i>${
-          lastBcLabel(c) ? `<i class="bc-sent">${esc(lastBcLabel(c))}</i>` : ''}</span>
-      </label>`).join('')}</div>
-    </div>
-    ${noTg.length ? `<div class="sh-block"><h4>Нет в боте — отправить в WhatsApp или Telegram (${noTg.length})</h4>
-      <p class="sh-note" style="margin:0 0 8px">Бот пишет только тем, кто ему писал. Остальным — по кнопке: откроется чат с уже готовым текстом, останется нажать отправку. Telegram откроется, только если у клиента есть Telegram и он не закрыл поиск по номеру в настройках приватности.</p>
-      ${noTg.map((c,i) => `<div class="wa-row${c.last_broadcast ? ' already' : ''}" data-wa="${i}">
-        <span><b>${esc(shownName(c))}</b><i>${c.phone ? esc(fmtPhone(c.phone)) : 'нет телефона'}</i>${
-          lastBcLabel(c) ? `<i class="bc-sent">${esc(lastBcLabel(c))}</i>` : ''}</span>
-        ${c.phone ? `<span class="wa-btns">
-          <button type="button" class="wa-btn tg-btn" data-i="${i}">Telegram</button>
-          <button type="button" class="wa-btn" data-i="${i}">WhatsApp</button>
-        </span>` : ''}
-      </div>`).join('')}</div>` : ''}
     <label class="f" for="bcText">Текст сообщения</label>
     <textarea id="bcText" rows="6" placeholder="{имя}, здравствуйте! …">${esc(initialText != null ? initialText : (title ? '' : (TEMPLATES[SEG] || '')))}</textarea>
     <p class="sh-note">{имя} — имя клиента, {процедура} — его последняя процедура${
@@ -1914,11 +1956,61 @@ function openComposer(only, title, initialText){
     <label class="chk"><input type="checkbox" id="bcBtn"${(SEG === 'booked' || initialText != null) ? '' : ' checked'}> Кнопка «📅 Записаться» под сообщением</label>
     <div class="sh-block"><h4>Так увидит ${sample ? esc(firstName(sample.tg_name) || 'клиент') : 'клиент'}</h4>
       <div class="bc-preview" id="bcPreview"></div></div>
+
+    <div class="sh-block">
+      <h4>Кому отправить</h4>
+      <div class="bc-summary-row">
+        <span id="bcCount"></span>
+        <button type="button" id="bcToggleList">показать список</button>
+      </div>
+      ${alreadyReach ? `<p class="bc-already-line">Уже писали ${alreadyReach} из ${reach.length}
+        <button type="button" id="bcSkipSent">снять уже получивших</button></p>` : ''}
+      <div class="bc-list hidden" id="bcListBox">
+        <div class="bc-tools"><span></span><button type="button" id="bcAll">снять все</button></div>
+        ${reach.map((c,i) => `<label class="bc-who${c.last_broadcast ? ' already' : ''}">
+          <input type="checkbox" class="bc-pick" data-i="${i}" checked>
+          <span><b>${esc(shownName(c))}</b><i>${c.visits_count ? `${c.visits_count} ${plural(c.visits_count,'визит','визита','визитов')}` : 'без визитов'}${
+            c.last_cat ? ' · ' + esc(CAT_TITLE[c.last_cat] || '') : ''}${c.days_since !== null ? ' · ' + daysAgo(c.days_since) : ''}</i>${
+            lastBcLabel(c) ? `<i class="bc-sent">${esc(lastBcLabel(c))}</i>` : ''}</span>
+        </label>`).join('')}
+      </div>
+    </div>
+    ${noTg.length ? `<div class="sh-block">
+      <h4>Нет в боте — WhatsApp или Telegram</h4>
+      <div class="bc-summary-row">
+        <span>${noTg.length} ${plural(noTg.length,'человек','человека','человек')}${alreadyNoTg ? ` · уже писали ${alreadyNoTg}` : ''}</span>
+        <button type="button" id="bcToggleNoTg">показать список</button>
+      </div>
+      <div class="hidden" id="noTgBox">
+        <p class="sh-note" style="margin:8px 0">Бот пишет только тем, кто ему писал. Остальным — по кнопке: откроется чат с уже готовым текстом, останется нажать отправку. Telegram откроется, только если у клиента есть Telegram и он не закрыл поиск по номеру в настройках приватности.</p>
+        ${noTg.map((c,i) => `<div class="wa-row${c.last_broadcast ? ' already' : ''}" data-wa="${i}">
+          <span><b>${esc(shownName(c))}</b><i>${c.phone ? esc(fmtPhone(c.phone)) : 'нет телефона'}</i>${
+            lastBcLabel(c) ? `<i class="bc-sent">${esc(lastBcLabel(c))}</i>` : ''}</span>
+          ${c.phone ? `<span class="wa-btns">
+            <button type="button" class="wa-btn tg-btn" data-i="${i}">Telegram</button>
+            <button type="button" class="wa-btn" data-i="${i}">WhatsApp</button>
+          </span>` : ''}
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
     <div class="bc-actions">
       <button type="button" id="bcTest">Отправить себе тест</button>
       <button type="button" id="bcSend" class="primary" ${reach.length ? '' : 'disabled'}>Отправить</button>
     </div>
     <div id="bcResult"></div>`;
+
+  const toggleList = sheet.querySelector('#bcToggleList');
+  const listBox = sheet.querySelector('#bcListBox');
+  toggleList.onclick = () => {
+    const show = listBox.classList.toggle('hidden') === false;
+    toggleList.textContent = show ? 'скрыть список' : 'показать список';
+  };
+  const toggleNoTg = sheet.querySelector('#bcToggleNoTg');
+  if (toggleNoTg) toggleNoTg.onclick = () => {
+    const box = sheet.querySelector('#noTgBox');
+    const show = box.classList.toggle('hidden') === false;
+    toggleNoTg.textContent = show ? 'скрыть список' : 'показать список';
+  };
 
   // Кого отправляем — можно снимать галочки
   const picks = () => [...sheet.querySelectorAll('.bc-pick')].filter(x => x.checked).map(x => reach[+x.dataset.i]);
@@ -1940,6 +2032,7 @@ function openComposer(only, title, initialText){
   if (skipSent) skipSent.onclick = () => {
     sheet.querySelectorAll('.bc-pick').forEach(x => { if (reach[+x.dataset.i].last_broadcast) x.checked = false; });
     refreshPicks();
+    listBox.classList.remove('hidden'); toggleList.textContent = 'скрыть список';
   };
   refreshPicks();
 
