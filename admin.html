@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1049 today-tab-refresh -->
+<!-- admin-build 2026-10-09-1039 today-tab-no-escalations -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -324,7 +324,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1049</p>
+  <p class="ver">версия 2026-10-09-1039</p>
 </header>
 
 <nav class="tabs">
@@ -997,7 +997,6 @@ function showTab(t){
   document.getElementById('tabRevenue').classList.toggle('hidden', t !== 'revenue');
   document.getElementById('tabChats').classList.toggle('hidden', t !== 'chats');
   document.getElementById('pageTitle').textContent = { visits:'Сегодня', clients:'Клиенты', revenue:'Выручка', chats:'TG' }[t];
-  if (t === 'visits') { CLIENTS = null; _clientsPromise = null; fetchClientsData().then(renderTodayActivity); }
   if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
   if (t === 'revenue') loadRevenue();
   if (t === 'chats') loadChats();
