@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1545 tg-no-messages -->
+<!-- admin-build 2026-10-09-1620 single-clients-endpoint -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -364,7 +364,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1545</p>
+  <p class="ver">версия 2026-10-09-1620</p>
 
 </header>
 
@@ -1250,29 +1250,14 @@ function cState(title, text){
 // ---- Уровень клиента на карточках визитов: Катя видит скидку до оплаты ----
 let _clientsPromise = null;
 let _clientsAt = 0;   // когда клиенты последний раз успешно загружены
-let CLIENTS_EP_USED = '';
-// Сначала пробуем быстрый (параллельный) воркфлоу admin-clients-merge,
-// если его нет / он упал / завис — берём обычный admin-clients
 async function clientsRequest(){
-  const q = `init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`;
-  const tryEp = async (ep, ms) => {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), ms);
-    try{
-      const r = await fetch(`${API}/${ep}?${q}`, { signal: ctl.signal });
-      const raw = await r.json();
-      const d = Array.isArray(raw) ? raw[0] : raw;
-      return d;
-    } finally { clearTimeout(t); }
-  };
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 180000);
   try{
-    const d = await tryEp('admin-clients-merge', 45000);
-    if (d && d.ok !== false && Array.isArray(d.clients)) { CLIENTS_EP_USED = 'merge'; return d; }
-    if (d && d.ok === false && d.error === 'forbidden') return d;
-  }catch(e){}
-  const d = await tryEp('admin-clients', 180000);
-  CLIENTS_EP_USED = 'classic';
-  return d;
+    const r = await fetch(`${API}/admin-clients?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`, { signal: ctl.signal });
+    const raw = await r.json();
+    return Array.isArray(raw) ? raw[0] : raw;
+  } finally { clearTimeout(t); }
 }
 // ---- Память о последнем списке: «Клиенты» открываются сразу, свежее подгружается фоном ----
 let CLIENTS_STALE = false, CLIENTS_CACHE_AT = 0;
@@ -1310,8 +1295,6 @@ function fetchClientsData(){
         enrichClients();
         paintLevels();
         setStaleNote('');
-        const v = document.querySelector('.ver');
-        if (v) v.textContent = v.textContent.replace(/ · (merge|classic)$/, '') + ' · ' + CLIENTS_EP_USED;
         if (wasStale){
           if (!document.getElementById('cMain').classList.contains('hidden')){ renderSummary(); renderSegs(); renderClients(); }
           if (!document.getElementById('tabVisits').classList.contains('hidden')) renderTodayActivity();
