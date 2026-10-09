@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1500 clients-instant-open -->
+<!-- admin-build 2026-10-09-1545 tg-no-messages -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -364,7 +364,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1500</p>
+  <p class="ver">версия 2026-10-09-1545</p>
 
 </header>
 
@@ -427,9 +427,8 @@
 
 <div id="tabChats" class="hidden">
   <div class="segs" id="tgSub">
-    <button type="button" class="seg-chip on" data-tgview="live">Чаты</button>
+    <button type="button" class="seg-chip on" data-tgview="activity">Активити</button>
     <button type="button" class="seg-chip" data-tgview="users">Пользователи</button>
-    <button type="button" class="seg-chip" data-tgview="activity">Активити</button>
   </div>
   <div id="chState" class="state"><b>Загружаю…</b></div>
   <div id="chMain" class="wrap hidden">
@@ -1915,7 +1914,7 @@ function initials(name){
   const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0]||'') + (parts[1]?.[0]||'')).toUpperCase() || '?';
 }
-let TG_VIEW = 'live';   // live — живые диалоги, users — все пользователи бота, activity — кто что нажимал
+let TG_VIEW = 'activity';   // activity — кто что нажимал, users — все пользователи бота
 document.querySelectorAll('#tgSub [data-tgview]').forEach(b => b.onclick = () => {
   TG_VIEW = b.dataset.tgview;
   document.querySelectorAll('#tgSub [data-tgview]').forEach(x => x.classList.toggle('on', x === b));
@@ -1981,30 +1980,6 @@ function renderChats(){
     box.querySelectorAll('.chat-row').forEach(b => b.onclick = () => openClient(b.dataset.k));
     return;
   }
-
-  // «Чаты» — только живые диалоги: кто реально писал боту (msg_count > 0).
-  // Тех, кто просто нажал /start или только получал рассылки/уведомления, сюда не берём.
-  const list = CLIENTS.filter(c => c.can_message && !c.archived && (c.msg_count > 0))
-    .slice()
-    .sort((a,b) => new Date(String(b.updated_at || b.first_seen || 0).replace(' ','T'))
-                 - new Date(String(a.updated_at || a.first_seen || 0).replace(' ','T')));
-
-  document.getElementById('chFound').textContent =
-    `${list.length} ${plural(list.length,'диалог','диалога','диалогов')}`;
-
-  const box = document.getElementById('chList');
-  if (!list.length){ box.innerHTML = '<div class="state" style="padding:24px 8px"><b>Пока пусто</b>Никто ещё не писал боту.</div>'; return; }
-
-  box.innerHTML = list.map(c => `
-    <button type="button" class="chat-row" data-k="${esc(c.key)}">
-      <div class="av">${esc(initials(c.tg_name || c.name))}</div>
-      <div class="body">
-        <div class="top"><span class="nm">${esc(c.tg_name || shownName(c))}</span>
-          <span class="when">${esc(timeAgo(c.updated_at || c.first_seen))}</span></div>
-        <div class="prev">${c.phone ? esc(fmtPhone(c.phone)) : 'телефон не указан'}</div>
-      </div>
-    </button>`).join('');
-  box.querySelectorAll('.chat-row').forEach(b => b.onclick = () => openClient(b.dataset.k, { openChat:true, onlyDialog:true }));
 }
 
 // ============================================================
