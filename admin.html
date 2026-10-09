@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1153 no-vip-card -->
+<!-- admin-build 2026-10-09-1300 manual-broadcast -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -119,6 +119,15 @@
   .wa-row i{font-style:normal;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
   .wa-row.sent{opacity:.5;}
   .bc-sent{display:block;color:#B5680A;}
+  .rc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid #EEF2F5;}
+  .rc-row:first-child{border-top:none;}
+  .rc-row.sent{opacity:.55;}
+  .rc-info{min-width:0;}
+  .rc-info b{display:block;font-size:14px;font-weight:600;}
+  .rc-info i{display:block;font-style:normal;font-size:12px;color:var(--muted);}
+  .rc-badge{display:inline-block;margin-top:4px;padding:3px 8px;border-radius:7px;background:#FFF1DA;color:#8A5A0B;font-size:11.5px;font-weight:700;line-height:1.3;}
+  .rc-badge.same{background:#FBEEEC;color:#A23B2C;}
+  .rc-nophone{flex:none;font-size:12px;color:var(--muted);}
   .bc-who.already, .wa-row.already{background:#FFF8EE;border-radius:10px;padding-left:4px;}
   .bc-tools button{margin-left:6px;}
   .wa-btn{flex:none;height:36px;padding:0 14px;border:1px solid var(--line);border-radius:9px;background:#fff;
@@ -352,7 +361,8 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1153</p>
+  <p class="ver">версия 2026-10-09-1300</p>
+
 </header>
 
 <nav class="tabs">
@@ -1346,21 +1356,30 @@ function renderSummary(){
 // сразу спрашиваем, кому хотим написать — понятными словами и с тем,
 // скольким из них уже писали, чтобы не слать повторно всем подряд.
 const BROADCAST_PRESETS = [
-  { k:'all',      l:'Все клиенты' },
   { k:'booked',   l:'Кто записан' },
   { k:'due',      l:'Пора повторить' },
   { k:'sleeping', l:'Давно не были' },
 ];
+// Кто входит в рассылку. «Записаны» берём независимо от дня, выбранного
+// в календаре на экране клиентов, — ближайшие записи сверху.
+function audienceList(p){
+  if (p.k === 'booked'){
+    return CLIENTS.filter(c => !c.archived && c.upcoming.length > 0)
+      .sort((a,b) => (a.upcoming[0].date + a.upcoming[0].time).localeCompare(b.upcoming[0].date + b.upcoming[0].time));
+  }
+  return CLIENTS.filter(c => inSeg(c, p.k));
+}
 function openAudiencePicker(){
   const rows = BROADCAST_PRESETS.map(p => {
-    const list = CLIENTS.filter(c => inSeg(c, p.k));
-    const already = list.filter(c => c.last_broadcast).length;
+    const list = audienceList(p);
+    const got = list.filter(c => gotSameBroadcast(c, p)).length;
+    const shown = p.k === 'booked' ? list.length - got : list.length;
     const sub = !list.length ? 'никого по этому фильтру'
-      : already === 0 ? 'рассылки ещё не было'
-      : already === list.length ? 'уже писали всем'
-      : `уже писали ${already} из ${list.length}`;
+      : got === 0 ? 'эту рассылку ещё не отправляли'
+      : got === list.length ? 'эту рассылку уже получили все'
+      : `эту рассылку уже получили ${got} из ${list.length}`;
     return `<button type="button" class="aud-row" data-k="${p.k}"${list.length ? '' : ' disabled'}>
-      <div class="aud-main"><b>${esc(p.l)}</b><span>${list.length}</span></div>
+      <div class="aud-main"><b>${esc(p.l)}</b><span>${shown}</span></div>
       <div class="aud-sub">${esc(sub)}</div>
     </button>`;
   }).join('');
@@ -1375,8 +1394,7 @@ function openAudiencePicker(){
   sheet.querySelector('.sh-x').onclick = closeClient;
   sheet.querySelectorAll('.aud-row[data-k]').forEach(b => b.onclick = () => {
     const p = BROADCAST_PRESETS.find(x => x.k === b.dataset.k);
-    const list = CLIENTS.filter(c => inSeg(c, p.k));
-    openComposer(list, null, null, p.l);
+    openComposer(audienceList(p), null, null, p);
   });
   sheet.scrollTop = 0;
   document.getElementById('sheetBg').classList.remove('hidden');
@@ -1510,11 +1528,9 @@ function renderClients(){
     BOOK_DAY = null;
   } else { whenBar.innerHTML = ''; whenBar.classList.add('hidden'); BOOK_DAY = null; TG_WHEN = 'all'; }
 
-  document.getElementById('mailBar').innerHTML = list.length
-    ? `<button type="button" class="mail-btn" id="mailBtn">✉️ Написать: «${esc(segName)}»${QUERY ? ' + поиск' : ''}<span>${reach} в Telegram</span></button>`
-    : '';
-  const mb = document.getElementById('mailBtn');
-  if (mb) mb.onclick = () => openComposer();
+  // Рассылка запускается только кнопкой «Сделать рассылку» сверху —
+  // под фильтрами отдельных кнопок «Написать им» больше нет.
+  document.getElementById('mailBar').innerHTML = '';
 
   const box = document.getElementById('cList');
   if (!list.length){ box.innerHTML = '<div class="state" style="padding:24px 8px"><b>Никого</b>По этому фильтру клиентов нет.</div>'; return; }
@@ -1791,11 +1807,32 @@ function timeAgo(iso){
   if (diffD < 7)     return `${diffD} ${plural(diffD,'день','дня','дней')} назад`;
   return fmtIso(String(iso).slice(0,10));
 }
-// Подпись «уже писали N дней назад» — чтобы видеть, кому уже отправляли рассылку
+// Плашка «кому и какую рассылку уже отправляли»: название рассылки + дата.
+// Важно именно название — «напомнили о записи» не отменяет «давно не были».
+function bcTime(iso){
+  const t = new Date(String(iso || '').replace(' ', 'T'));
+  return isNaN(t) ? null : t.getTime();
+}
 function lastBcLabel(c){
-  if (!c.last_broadcast) return '';
-  const ch = { tg:'ботом', tg_manual:'в Telegram', wa:'в WhatsApp' }[c.last_broadcast.channel] || '';
-  return `уже писали ${timeAgo(c.last_broadcast.ts)}${ch ? ' · ' + ch : ''}`;
+  const b = c.last_broadcast;
+  if (!b) return '';
+  const t = bcTime(b.ts);
+  const seg = b.segment || 'рассылка';
+  if (t === null) return `Уже писали: «${seg}»`;
+  const dd = new Date(t);
+  const date = String(dd.getDate()).padStart(2,'0') + '.' + String(dd.getMonth()+1).padStart(2,'0');
+  const days = Math.floor((Date.now() - t) / 86400000);
+  const rel = days <= 0 ? 'сегодня' : days === 1 ? 'вчера' : days < 7 ? `${days} ${plural(days,'день','дня','дней')} назад` : '';
+  return `Уже писали: «${seg}» · ${date}${rel ? ' (' + rel + ')' : ''}`;
+}
+// Эту же самую рассылку человек уже получал недавно?
+const SAME_BC_DAYS = { booked: 3, due: 30, sleeping: 30 };
+function gotSameBroadcast(c, aud){
+  const b = c.last_broadcast;
+  if (!b || !aud || b.segment !== aud.l) return false;
+  const t = bcTime(b.ts);
+  if (t === null) return true;
+  return (Date.now() - t) <= (SAME_BC_DAYS[aud.k] || 30) * 86400000;
 }
 // Запомнить, кому отправили — чтобы в следующий раз было видно, кто уже получал
 async function logBroadcast(entries){
@@ -1907,10 +1944,10 @@ function renderChats(){
 let CURRENT_LIST = [];
 const TEMPLATES = {
   booked:   '{имя}, здравствуйте! 💛\nНапоминаем: {дата} в {время} ждём вас у Екатерины на Лисичанской 6.\n\nЕсли планы изменились — сообщите, пожалуйста, чтобы время смог занять кто-то другой.',
-  due:      '{имя}, здравствуйте! 💛\nПодходит время повторить {процедура}, чтобы сохранить результат. Свободные окна можно посмотреть по кнопке ниже.',
-  sleeping: '{имя}, здравствуйте! 💛\nДавно вас не видели! Екатерина будет рада встрече — свободные окна можно посмотреть по кнопке ниже.',
-  consult:  '{имя}, здравствуйте! 💛\nВы были у Екатерины на консультации — если остались вопросы или сомнения, напишите сюда, она подскажет. А записаться можно по кнопке ниже.',
-  tg:       '{имя}, здравствуйте! 💛\nЕсли остались вопросы по процедурам — напишите сюда, Екатерина подскажет. А свободные окна можно посмотреть по кнопке ниже.',
+  due:      '{имя}, здравствуйте! 💛\nПодходит время повторить {процедура}, чтобы сохранить результат. Свободные окна можно посмотреть по ссылке ниже.',
+  sleeping: '{имя}, здравствуйте! 💛\nДавно вас не видели! Екатерина будет рада встрече — свободные окна можно посмотреть по ссылке ниже.',
+  consult:  '{имя}, здравствуйте! 💛\nВы были у Екатерины на консультации — если остались вопросы или сомнения, напишите сюда, она подскажет. А записаться можно по ссылке ниже.',
+  tg:       '{имя}, здравствуйте! 💛\nЕсли остались вопросы по процедурам — напишите сюда, Екатерина подскажет. А свободные окна можно посмотреть по ссылке ниже.',
 };
 const firstName = s => String(s||'').trim().split(/\s+/)[0] || '';
 function personalize(text, c){
@@ -1930,207 +1967,126 @@ function confirmBox(msg){
   });
 }
 
-function openComposer(only, title, initialText, groupLabel){
-  const list  = only ? only.slice() : CURRENT_LIST.slice();
-  const reach = list.filter(c => c.can_message);
-  const noTg  = list.filter(c => !c.can_message);
-  const segName = groupLabel || title || (SEGS.find(s => s.k === SEG) || {}).l || 'Все';
-  const sample = reach[0] || null;
-  const alreadyReach = reach.filter(c => c.last_broadcast).length;
-  const alreadyNoTg  = noTg.filter(c => c.last_broadcast).length;
+function openComposer(only, title, initialText, aud){
+  // aud — рассылка, выбранная в «Сделать рассылку» ({k, l}). У сообщения одному клиенту её нет.
+  // Отправка только вручную: у каждого человека свои кнопки Telegram / WhatsApp.
+  const base   = only ? only.slice() : [];
+  const audKey = aud ? aud.k : null;
+  const logSeg = aud ? aud.l : (title && /^Памятка/.test(title) ? title : 'Личное сообщение');
+  // У клиентов не из бота имя приходит из DIKIDI: бывает и «Имя Фамилия», и «Фамилия Имя».
+  // Подставляем только однословное — иначе назовём по фамилии.
+  const nameFor = c => c.tg_name || (String(c.name||'').trim().split(/\s+/).length === 1 ? c.name : '');
+  const sample = base[0] || null;
+  const DIKIDI_BOOK = 'https://dikidi.net/ru/profile/katya_1788592';
+  const sentNow = new Set();                       // кому уже нажали сейчас — строка не пропадает с экрана
+  let hideSent = audKey === 'booked';              // «записаны»: кому уже напоминали — по умолчанию скрыты
+  const gotN = aud ? base.filter(c => gotSameBroadcast(c, aud)).length : 0;
 
   const sheet = document.getElementById('sheet');
   sheet.innerHTML = `
     <div class="sh-head">
-      <div><div class="sh-name">${title ? esc(shownName(list[0])) : (groupLabel || 'Рассылка')}</div>
-        <div class="sh-phone">${title ? 'Сообщение через бота' : (groupLabel ? `Аудитория: «${esc(segName)}»` : `Фильтр: «${esc(segName)}»${QUERY ? ' + поиск' : ''}`)}</div></div>
+      <div><div class="sh-name">${aud ? esc(aud.l) : esc(shownName(base[0] || {}))}</div>
+        <div class="sh-phone">${aud ? 'Рассылка вручную — каждому своей кнопкой' : 'Сообщение вручную'}</div></div>
       <button class="sh-x" type="button" aria-label="Закрыть">×</button>
     </div>
     <label class="f" for="bcText">Текст сообщения</label>
-    <textarea id="bcText" rows="6" placeholder="{имя}, здравствуйте! …">${esc(initialText != null ? initialText : (title ? '' : (TEMPLATES[SEG] || '')))}</textarea>
+    <textarea id="bcText" rows="6" placeholder="{имя}, здравствуйте! …">${esc(initialText != null ? initialText : (aud ? (TEMPLATES[aud.k] || '') : ''))}</textarea>
     <p class="sh-note">{имя} — имя клиента, {процедура} — его последняя процедура${
-      SEG === 'booked' ? ', {дата} и {время} — его запись' : ''}</p>
-    <label class="chk"><input type="checkbox" id="bcBtn"${(SEG === 'booked' || initialText != null) ? '' : ' checked'}> Кнопка «📅 Записаться» под сообщением</label>
-    <div class="sh-block"><h4>Так увидит ${sample ? esc(firstName(sample.tg_name) || 'клиент') : 'клиент'}</h4>
+      audKey === 'booked' ? ', {дата} и {время} — его запись' : ''}</p>
+    <label class="chk"><input type="checkbox" id="bcBtn"${(audKey === 'booked' || initialText != null) ? '' : ' checked'}> Добавить ссылку «Записаться» в конец сообщения</label>
+    <div class="sh-block"><h4>Так увидит ${sample ? esc(firstName(nameFor(sample)) || 'клиент') : 'клиент'}</h4>
       <div class="bc-preview" id="bcPreview"></div></div>
-
     <div class="sh-block">
-      <h4>Кому отправить</h4>
-      <div class="bc-summary-row">
-        <span id="bcCount"></span>
-        <button type="button" id="bcToggleList">показать список</button>
-      </div>
-      ${alreadyReach ? `<p class="bc-already-line">Уже писали ${alreadyReach} из ${reach.length}
-        <button type="button" id="bcSkipSent">снять уже получивших</button></p>` : ''}
-      <div class="bc-list hidden" id="bcListBox">
-        <div class="bc-tools"><span></span><button type="button" id="bcAll">снять все</button></div>
-        ${reach.map((c,i) => `<label class="bc-who${c.last_broadcast ? ' already' : ''}">
-          <input type="checkbox" class="bc-pick" data-i="${i}" checked>
-          <span><b>${esc(shownName(c))}</b><i>${c.visits_count ? `${c.visits_count} ${plural(c.visits_count,'визит','визита','визитов')}` : 'без визитов'}${
-            c.last_cat ? ' · ' + esc(CAT_TITLE[c.last_cat] || '') : ''}${c.days_since !== null ? ' · ' + daysAgo(c.days_since) : ''}</i>${
-            lastBcLabel(c) ? `<i class="bc-sent">${esc(lastBcLabel(c))}</i>` : ''}</span>
-        </label>`).join('')}
-      </div>
-    </div>
-    ${noTg.length ? `<div class="sh-block">
-      <h4>Нет в боте — WhatsApp или Telegram</h4>
-      <div class="bc-summary-row">
-        <span>${noTg.length} ${plural(noTg.length,'человек','человека','человек')}${alreadyNoTg ? ` · уже писали ${alreadyNoTg}` : ''}</span>
-        <button type="button" id="bcToggleNoTg">показать список</button>
-      </div>
-      <div class="hidden" id="noTgBox">
-        <p class="sh-note" style="margin:8px 0">Бот пишет только тем, кто ему писал. Остальным — по кнопке: откроется чат с уже готовым текстом, останется нажать отправку. Telegram откроется, только если у клиента есть Telegram и он не закрыл поиск по номеру в настройках приватности.</p>
-        ${noTg.map((c,i) => `<div class="wa-row${c.last_broadcast ? ' already' : ''}" data-wa="${i}">
-          <span><b>${esc(shownName(c))}</b><i>${c.phone ? esc(fmtPhone(c.phone)) : 'нет телефона'}</i>${
-            lastBcLabel(c) ? `<i class="bc-sent">${esc(lastBcLabel(c))}</i>` : ''}</span>
-          ${c.phone ? `<span class="wa-btns">
-            <button type="button" class="wa-btn tg-btn" data-i="${i}">Telegram</button>
-            <button type="button" class="wa-btn" data-i="${i}">WhatsApp</button>
-          </span>` : ''}
-        </div>`).join('')}
-      </div>
-    </div>` : ''}
-    <div class="bc-actions">
-      <button type="button" id="bcTest">Отправить себе тест</button>
-      <button type="button" id="bcSend" class="primary" ${reach.length ? '' : 'disabled'}>Отправить</button>
+      <h4>Кому написать</h4>
+      <div class="bc-summary-row"><span id="rcCount"></span>
+        ${gotN ? `<button type="button" id="rcToggle"></button>` : ''}</div>
+      <p class="sh-note" style="margin:6px 0 4px">Нажмите Telegram или WhatsApp напротив человека — откроется чат с готовым текстом, останется нажать «отправить». Сообщение запомнится в истории рассылок.</p>
+      <div id="rcList"></div>
     </div>
     <div id="bcResult"></div>`;
-
-  const toggleList = sheet.querySelector('#bcToggleList');
-  const listBox = sheet.querySelector('#bcListBox');
-  toggleList.onclick = () => {
-    const show = listBox.classList.toggle('hidden') === false;
-    toggleList.textContent = show ? 'скрыть список' : 'показать список';
-  };
-  const toggleNoTg = sheet.querySelector('#bcToggleNoTg');
-  if (toggleNoTg) toggleNoTg.onclick = () => {
-    const box = sheet.querySelector('#noTgBox');
-    const show = box.classList.toggle('hidden') === false;
-    toggleNoTg.textContent = show ? 'скрыть список' : 'показать список';
-  };
-
-  // Кого отправляем — можно снимать галочки
-  const picks = () => [...sheet.querySelectorAll('.bc-pick')].filter(x => x.checked).map(x => reach[+x.dataset.i]);
-  const refreshPicks = () => {
-    const n = picks().length;
-    sheet.querySelector('#bcCount').textContent = `${n} ${plural(n,'получатель','получателя','получателей')} из ${reach.length}`;
-    const send = sheet.querySelector('#bcSend');
-    send.disabled = n === 0;
-    send.textContent = n ? `Отправить ${n} ${plural(n,'клиенту','клиентам','клиентам')}` : 'Никто не выбран';
-    sheet.querySelector('#bcAll').textContent = n ? 'снять все' : 'выбрать все';
-  };
-  sheet.querySelectorAll('.bc-pick').forEach(x => x.onchange = refreshPicks);
-  sheet.querySelector('#bcAll').onclick = () => {
-    const on = picks().length === 0;
-    sheet.querySelectorAll('.bc-pick').forEach(x => x.checked = on);
-    refreshPicks();
-  };
-  const skipSent = sheet.querySelector('#bcSkipSent');
-  if (skipSent) skipSent.onclick = () => {
-    sheet.querySelectorAll('.bc-pick').forEach(x => { if (reach[+x.dataset.i].last_broadcast) x.checked = false; });
-    refreshPicks();
-    listBox.classList.remove('hidden'); toggleList.textContent = 'скрыть список';
-  };
-  refreshPicks();
 
   const ta = sheet.querySelector('#bcText');
   const pv = sheet.querySelector('#bcPreview');
   const btnBox = sheet.querySelector('#bcBtn');
-  const paint = () => {
-    pv.textContent = personalize(ta.value, sample) || '—';
-    if (btnBox.checked) pv.insertAdjacentHTML('beforeend', '<div class="bc-kb">📅 Записаться</div>');
-  };
-  ta.addEventListener('input', paint); btnBox.addEventListener('change', paint); paint();
-
-  sheet.querySelector('.sh-x').onclick = closeClient;
-  sheet.querySelectorAll('a[data-ext]').forEach(a => a.onclick = e => { if (tg?.openLink){ e.preventDefault(); tg.openLink(a.href); } });
-
-  const DIKIDI_BOOK = 'https://dikidi.net/ru/profile/katya_1788592';
   const result = sheet.querySelector('#bcResult');
+  const rcList = sheet.querySelector('#rcList');
+  const rcCount = sheet.querySelector('#rcCount');
+  const rcToggle = sheet.querySelector('#rcToggle');
 
-  // Один и тот же текст — что в WhatsApp, что в Telegram (кнопок в обоих нет — даём ссылкой)
+  // Один и тот же текст — что в WhatsApp, что в Telegram
   function composeMsg(c){
     const text = ta.value.trim();
     if (!text) return null;
-    // У клиентов не из бота имя приходит из DIKIDI: бывает и «Имя Фамилия»,
-    // и «Фамилия Имя». Подставляем только однословное — иначе назовём по фамилии.
-    const waName = c.tg_name || (String(c.name||'').trim().split(/\s+/).length === 1 ? c.name : '');
-    let msg = personalize(text, { ...c, tg_name: waName });
+    let msg = personalize(text, { ...c, tg_name: nameFor(c) });
     if (btnBox.checked) msg += '\n\nЗаписаться: ' + DIKIDI_BOOK;
     return msg;
   }
-  sheet.querySelectorAll('.wa-btn:not(.tg-btn)').forEach(btn => btn.onclick = () => {
-    const c = noTg[+btn.dataset.i];
-    const msg = composeMsg(c);
-    if (msg === null){
-      sheet.querySelector('#bcResult').innerHTML = '<p class="bc-res bad">Сначала напишите текст сообщения.</p>';
-      ta.focus(); return;
-    }
-    const url = `https://wa.me/${c.phone}?text=${encodeURIComponent(msg)}`;
-    if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
-    btn.closest('.wa-row').classList.add('sent');
-    btn.textContent = 'открыт';
-    logBroadcast([{ phone:c.phone, channel:'wa', segment:segName, text:msg.slice(0,200) }]);
-  });
-  // Telegram: тот же текст, что и в WhatsApp — открываем чат по номеру с подставленным текстом
-  sheet.querySelectorAll('.tg-btn').forEach(btn => btn.onclick = () => {
-    const c = noTg[+btn.dataset.i];
-    const msg = composeMsg(c);
-    if (msg === null){
-      sheet.querySelector('#bcResult').innerHTML = '<p class="bc-res bad">Сначала напишите текст сообщения.</p>';
-      ta.focus(); return;
-    }
-    const url = `https://t.me/+${c.phone}?text=${encodeURIComponent(msg)}`;
-    if (tg?.openTelegramLink) tg.openTelegramLink(url);
-    else if (tg?.openLink) tg.openLink(url);
-    else window.open(url, '_blank');
-    btn.closest('.wa-row').classList.add('sent');
-    btn.textContent = 'открыт';
-    logBroadcast([{ phone:c.phone, channel:'tg_manual', segment:segName, text:msg.slice(0,200) }]);
-  });
-  async function send(test){
-    const text = ta.value.trim();
-    if (!text){ result.innerHTML = '<p class="bc-res bad">Напишите текст сообщения.</p>'; ta.focus(); return; }
-    if (!test){
-      const chosen = picks();
-      if (!chosen.length) return;
-      const ok = await confirmBox(`Отправить сообщение ${chosen.length} ${plural(chosen.length,'клиенту','клиентам','клиентам')}? Отменить будет нельзя.`);
-      if (!ok) return;
-    }
-    const btn = sheet.querySelector(test ? '#bcTest' : '#bcSend');
-    const was = btn.textContent; btn.disabled = true; btn.textContent = 'Отправляю…';
-    try{
-      const r = await fetch(`${API}/admin-broadcast`, { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          init_data: initData, user_id: tgUser?.id, text, with_button: btnBox.checked, test,
-          test_name: firstName(tgUser?.first_name), test_proc: sample ? (CAT_PROC[sample.last_cat] || '') : '',
-          test_when: sample && sample.upcoming[0] ? dayWord(sample.upcoming[0].date) : 'завтра',
-          test_time: sample && sample.upcoming[0] ? sample.upcoming[0].time : '12:00',
-          recipients: test ? [] : picks().map(c => ({ chat_id: c.chat_id, name: c.tg_name || '',
-            proc: CAT_PROC[c.last_cat] || '',
-            when: c.upcoming[0] ? dayWord(c.upcoming[0].date) : '',
-            time: c.upcoming[0] ? c.upcoming[0].time : '' }))
-        })});
-      const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
-      if (!d || d.ok === false) throw new Error(d?.reason || 'forbidden');
-      if (test) {
-        result.innerHTML = '<p class="bc-res ok">Тест отправлен вам в бот — проверьте, как выглядит.</p>';
-        btn.disabled = false; btn.textContent = was;
-      } else {
-        result.innerHTML = `<p class="bc-res ok">✅ Доставлено: ${d.sent} из ${picks().length}.${d.failed
-          ? `<br>Не дошло: ${d.failed} — обычно это значит, что человек удалил или заблокировал бота.` : ''}</p>`;
-        btn.textContent = 'Отправлено';   // повторно не даём, чтобы не задвоить
-        try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
-        logBroadcast(picks().map(c => ({ phone:c.phone, channel:'tg', segment:segName, text })));
-      }
-    }catch(e){
-      result.innerHTML = '<p class="bc-res bad">Не удалось отправить. Проверьте, что воркфлоу Admin Broadcast API включён, и попробуйте ещё раз.</p>';
-      btn.disabled = false; btn.textContent = was;
-    }
-  }
-  sheet.querySelector('#bcTest').onclick = () => send(true);
-  sheet.querySelector('#bcSend').onclick = () => send(false);
+  const paint = () => { pv.textContent = (sample && composeMsg(sample)) || '—'; };
+  ta.addEventListener('input', paint); btnBox.addEventListener('change', paint); paint();
 
+  const visible = () => base.filter(c => sentNow.has(c.key) || !(hideSent && aud && gotSameBroadcast(c, aud)));
+  const subOf = c => {
+    const bits = [];
+    const u = c.upcoming && c.upcoming[0];
+    if (audKey === 'booked' && u) bits.push(`записан(а) ${dayWord(u.date)} в ${u.time}`);
+    else {
+      bits.push(c.visits_count ? `${c.visits_count} ${plural(c.visits_count,'визит','визита','визитов')}` : 'без визитов');
+      if (c.last_cat) bits.push(CAT_TITLE[c.last_cat] || '');
+      if (c.days_since !== null && c.days_since !== undefined) bits.push(daysAgo(c.days_since));
+    }
+    if (c.phone) bits.push(fmtPhone(c.phone));
+    return bits.filter(Boolean).join(' · ');
+  };
+  // Плашка: какая именно рассылка и когда уходила этому человеку
+  const badgeOf = c => c.last_broadcast
+    ? `<span class="rc-badge${aud && gotSameBroadcast(c, aud) ? ' same' : ''}">${esc(lastBcLabel(c))}</span>` : '';
+  function renderRows(){
+    const vis = visible();
+    rcCount.textContent = `${vis.length} ${plural(vis.length,'человек','человека','человек')}`;
+    if (rcToggle) rcToggle.textContent = hideSent ? `Показать тех, кому уже писали (${gotN})` : `Скрыть тех, кому уже писали (${gotN})`;
+    rcList.innerHTML = vis.length ? vis.map(c => `
+      <div class="rc-row${sentNow.has(c.key) ? ' sent' : ''}" data-k="${esc(c.key)}">
+        <div class="rc-info"><b>${esc(shownName(c))}</b><i>${esc(subOf(c))}</i><span class="rc-badge-box">${badgeOf(c)}</span></div>
+        ${c.phone
+          ? `<span class="wa-btns"><button type="button" class="wa-btn tg-btn">Telegram</button><button type="button" class="wa-btn">WhatsApp</button></span>`
+          : `<span class="rc-nophone">нет номера</span>`}
+      </div>`).join('')
+      : '<p class="sh-note" style="margin:8px 0">Некому писать — всем уже отправляли эту рассылку.</p>';
+  }
+  if (rcToggle) rcToggle.onclick = () => { hideSent = !hideSent; renderRows(); };
+  renderRows();
+
+  rcList.addEventListener('click', e => {
+    const btn = e.target.closest('.wa-btn'); if (!btn) return;
+    const row = btn.closest('.rc-row');
+    const c = base.find(x => x.key === row.dataset.k); if (!c) return;
+    const msg = composeMsg(c);
+    if (msg === null){
+      result.innerHTML = '<p class="bc-res bad">Сначала напишите текст сообщения.</p>';
+      ta.focus(); return;
+    }
+    result.innerHTML = '';
+    const viaTg = btn.classList.contains('tg-btn');
+    const channel = viaTg ? 'tg_manual' : 'wa';
+    if (viaTg){
+      const url = `https://t.me/+${c.phone}?text=${encodeURIComponent(msg)}`;
+      if (tg?.openTelegramLink) tg.openTelegramLink(url);
+      else if (tg?.openLink) tg.openLink(url);
+      else window.open(url, '_blank');
+    } else {
+      const url = `https://wa.me/${c.phone}?text=${encodeURIComponent(msg)}`;
+      if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
+    }
+    sentNow.add(c.key);
+    row.classList.add('sent');
+    btn.textContent = 'открыт';
+    // запоминаем сразу и в памяти — чтобы плашка и счётчики обновились без перезагрузки
+    c.last_broadcast = { ts: new Date().toISOString(), channel, segment: logSeg, text: msg.slice(0, 200) };
+    row.querySelector('.rc-badge-box').innerHTML = badgeOf(c);
+    logBroadcast([{ phone:c.phone, channel, segment:logSeg, text:msg.slice(0, 200) }]);
+  });
+
+  sheet.querySelector('.sh-x').onclick = closeClient;
   sheet.scrollTop = 0;
   document.getElementById('sheetBg').classList.remove('hidden');
 }
