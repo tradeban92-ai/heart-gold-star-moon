@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1300 manual-broadcast -->
+<!-- admin-build 2026-10-09-1315 throttle-refetch -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -361,7 +361,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1300</p>
+  <p class="ver">версия 2026-10-09-1315</p>
 
 </header>
 
@@ -1039,7 +1039,7 @@ function showTab(t){
   document.getElementById('tabRevenue').classList.toggle('hidden', t !== 'revenue');
   document.getElementById('tabChats').classList.toggle('hidden', t !== 'chats');
   document.getElementById('pageTitle').textContent = { visits:'Сегодня', clients:'Клиенты', revenue:'Выручка', chats:'TG' }[t];
-  if (t === 'visits') { CLIENTS = null; _clientsPromise = null; fetchClientsData().then(renderTodayActivity); }
+  if (t === 'visits' && Date.now() - _clientsAt > 60000) { CLIENTS = null; _clientsPromise = null; fetchClientsData().then(renderTodayActivity); }  // не чаще раза в минуту — не грузим Google Sheets лишний раз
   if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
   if (t === 'revenue') loadRevenue();
   if (t === 'chats') loadChats();
@@ -1240,6 +1240,7 @@ function cState(title, text){
 
 // ---- Уровень клиента на карточках визитов: Катя видит скидку до оплаты ----
 let _clientsPromise = null;
+let _clientsAt = 0;   // когда клиенты последний раз успешно загружены
 function fetchClientsData(){
   if (_clientsPromise || !tgUser) return _clientsPromise;
   _clientsPromise = fetch(`${API}/admin-clients?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`)
@@ -1248,6 +1249,7 @@ function fetchClientsData(){
       const d = Array.isArray(raw) ? raw[0] : raw;
       if (d && d.ok !== false && Array.isArray(d.clients)) {
         CLIENTS = d.clients; SUMMARY = d.summary || {}; SLEEP_DAYS = d.sleeping_after || 130;
+        _clientsAt = Date.now();
         enrichClients();
         paintLevels();
       }
