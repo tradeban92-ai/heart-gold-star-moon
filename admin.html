@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-1650 broadcast-next-btn -->
+<!-- admin-build 2026-10-09-1720 broadcast-confirm-tg -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -134,6 +134,9 @@
   .next-btn{width:100%;min-height:52px;border:0;border-radius:14px;background:var(--steel-dk,#2F4A63);color:#fff;font-size:15.5px;font-weight:700;padding:8px 14px;line-height:1.25;}
   .next-btn small{display:block;font-size:12px;font-weight:500;opacity:.85;margin-top:2px;}
   .next-btn:disabled{background:#DDE3E8;color:#6B7884;}
+  .rc-row.nots{opacity:.75;}
+  .rc-fail{display:block;margin-top:6px;border:1px dashed #C9A15A;border-radius:8px;background:#FFF8EE;color:#8A5A0B;font-size:12px;font-weight:600;padding:5px 9px;}
+  .rc-note-no{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;color:#A23B2C;}
   .rc-nophone{flex:none;font-size:12px;color:var(--muted);}
   .bc-who.already, .wa-row.already{background:#FFF8EE;border-radius:10px;padding-left:4px;}
   .bc-tools button{margin-left:6px;}
@@ -368,7 +371,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-1650</p>
+  <p class="ver">версия 2026-10-09-1720</p>
 
 </header>
 
@@ -1840,7 +1843,7 @@ function openClient(key, opts){
   const mb = sheet.querySelector('#msgBtn');
   if (mb) mb.onclick = () => openComposer([c], shownName(c));
 }
-function closeClient(){ LIVE_COMPOSER = null; document.getElementById('sheetBg').classList.add('hidden'); }
+function closeClient(){ if (typeof COMPOSER_FLUSH === 'function' && COMPOSER_FLUSH){ try{ COMPOSER_FLUSH(); }catch(e){} COMPOSER_FLUSH = null; } LIVE_COMPOSER = null; document.getElementById('sheetBg').classList.add('hidden'); }
 
 // ============================================================
 // ЧАТЫ — все, кто писал боту, сверху самые свежие
@@ -1998,7 +2001,9 @@ function confirmBox(msg){
   });
 }
 
+let COMPOSER_FLUSH = null;
 function openComposer(only, title, initialText, aud){
+  if (COMPOSER_FLUSH) { try{ COMPOSER_FLUSH(); }catch(e){} COMPOSER_FLUSH = null; }
   // aud — рассылка, выбранная в «Сделать рассылку» ({k, l}). У сообщения одному клиенту её нет.
   // Отправка только вручную: у каждого человека свои кнопки Telegram / WhatsApp.
   const base   = only ? only.slice() : [];
@@ -2089,7 +2094,7 @@ function openComposer(only, title, initialText, aud){
   }
   // «Следующий»: открывает чат с первым ещё не открытым человеком (Telegram) и сам отмечает его
   const nextBtn = sheet.querySelector('#nextBtn');
-  const pendingRows = () => Array.from(rcList.querySelectorAll('.rc-row:not(.sent)')).filter(r => r.querySelector('.tg-btn'));
+  const pendingRows = () => Array.from(rcList.querySelectorAll('.rc-row:not(.sent):not(.nots)')).filter(r => r.querySelector('.tg-btn'));
   function updateNext(){
     if (!nextBtn) return;
     const rows = pendingRows();
@@ -2110,7 +2115,35 @@ function openComposer(only, title, initialText, aud){
   if (rcToggle) rcToggle.onclick = () => { hideSent = !hideSent; renderRows(); };
   renderRows();
 
+  // Telegram: «отправлено» записываем не при нажатии, а когда подтверждено —
+  // следующим нажатием или закрытием окна. Если у человека нет Telegram, чат не откроется,
+  // и под строкой есть кнопка «не открылось» — тогда человек в историю не попадёт.
+  let pending = null;   // { c, msg, channel, row }
+  function commit(c, msg, channel, row){
+    sentNow.add(c.key);
+    c.last_broadcast = { ts: new Date().toISOString(), channel, segment: logSeg, text: msg.slice(0, 200) };
+    const bb = row && row.querySelector('.rc-badge-box'); if (bb) bb.innerHTML = badgeOf(c);
+    logBroadcast([{ phone:c.phone, channel, segment:logSeg, text:msg.slice(0, 200) }]);
+  }
+  function confirmPending(){
+    if (!pending) return;
+    const { c, msg, channel, row } = pending; pending = null;
+    if (row){ row.classList.remove('pend'); const f = row.querySelector('.rc-fail'); if (f) f.remove(); }
+    commit(c, msg, channel, row);
+  }
+  COMPOSER_FLUSH = confirmPending;
+
   rcList.addEventListener('click', e => {
+    const fail = e.target.closest('.rc-fail');
+    if (fail){                                   // чат не открылся — нет Telegram
+      const row = fail.closest('.rc-row');
+      if (pending && pending.row === row) pending = null;
+      row.classList.remove('sent', 'pend'); row.classList.add('nots');
+      fail.remove();
+      const tgb = row.querySelector('.tg-btn'); if (tgb) tgb.textContent = 'Telegram';
+      row.querySelector('.rc-info').insertAdjacentHTML('beforeend', '<span class="rc-note-no">нет Telegram — напишите в WhatsApp</span>');
+      updateNext(); return;
+    }
     const btn = e.target.closest('.wa-btn'); if (!btn) return;
     const row = btn.closest('.rc-row');
     const c = base.find(x => x.key === row.dataset.k); if (!c) return;
@@ -2120,24 +2153,26 @@ function openComposer(only, title, initialText, aud){
       ta.focus(); return;
     }
     result.innerHTML = '';
+    confirmPending();                             // предыдущий считаем отправленным
     const viaTg = btn.classList.contains('tg-btn');
-    const channel = viaTg ? 'tg_manual' : 'wa';
     if (viaTg){
       const url = `https://t.me/+${c.phone}?text=${encodeURIComponent(msg)}`;
       if (tg?.openTelegramLink) tg.openTelegramLink(url);
       else if (tg?.openLink) tg.openLink(url);
       else window.open(url, '_blank');
+      row.classList.remove('nots'); const old = row.querySelector('.rc-note-no'); if (old) old.remove();
+      row.classList.add('sent', 'pend');
+      btn.textContent = 'открыт';
+      if (!row.querySelector('.rc-fail')) row.querySelector('.rc-info').insertAdjacentHTML('beforeend', '<button type="button" class="rc-fail">Чат не открылся? Нажмите — нет Telegram</button>');
+      pending = { c, msg, channel:'tg_manual', row };
     } else {
       const url = `https://wa.me/${c.phone}?text=${encodeURIComponent(msg)}`;
       if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
+      row.classList.remove('nots'); const old = row.querySelector('.rc-note-no'); if (old) old.remove();
+      row.classList.add('sent');
+      btn.textContent = 'открыт';
+      commit(c, msg, 'wa', row);
     }
-    sentNow.add(c.key);
-    row.classList.add('sent');
-    btn.textContent = 'открыт';
-    // запоминаем сразу и в памяти — чтобы плашка и счётчики обновились без перезагрузки
-    c.last_broadcast = { ts: new Date().toISOString(), channel, segment: logSeg, text: msg.slice(0, 200) };
-    row.querySelector('.rc-badge-box').innerHTML = badgeOf(c);
-    logBroadcast([{ phone:c.phone, channel, segment:logSeg, text:msg.slice(0, 200) }]);
     updateNext();
   });
 
