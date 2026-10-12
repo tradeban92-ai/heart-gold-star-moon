@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-12-1130 open-client-link -->
+<!-- admin-build 2026-10-12-1700 sales-tab -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -237,10 +237,10 @@
   .rv-colbar{width:100%;max-width:34px;background:#C9D3DC;border-radius:6px 6px 2px 2px;}
   .rv-col.on .rv-colbar{background:var(--steel-dk);} .rv-col.on em{color:var(--ink);font-weight:700;}
   .rv-col span{font-size:11.5px;color:var(--muted);}
-  .tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin:0 16px 6px;padding:4px;
+  .tabs{display:flex;gap:3px;margin:0 16px 6px;padding:4px;
         background:#DCE3E9;border-radius:12px;}
   .tabs button{height:38px;border:none;border-radius:9px;background:transparent;color:var(--steel-dk);
-        font:600 11.5px 'Manrope',sans-serif;cursor:pointer;padding:0;}
+        font:600 10.5px 'Manrope',sans-serif;cursor:pointer;padding:0 3px;letter-spacing:-.1px;white-space:nowrap;flex:1 1 auto;min-width:0;}
   .tabs button.on{background:#fff;box-shadow:0 1px 3px rgba(43,54,66,.12);}
 
   .chat-row{width:100%;text-align:left;background:var(--panel);border:1px solid var(--line-soft);border-radius:14px;
@@ -407,6 +407,20 @@
   .rv-src b{flex:1;font-weight:600;}
   .rv-src i{font-style:normal;color:var(--muted);font-size:12.5px;}
   .rv-src span{font-weight:700;font-variant-numeric:tabular-nums;}
+  /* Продажи */
+  .sl-due{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft);}
+  .sl-due:last-of-type{border-bottom:none;}
+  .sl-due div{min-width:0;}
+  .sl-due b{display:block;font-size:15px;color:var(--ink);}
+  .sl-due span{display:block;font-size:12px;color:var(--muted);line-height:1.35;}
+  .sl-due button{flex:none;min-height:38px;padding:0 12px;border:0;border-radius:10px;background:var(--steel-dk);color:#fff;font:700 13px 'Manrope',sans-serif;}
+  .sl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .sl-grid2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .sl-grid .inv-in{font-size:16px;padding:11px;}
+  .sl-grid label.f{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sl-sel{font-size:16px;background:#fff;appearance:auto;}
+  #slProdName,#slClient,#slContact{font-size:16px;}
+  .sl-ta{width:100%;min-height:130px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;font:inherit;font-size:15px;line-height:1.45;resize:vertical;}
 </style>
 </head>
 <body>
@@ -416,7 +430,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-12-1130</p>
+  <p class="ver">версия 2026-10-12-1700</p>
 
 </header>
 
@@ -424,6 +438,7 @@
   <button type="button" data-tab="visits" class="on">Сегодня</button>
   <button type="button" data-tab="clients">Клиенты</button>
   <button type="button" data-tab="revenue">Выручка</button>
+  <button type="button" data-tab="sales">Продажи</button>
   <button type="button" data-tab="chats">TG</button>
   <button type="button" data-tab="invest">Инвест</button>
   <button type="button" data-tab="loan">Кредит</button>
@@ -478,6 +493,11 @@
 <div id="tabRevenue" class="hidden">
   <div id="rState" class="state"><b>Загружаю…</b></div>
   <div id="rMain" class="wrap hidden"></div>
+</div>
+
+<div id="tabSales" class="hidden">
+  <div id="sState" class="state"><b>Загружаю…</b></div>
+  <div id="sMain" class="wrap hidden"></div>
 </div>
 
 <div id="tabInvest" class="hidden">
@@ -1112,13 +1132,15 @@ function showTab(t){
   document.getElementById('tabClients').classList.toggle('hidden', t !== 'clients');
   document.getElementById('tabRevenue').classList.toggle('hidden', t !== 'revenue');
   document.getElementById('tabChats').classList.toggle('hidden', t !== 'chats');
+  document.getElementById('tabSales').classList.toggle('hidden', t !== 'sales');
   document.getElementById('tabInvest').classList.toggle('hidden', t !== 'invest');
   document.getElementById('tabLoan').classList.toggle('hidden', t !== 'loan');
-  document.getElementById('pageTitle').textContent = { visits:'Сегодня', clients:'Клиенты', revenue:'Выручка', chats:'TG', invest:'Инвест', loan:'Машина кредит' }[t];
+  document.getElementById('pageTitle').textContent = { visits:'Сегодня', clients:'Клиенты', revenue:'Выручка', sales:'Продажи', chats:'TG', invest:'Инвест', loan:'Машина кредит' }[t];
   if (t === 'visits' && Date.now() - _clientsAt > 60000) { CLIENTS = null; _clientsPromise = null; fetchClientsData().then(renderTodayActivity); }  // не чаще раза в минуту — не грузим Google Sheets лишний раз
   if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
   if (t === 'revenue') loadRevenue();
   if (t === 'chats') loadChats();
+  if (t === 'sales') loadSales();
   if (t === 'invest') loadInvest();
   if (t === 'loan') loadLoan();
   window.scrollTo(0, 0);
@@ -2808,7 +2830,7 @@ function renderRevenue(){
 document.getElementById('sheetBg').addEventListener('click', e => { if (e.target.id === 'sheetBg') closeClient(); });
 
 // Открыть сразу нужную вкладку: admin.html?tab=clients
-{ const t0 = new URLSearchParams(location.search).get('tab'); if (t0 === 'clients' || t0 === 'revenue' || t0 === 'chats') showTab(t0); }
+{ const t0 = new URLSearchParams(location.search).get('tab'); if (t0 === 'clients' || t0 === 'revenue' || t0 === 'sales' || t0 === 'chats') showTab(t0); }
 // Открыть сразу карточку клиента (кнопка в уведомлении): admin.html?client=<telegram id>
 { const cid = new URLSearchParams(location.search).get('client');
   if (cid && tgUser){
@@ -3198,6 +3220,265 @@ function lnOpenAdd(type, base){
     }catch(e){ btns.forEach(b => b.disabled = false); err.innerHTML = '<p class="bc-res bad">Не удалось сохранить. Проверьте, что воркфлоу Admin Car Loan API включён.</p>'; }
   };
   sheet.querySelector('#lnNo').onclick = closeClient; sheet.querySelector('.sh-x').onclick = closeClient;
+  sheet.scrollTop = 0; document.getElementById('sheetBg').classList.remove('hidden');
+}
+
+// ============================================================
+// ПРОДАЖИ — косметика для домашнего ухода: учёт продаж и напоминания о повторной покупке
+// Листы «Продажи» и «Товары» в таблице users. Воркфлоу Admin Sales API (admin-sales / admin-sales-save)
+// ============================================================
+let SL_ROWS = null, SL_PRODUCTS = [], SL_MONTH = null;          // SL_MONTH = 'YYYY-MM'
+const SL_MONTHS = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+const SL_SHORT  = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+const SL_SEGMENT = 'Повторная покупка';
+function slToday(){ return new Date(Date.now() + 3*3600*1000).toISOString().slice(0, 10); }   // по Москве
+function slAddDays(iso, n){
+  const t = Date.parse(String(iso) + 'T00:00:00Z');
+  return isFinite(t) && isFinite(n) ? new Date(t + n*86400000).toISOString().slice(0, 10) : '';
+}
+function slDays(a, b){ return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000); }
+function slFmt(iso){ const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[3]} ${SL_SHORT[+m[2]-1]}` : esc(iso); }
+function slMonthLabel(ym){ const [y, m] = ym.split('-').map(Number); return `${SL_MONTHS[m-1]} ${y}`; }
+function slShiftMonth(ym, k){ let [y, m] = ym.split('-').map(Number); m += k; while (m < 1){ m += 12; y--; } while (m > 12){ m -= 12; y++; } return `${y}-${String(m).padStart(2,'0')}`; }
+function slPhone(v){
+  let d = String(v||'').replace(/\D/g,'');
+  if (d.length === 11 && d[0] === '8') d = '7' + d.slice(1);
+  if (d.length === 10) d = '7' + d;
+  return d.length === 11 ? d : '';
+}
+function slUser(v){ const m = String(v||'').trim().match(/^@([A-Za-z][A-Za-z0-9_]{3,})$/); return m ? m[1] : ''; }
+const slNum = v => { const n = parseFloat(String(v ?? '').replace(/\s/g,'').replace(',', '.')); return isFinite(n) ? n : 0; };
+const slIsSample = r => !(r.price > 0);
+
+function slState(title, text){
+  const st = document.getElementById('sState');
+  if (!title){ st.classList.add('hidden'); return; }
+  st.innerHTML = `<b>${title}</b>${text || ''}`; st.classList.remove('hidden');
+  document.getElementById('sMain').classList.add('hidden');
+}
+async function loadSales(){
+  if (!tgUser){ slState('Откройте через бота', 'Раздел работает только внутри Telegram.'); return; }
+  if (!SL_ROWS) slState('Загружаю…');
+  fetchClientsData();                       // для подсказки имён в форме — берётся из кэша, если уже загружено
+  try{
+    const r = await fetch(`${API}/admin-sales?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`);
+    const raw = await r.json();
+    const d = Array.isArray(raw) ? raw[0] : raw;
+    if (!d || d.ok === false){ slState('Нет доступа', 'Раздел только для администратора.'); return; }
+    SL_ROWS = d.sales || [];
+    SL_PRODUCTS = d.products || [];
+    if (!SL_MONTH) SL_MONTH = slToday().slice(0, 7);
+    slState('');
+    document.getElementById('sMain').classList.remove('hidden');
+    renderSales();
+  }catch(e){
+    if (!SL_ROWS) slState('Нет связи с сервисом', 'Включите воркфлоу <b style="display:inline;font:inherit;color:inherit">Admin Sales API</b> в n8n и проверьте, что в таблице есть листы «Продажи» и «Товары».');
+  }
+}
+async function slSave(body){
+  const r = await fetch(`${API}/admin-sales-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, ...body }) });
+  const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+  if (!d || d.ok === false) throw new Error((d && d.reason) || 'fail');
+  return d;
+}
+
+function renderSales(){
+  const today = slToday(), curMonth = today.slice(0, 7);
+  const inM = SL_ROWS.filter(r => String(r.date).slice(0, 7) === SL_MONTH)
+                     .sort((a, b) => String(b.date).localeCompare(String(a.date)) || b.row_number - a.row_number);
+  const sold = inM.filter(r => !slIsSample(r)), samples = inM.filter(slIsSample);
+  const revenue = sold.reduce((s, r) => s + r.price * r.qty, 0);
+  const profit  = inM.reduce((s, r) => s + r.profit, 0);
+  const sampleCost = samples.reduce((s, r) => s + r.cost * r.qty, 0);
+  const units = sold.reduce((s, r) => s + r.qty, 0);
+  const due = SL_ROWS.filter(r => r.remind_date && r.remind_date <= today && !r.reminded)
+                     .sort((a, b) => a.remind_date.localeCompare(b.remind_date));
+  const soon = SL_ROWS.filter(r => r.remind_date > today && !r.reminded && slDays(today, r.remind_date) <= 7).length;
+
+  // что продаётся в этом месяце
+  const top = {};
+  sold.forEach(r => { const k = r.product || r.sku; top[k] = (top[k] || 0) + r.qty; });
+  const topList = Object.entries(top).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  const dueHtml = due.length ? due.map(r => {
+    const late = slDays(r.remind_date, today);
+    return `<div class="sl-due"><div><b>${esc(r.client || 'Без имени')}</b>
+        <span>${esc(r.product)}${slIsSample(r) ? ' (пробник)' : ''} · куплено ${slFmt(r.date)}${late > 0 ? ` · ждёт ${late} ${plural(late,'день','дня','дней')}` : ''}</span></div>
+        <button type="button" data-remind="${r.row_number}">Напомнить</button></div>`;
+  }).join('') : '<p class="sh-note" style="margin:0">Сегодня напоминать некому.</p>';
+
+  const listHtml = inM.length ? inM.map(r => `<div class="ln-log"><div>
+        <b>${esc(r.product || r.sku)}${r.qty > 1 ? ` × ${r.qty}` : ''}</b>
+        <span>${slFmt(r.date)} · ${esc(r.client || 'без имени')} · ${slIsSample(r) ? `пробник, −${rub(r.cost * r.qty)}` : `${rub(r.price * r.qty)}, прибыль ${rub(r.profit)}`}${r.reminded ? ' · напомнили' : r.remind_date ? ` · напомнить ${slFmt(r.remind_date)}` : ''}</span></div>
+        <button type="button" data-del="${r.row_number}" aria-label="Удалить запись">×</button></div>`).join('')
+    : '<p class="sh-note" style="margin:0">В этом месяце продаж пока нет.</p>';
+
+  const m = document.getElementById('sMain');
+  m.innerHTML = `
+    <div class="rv-nav">
+      <button type="button" id="slPrev" aria-label="Предыдущий месяц">‹</button>
+      <b>${esc(slMonthLabel(SL_MONTH))}</b>
+      <button type="button" id="slNext" aria-label="Следующий месяц" ${SL_MONTH >= curMonth ? 'disabled' : ''}>›</button>
+    </div>
+    <div class="inv-goal"><span>Прибыль с косметики за месяц</span>
+      <b>${rub(profit)}</b>
+      <small>выручка ${rub(revenue)} · продано ${units} ${plural(units,'штука','штуки','штук')}${samples.length ? `<br>пробников ${samples.length} на ${rub(sampleCost)} (уже вычтены)` : ''}</small></div>
+    <div class="ln-actions">
+      <button type="button" id="slAdd" class="primary">＋ Продажа</button>
+      <button type="button" id="slSample">＋ Пробник</button>
+    </div>
+    <div class="sh-block"><h4>Пора напомнить${due.length ? ` · ${due.length}` : ''}</h4>${dueHtml}
+      ${soon ? `<p class="sh-note" style="margin:8px 0 0">На этой неделе подойдёт ещё ${soon}.</p>` : ''}</div>
+    ${topList.length ? `<div class="sh-block"><h4>Что берут в этом месяце</h4>${topList.map(([k, n]) => `<div class="rv-src"><b>${esc(k)}</b><span>${n} шт.</span></div>`).join('')}</div>` : ''}
+    <div class="sh-block"><h4>Продажи за месяц</h4>${listHtml}</div>`;
+
+  m.querySelector('#slPrev').onclick = () => { SL_MONTH = slShiftMonth(SL_MONTH, -1); renderSales(); };
+  m.querySelector('#slNext').onclick = () => { if (SL_MONTH < curMonth){ SL_MONTH = slShiftMonth(SL_MONTH, 1); renderSales(); } };
+  m.querySelector('#slAdd').onclick = () => slOpenAdd(false);
+  m.querySelector('#slSample').onclick = () => slOpenAdd(true);
+  m.querySelectorAll('[data-remind]').forEach(b => b.onclick = () => slOpenRemind(SL_ROWS.find(r => r.row_number === +b.dataset.remind)));
+  m.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!confirm('Удалить эту запись?')) return;
+    b.disabled = true;
+    try{ await slSave({ action:'delete', row_number:+b.dataset.del }); SL_ROWS = SL_ROWS.filter(r => r.row_number !== +b.dataset.del); renderSales(); }
+    catch(e){ b.disabled = false; alert('Не удалось удалить. Проверьте, что воркфлоу Admin Sales API включён.'); }
+  });
+}
+
+function slOpenAdd(isSample){
+  const today = slToday();
+  const prods = SL_PRODUCTS.filter(p => isSample ? !(p.price > 0) : p.price > 0);
+  const names = {};
+  (CLIENTS || []).forEach(c => { const n = String(c.name || '').trim(); if (n && c.phone && !names[n]) names[n] = c.phone; });
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sh-head"><div><div class="sh-name">${isSample ? 'Пробник' : 'Продажа'}</div>
+      <div class="sh-phone">${isSample ? 'бесплатно — для учёта и напоминания' : 'запишется в лист «Продажи»'}</div></div>
+      <button class="sh-x" type="button" aria-label="Закрыть">×</button></div>
+    <label class="f" for="slProd">Препарат</label>
+    <select class="inv-in sl-sel" id="slProd">
+      <option value="">— выберите —</option>
+      ${prods.map((p, i) => `<option value="${i}">${esc(p.product)}${p.volume ? ' · ' + esc(p.volume) : ''}</option>`).join('')}
+      <option value="other">Другое — вписать</option>
+    </select>
+    <input class="inv-in hidden" id="slProdName" type="text" placeholder="Название препарата">
+    <label class="f" for="slClient">Клиентка</label>
+    <input class="inv-in" id="slClient" type="text" list="slNames" autocomplete="off" placeholder="Имя">
+    <datalist id="slNames">${Object.keys(names).sort().map(n => `<option value="${esc(n)}"></option>`).join('')}</datalist>
+    <label class="f" for="slContact">Телефон или @ник в Telegram — для напоминания</label>
+    <input class="inv-in" id="slContact" type="text" inputmode="tel" placeholder="+7 900 000-00-00">
+    <div class="sl-grid">
+      <div><label class="f" for="slQty">Кол-во</label><input class="inv-in" id="slQty" type="number" inputmode="numeric" min="1" step="1" value="1"></div>
+      <div><label class="f" for="slCost">Закупка, ₽</label><input class="inv-in" id="slCost" type="number" inputmode="decimal" min="0" step="any"></div>
+      <div${isSample ? ' class="hidden"' : ''}><label class="f" for="slPrice">Продали, ₽</label><input class="inv-in" id="slPrice" type="number" inputmode="decimal" min="0" step="any" value="${isSample ? 0 : ''}"></div>
+    </div>
+    <div class="sl-grid sl-grid2">
+      <div><label class="f" for="slDays">Напомнить через, дн.</label><input class="inv-in" id="slDays" type="number" inputmode="numeric" min="0" step="1"></div>
+      <div><label class="f" for="slDate">Дата</label><input class="inv-in" id="slDate" type="date" value="${today}"></div>
+    </div>
+    <p class="sh-note" id="slCalc" style="margin-top:6px">&nbsp;</p>
+    <div id="slErr"></div>
+    <div class="bc-actions" style="margin-top:10px"><button type="button" id="slOk" class="primary">Сохранить</button><button type="button" id="slNo">Отмена</button></div>`;
+
+  const $ = id => sheet.querySelector('#' + id);
+  const sel = $('slProd'), other = $('slProdName');
+  const calc = () => {
+    const qty = Math.max(1, Math.round(slNum($('slQty').value)) || 1);
+    const cost = slNum($('slCost').value), price = isSample ? 0 : slNum($('slPrice').value);
+    const days = Math.round(slNum($('slDays').value));
+    const rd = days > 0 ? slAddDays($('slDate').value || today, days) : '';
+    const pr = (price - cost) * qty;
+    $('slCalc').innerHTML = `${isSample ? `Расход: <b>${rub(cost * qty)}</b>` : `Прибыль: <b>${rub(pr)}</b>`}${rd ? ` · напомню ${slFmt(rd)}` : ' · без напоминания'}`;
+  };
+  sel.onchange = () => {
+    other.classList.toggle('hidden', sel.value !== 'other');
+    const p = prods[+sel.value];
+    if (p){ $('slCost').value = p.cost || ''; if (!isSample) $('slPrice').value = p.price || ''; $('slDays').value = p.remind_days || ''; }
+    if (sel.value === 'other') other.focus();
+    calc();
+  };
+  $('slClient').oninput = () => { const ph = names[$('slClient').value.trim()]; if (ph && !$('slContact').value.trim()) $('slContact').value = '+' + ph; };
+  ['slQty','slCost','slPrice','slDays','slDate'].forEach(id => $(id).oninput = calc);
+  calc();
+
+  const err = $('slErr');
+  $('slOk').onclick = async () => {
+    const p = prods[+sel.value];
+    const product = sel.value === 'other' ? other.value.trim() : (p ? p.product : '');
+    if (!product){ err.innerHTML = '<p class="bc-res bad">Выберите препарат.</p>'; return; }
+    const contactRaw = $('slContact').value.trim();
+    const contact = slPhone(contactRaw) || (slUser(contactRaw) ? '@' + slUser(contactRaw) : contactRaw);
+    const qty = Math.max(1, Math.round(slNum($('slQty').value)) || 1);
+    const cost = slNum($('slCost').value), price = isSample ? 0 : slNum($('slPrice').value);
+    if (!isSample && !(price > 0)){ err.innerHTML = '<p class="bc-res bad">Впишите, за сколько продали.</p>'; return; }
+    const date = $('slDate').value || today;
+    const days = Math.max(0, Math.round(slNum($('slDays').value)));
+    const row = { date, client: $('slClient').value.trim(), contact, sku: p && sel.value !== 'other' ? (p.sku || '') : '', product,
+      qty, cost, price, profit: Math.round((price - cost) * qty), remind_days: days || '', remind_date: days ? slAddDays(date, days) : '' };
+    if (days && !slPhone(contact) && !slUser(contact) && !confirm('Без телефона или @ника напомнить из приложения не получится. Сохранить всё равно?')) return;
+    const btns = sheet.querySelectorAll('button'); btns.forEach(b => b.disabled = true);
+    try{
+      await slSave({ action:'add', ...row });
+      try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+      closeClient(); SL_MONTH = date.slice(0, 7); await loadSales();
+    }catch(e){
+      btns.forEach(b => b.disabled = false);
+      err.innerHTML = '<p class="bc-res bad">Не удалось сохранить. Проверьте, что воркфлоу Admin Sales API включён и лист называется «Продажи».</p>';
+    }
+  };
+  $('slNo').onclick = closeClient; sheet.querySelector('.sh-x').onclick = closeClient;
+  sheet.scrollTop = 0; document.getElementById('sheetBg').classList.remove('hidden');
+}
+
+function slOpenRemind(r){
+  if (!r) return;
+  const phone = slPhone(r.contact), user = slUser(r.contact);
+  const first = String(r.client || '').trim().split(/\s+/)[0];
+  const hi = first ? `${first}, здравствуйте!` : 'Здравствуйте!';
+  const text = slIsSample(r)
+    ? `${hi} Это Екатерина. Как вам ${r.product}? Если понравилось — полный формат есть у меня в кабинете, могу отложить к вашему визиту 🤍`
+    : `${hi} Это Екатерина. ${r.product}, который вы брали ${slFmt(r.date)}, скоро должен закончиться. Он есть у меня в наличии — могу отложить к вашему визиту или передать, когда удобно 🤍`;
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `
+    <div class="sh-head"><div><div class="sh-name">${esc(r.client || 'Без имени')}</div>
+      <div class="sh-phone">${phone ? '+' + phone : user ? '@' + esc(user) : 'контакта нет'} · ${esc(r.product)}</div></div>
+      <button class="sh-x" type="button" aria-label="Закрыть">×</button></div>
+    <label class="f" for="slMsg">Текст сообщения</label>
+    <textarea class="sl-ta" id="slMsg" rows="6">${esc(text)}</textarea>
+    <div id="slRErr"></div>
+    <div class="bc-actions" style="margin-top:10px">
+      <button type="button" id="slTg" class="primary" ${phone || user ? '' : 'disabled'}>Telegram</button>
+      <button type="button" id="slWa" ${phone ? '' : 'disabled'}>WhatsApp</button>
+    </div>
+    <button type="button" id="slDone" class="ln-wide" style="background:#fff;color:var(--steel-dk);border:1px solid var(--line)">Уже напомнили — убрать из списка</button>`;
+  const $ = id => sheet.querySelector('#' + id);
+  const err = $('slRErr');
+  const done = async (channel, msg) => {
+    r.reminded = slToday();                       // сразу убираем из списка, запись в таблицу — следом
+    renderSales();
+    try{ await slSave({ action:'reminded', row_number:r.row_number }); }
+    catch(e){ r.reminded = ''; renderSales(); alert('Не удалось отметить напоминание в таблице — попробуйте ещё раз.'); }
+    if (channel && phone) logBroadcast([{ phone, channel, segment:SL_SEGMENT, text:String(msg).slice(0, 200) }]);
+  };
+  $('slTg').onclick = () => {
+    const msg = $('slMsg').value.trim(); if (!msg){ $('slMsg').focus(); return; }
+    const url = phone ? `https://t.me/+${phone}?text=${encodeURIComponent(msg)}` : `https://t.me/${user}?text=${encodeURIComponent(msg)}`;
+    let opened = false;
+    for (const open of [u => tg?.openTelegramLink?.(u), u => tg?.openLink?.(u), u => window.open(u, '_blank')]){
+      try{ open(url); opened = true; break; }catch(e){}
+    }
+    if (!opened){ err.innerHTML = '<p class="bc-res bad">Не удалось открыть Telegram. Попробуйте WhatsApp.</p>'; return; }
+    closeClient(); done('tg_manual', msg);
+  };
+  $('slWa').onclick = () => {
+    const msg = $('slMsg').value.trim(); if (!msg){ $('slMsg').focus(); return; }
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
+    closeClient(); done('wa', msg);
+  };
+  $('slDone').onclick = () => { closeClient(); done(null, ''); };
+  sheet.querySelector('.sh-x').onclick = closeClient;
   sheet.scrollTop = 0; document.getElementById('sheetBg').classList.remove('hidden');
 }
 </script>
