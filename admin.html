@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-12-1100 repair-two-people -->
+<!-- admin-build 2026-10-12-1130 open-client-link -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -416,7 +416,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-12-1100</p>
+  <p class="ver">версия 2026-10-12-1130</p>
 
 </header>
 
@@ -2809,6 +2809,15 @@ document.getElementById('sheetBg').addEventListener('click', e => { if (e.target
 
 // Открыть сразу нужную вкладку: admin.html?tab=clients
 { const t0 = new URLSearchParams(location.search).get('tab'); if (t0 === 'clients' || t0 === 'revenue' || t0 === 'chats') showTab(t0); }
+// Открыть сразу карточку клиента (кнопка в уведомлении): admin.html?client=<telegram id>
+{ const cid = new URLSearchParams(location.search).get('client');
+  if (cid && tgUser){
+    showTab('clients');
+    fetchClientsData().then(() => {
+      const c = (CLIENTS || []).find(x => String(x.user_id) === cid || String(x.chat_id) === cid);
+      if (c) openClient(c.key);
+    });
+  } }
 
 // ============================================================
 // ИНВЕСТ — копилка по месяцам: ремонт отдельно, инвестиции с доходом 15% годовых
