@@ -1,4 +1,4 @@
-<!-- admin-build 2026-10-09-2330 car-loan-tab -->
+<!-- admin-build 2026-10-12-1100 repair-two-people -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -416,7 +416,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-10-09-2330</p>
+  <p class="ver">версия 2026-10-12-1100</p>
 
 </header>
 
@@ -2834,19 +2834,17 @@ function invCurIdx(){
 function invCompute(rows){
   let prevTotal = 0, prevInc = 0;
   return rows.map(r => {
-    const invest = r.sasha + r.katya;
-    const total = prevTotal + prevInc + invest;
-    const income = total * INV_RATE / 100 / 12;
-    prevTotal = total; prevInc = income;
-    return { ...r, invest, total, income };
+    const repair = r.sasha + r.katya;
+    prevTotal += repair;
+    return { ...r, repair, total: prevTotal };
   });
 }
 // Цель — накопить миллион на РЕМОНТ (проценты на него не начисляются).
 function invPlan(rows, cur){
   const comp = invCompute(rows);
-  const saved = rows.reduce((t, r) => t + r.repair, 0);
+  const saved = comp.reduce((t, r) => t + r.repair, 0);
   // оставшиеся месяцы: с текущего, если в нём ремонт ещё не вносили, иначе со следующего
-  const left = Math.max(1, rows.length - cur - (rows[cur] && rows[cur].repair > 0 ? 1 : 0));
+  const left = Math.max(1, rows.length - cur - (comp[cur] && comp[cur].repair > 0 ? 1 : 0));
   const need = Math.max(0, (INV_GOAL - saved) / left);
   return { comp, saved, left, need };
 }
@@ -2864,7 +2862,7 @@ async function loadInvest(){
     const d = Array.isArray(raw) ? raw[0] : raw;
     if (!d || d.ok === false){ iState('Нет доступа', 'Раздел только для администратора.'); return; }
     INV_ROWS = d.rows || [];
-    if (!INV_ROWS.length){ iState('В листе «Инвест» нет строк', 'Проверьте название листа и заголовки: Месяц, Ремонт, Инвест Саша, Инвест Катя.'); return; }
+    if (!INV_ROWS.length){ iState('В листе «Инвест» нет строк', 'Проверьте название листа и заголовки: Месяц, Ремонт Саша, Ремонт Катя.'); return; }
     if (!INV_PICKED){ INV_IDX = invCurIdx(); INV_PICKED = true; }
     INV_IDX = Math.min(INV_IDX, INV_ROWS.length - 1);
     document.getElementById('iState').classList.add('hidden');
@@ -2891,23 +2889,22 @@ function renderInvest(){
     <div class="inv-goal"><span>Накопить на ремонт — ${rub(INV_GOAL)} к ${esc(lastLabel)}</span>
       <b>${rub(plan.saved)}</b>
       <div class="inv-bar"><i style="width:${pct.toFixed(1)}%"></i></div>
-      <small>${pct.toFixed(1)}% от цели · инвестиции сейчас: ${rub(now.total)}</small></div>
+      <small>${pct.toFixed(1)}% от цели</small></div>
     <div class="inv-plan">${planText}</div>
     <div class="rv-nav">
       <button type="button" id="ivPrev" aria-label="Предыдущий месяц" ${INV_IDX === 0 ? 'disabled' : ''}>‹</button>
       <b>${esc(invLabel(INV_IDX))}</b>
       <button type="button" id="ivNext" aria-label="Следующий месяц" ${INV_IDX >= rows.length - 1 ? 'disabled' : ''}>›</button>
     </div>
-    ${field('repair', 'Ремонт')}
-    ${field('sasha', 'Инвест Саша')}
-    ${field('katya', 'Инвест Катя')}
+    ${field('sasha', 'Ремонт Саша')}
+    ${field('katya', 'Ремонт Катя')}
     <div class="rv-profit">
-      <div><span>Всего инвест</span><b>${rub(sel.total)}</b></div>
-      <div><span>Доход за месяц · ${INV_RATE}% годовых</span><b>${rub(sel.income)}</b></div>
+      <div><span>Ремонт за месяц</span><b>${rub(sel.repair)}</b></div>
+      <div><span>Накоплено к концу месяца</span><b>${rub(sel.total)}</b></div>
     </div>
     <div class="sh-block"><h4>Все месяцы</h4>
-      <table class="inv-tbl"><thead><tr><th>Месяц</th><th>Ремонт</th><th>Вложено</th><th>Всего</th><th>Доход</th></tr></thead><tbody>
-      ${comp.map((r, i) => `<tr data-i="${i}" class="${i === INV_IDX ? 'on' : ''}"><td>${esc(invShort(i))}</td><td>${r.repair ? Math.round(r.repair).toLocaleString('ru-RU') : '—'}</td><td>${r.invest ? Math.round(r.invest).toLocaleString('ru-RU') : '—'}</td><td>${Math.round(r.total).toLocaleString('ru-RU')}</td><td>${Math.round(r.income).toLocaleString('ru-RU')}</td></tr>`).join('')}
+      <table class="inv-tbl"><thead><tr><th>Месяц</th><th>Саша</th><th>Катя</th><th>За месяц</th><th>Накоплено</th></tr></thead><tbody>
+      ${comp.map((r, i) => `<tr data-i="${i}" class="${i === INV_IDX ? 'on' : ''}"><td>${esc(invShort(i))}</td><td>${r.sasha ? Math.round(r.sasha).toLocaleString('ru-RU') : '—'}</td><td>${r.katya ? Math.round(r.katya).toLocaleString('ru-RU') : '—'}</td><td>${r.repair ? Math.round(r.repair).toLocaleString('ru-RU') : '—'}</td><td>${Math.round(r.total).toLocaleString('ru-RU')}</td></tr>`).join('')}
       </tbody></table></div>`;
   const m = document.getElementById('iMain');
   m.querySelector('#ivPrev').onclick = () => { INV_IDX = Math.max(0, INV_IDX - 1); renderInvest(); };
@@ -2916,7 +2913,7 @@ function renderInvest(){
   m.querySelectorAll('.inv-tbl tbody tr').forEach(tr => tr.onclick = () => { INV_IDX = +tr.dataset.i; renderInvest(); window.scrollTo(0, 0); });
 }
 function openInvestInput(fieldKey){
-  const labels = { repair:'Ремонт', sasha:'Инвест Саша', katya:'Инвест Катя' };
+  const labels = { sasha:'Ремонт Саша', katya:'Ремонт Катя' };
   const row = INV_ROWS[INV_IDX], curVal = row[fieldKey];
   const sheet = document.getElementById('sheet');
   sheet.innerHTML = `
@@ -2948,7 +2945,7 @@ function openInvestInput(fieldKey){
         body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, row_number:row.row_number, field:fieldKey, value:v, mode }) });
       const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
       if (!d || d.ok === false) throw new Error((d && d.reason) || 'fail');
-      row.repair = d.repair; row.sasha = d.sasha; row.katya = d.katya;
+      row.sasha = d.sasha; row.katya = d.katya; row.repair = d.sasha + d.katya;
       try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
       closeClient(); renderInvest();
     }catch(e){
