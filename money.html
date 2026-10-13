@@ -1,4 +1,4 @@
-<!-- money-build 2026-10-13-2000 -->
+<!-- money-build 2026-10-13-2100 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -450,12 +450,13 @@
 <header>
   <div class="head-row"><p class="eyebrow" id="today"></p></div>
   <h1 id="pageTitle">Инвест</h1>
-  <p class="ver">версия 2026-10-13-2000</p>
+  <p class="ver">версия 2026-10-13-2100</p>
 </header>
 
 <nav class="tabs">
   <button type="button" data-tab="arrivals" class="on">Не прибыли</button>
   <button type="button" data-tab="orders">Открытые</button>
+  <button type="button" data-tab="atyrau">Атырау</button>
   <button type="button" class="tab-more" id="moreBtn" aria-label="Ещё разделы" aria-expanded="false">⋯</button>
 </nav>
 <div class="more-menu hidden" id="moreMenu">
@@ -481,6 +482,11 @@
 <div id="tabOrders" class="hidden">
   <div id="oState" class="state"><b>Загружаю…</b></div>
   <div id="oMain" class="wrap hidden"></div>
+</div>
+
+<div id="tabAtyrau" class="hidden">
+  <div id="yState" class="state"><b>Загружаю…</b></div>
+  <div id="yMain" class="wrap hidden"></div>
 </div>
 
 <div class="sheet-bg hidden" id="sheetBg"><div class="sheet" id="sheet"></div></div>
@@ -511,7 +517,8 @@ const TABS = {
   invest: { el:'tabInvest', title:'Инвест',        load: () => loadInvest() },
   loan:   { el:'tabLoan',   title:'Машина кредит', load: () => loadLoan() },
   arrivals: { el:'tabArrivals', title:'Не прибыли', load: () => loadArrivals() },
-  orders:   { el:'tabOrders',   title:'Открытые грузы', load: () => loadOrders() }
+  orders:   { el:'tabOrders',   title:'Открытые грузы', load: () => loadOrders('orders') },
+  atyrau:   { el:'tabAtyrau',   title:'Атырау — Турция', load: () => loadOrders('atyrau') }
 };
 const MORE_TABS = ['invest', 'loan'];   // спрятаны за «⋯»
 function setMenu(open){
@@ -972,30 +979,37 @@ function renderArrivals(){
 }
 
 // ============================================================
-// ЗАЯВКИ — вторая таблица перевозок (только чтение): строки без статуса в колонке H
-// Воркфлоу Money Orders API (money-orders)
+// ОТКРЫТЫЕ ГРУЗЫ — две таблицы с одинаковым видом (только чтение):
+//   orders — вторая таблица перевозок, воркфлоу Money Orders API (money-orders)
+//   atyrau — Атырау–Турция, воркфлоу Money Atyrau API (money-atyrau)
 // ============================================================
-let OR_DATA = null;
-function orState(title, text){
-  const st = document.getElementById('oState');
+const ORD = {
+  orders: { api:'money-orders', wf:'Money Orders API', box:'o', title:'Открытые грузы', data:null },
+  atyrau: { api:'money-atyrau', wf:'Money Atyrau API', box:'y', title:'Атырау — Турция', data:null }
+};
+let OR_DATA = null;            // данные для рассылки (той вкладки, откуда её открыли)
+function orState(src, title, text){
+  const b = ORD[src].box, st = document.getElementById(b + 'State');
   if (!title){ st.classList.add('hidden'); return; }
   st.innerHTML = `<b>${title}</b>${text || ''}`; st.classList.remove('hidden');
-  document.getElementById('oMain').classList.add('hidden');
+  document.getElementById(b + 'Main').classList.add('hidden');
 }
-async function loadOrders(force){
-  if (!tgUser){ orState('Откройте через бота', 'Раздел работает только внутри Telegram.'); return; }
-  if (!OR_DATA || force) orState('Загружаю…');
+async function loadOrders(src, force){
+  src = src || 'orders';
+  const S = ORD[src];
+  if (!tgUser){ orState(src, 'Откройте через бота', 'Раздел работает только внутри Telegram.'); return; }
+  if (!S.data || force) orState(src, 'Загружаю…');
   try{
-    const r = await fetch(`${API}/money-orders?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`);
+    const r = await fetch(`${API}/${S.api}?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`);
     const raw = await r.json();
     const d = Array.isArray(raw) ? raw[0] : raw;
-    if (!d || d.ok === false){ orState('Нет доступа', 'Раздел только для владельца бота.'); return; }
-    OR_DATA = d;
-    orState('');
-    document.getElementById('oMain').classList.remove('hidden');
-    renderOrders();
+    if (!d || d.ok === false){ orState(src, 'Нет доступа', 'Раздел только для владельца бота.'); return; }
+    S.data = d;
+    orState(src, '');
+    document.getElementById(S.box + 'Main').classList.remove('hidden');
+    renderOrders(src);
   }catch(e){
-    if (!OR_DATA) orState('Нет связи с сервисом', 'Включите воркфлоу <b style="display:inline;font:inherit;color:inherit">Money Orders API</b> в n8n.');
+    if (!S.data) orState(src, 'Нет связи с сервисом', `Включите воркфлоу <b style="display:inline;font:inherit;color:inherit">${S.wf}</b> в n8n.`);
   }
 }
 function orRouteKey(r){ return String(r || '').toLowerCase().replace(/\s*[-–—]\s*/g, ' - ').replace(/\s+/g, ' ').trim(); }
@@ -1006,8 +1020,9 @@ function orPrice(list){
   if (ps.length === 1) return esc(ps[0]);
   return nums.length === ps.length ? `${Math.min(...nums)}–${Math.max(...nums)}` : esc(ps.join(' / '));
 }
-function renderOrders(){
-  const rows = OR_DATA.rows || [], today = OR_DATA.today;
+function renderOrders(src){
+  const S = ORD[src], pre = S.box;
+  const rows = S.data.rows || [], today = S.data.today;
   const byDate = {};
   rows.forEach(r => { (byDate[r.date || ''] = byDate[r.date || ''] || []).push(r); });
   const dates = Object.keys(byDate).sort((a, b) => (a || '9999').localeCompare(b || '9999'));
@@ -1022,7 +1037,7 @@ function renderOrders(){
     const cnt = byDate[d].length;
     return `<div class="sh-block"><h4>${esc(title(d))} · ${cnt} ${plural(cnt,'груз','груза','грузов')}</h4>
       ${items.map(list => {
-        const id = 'org' + (gi++), many = list.length > 1, isLate = d && d < today;
+        const id = pre + 'g' + (gi++), many = list.length > 1, isLate = d && d < today;
         return `<div class="or-item${isLate ? ' late' : ''}">
           <button type="button" class="or-head" ${many ? `data-open="${id}"` : ''}>
             <b>${esc(list[0].route || '—')}</b>
@@ -1033,14 +1048,14 @@ function renderOrders(){
         </div>`;
       }).join('')}</div>`;
   }).join('');
-  document.getElementById('oMain').innerHTML = `
-    <div class="or-sum"><div><b>Открытые грузы</b><span>${late ? `с прошедшей датой: ${late} · ` : ''}обновлено ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</span></div>
-      <strong>${rows.length}</strong><button type="button" id="orRefresh" aria-label="Обновить">↻</button></div>
-    ${rows.length ? '<button type="button" class="ln-wide" id="orBc" style="margin:0 0 10px">📣 Рассылка перевозчикам</button>' : '<div class="inv-plan">Открытых грузов нет ✓</div>'}
+  const m = document.getElementById(pre + 'Main');
+  m.innerHTML = `
+    <div class="or-sum"><div><b>${esc(S.title)}</b><span>${late ? `с прошедшей датой: ${late} · ` : ''}обновлено ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</span></div>
+      <strong>${rows.length}</strong><button type="button" class="or-refresh" aria-label="Обновить">↻</button></div>
+    ${rows.length ? '<button type="button" class="ln-wide or-bc" style="margin:0 0 10px">📣 Рассылка перевозчикам</button>' : '<div class="inv-plan">Открытых грузов нет ✓</div>'}
     ${html}`;
-  const m = document.getElementById('oMain');
-  m.querySelector('#orRefresh').onclick = () => loadOrders(true);
-  const bc = m.querySelector('#orBc'); if (bc) bc.onclick = openBroadcast;
+  m.querySelector('.or-refresh').onclick = () => loadOrders(src, true);
+  const bc = m.querySelector('.or-bc'); if (bc) bc.onclick = () => { OR_DATA = S.data; openBroadcast(); };
   m.querySelectorAll('[data-open]').forEach(b => b.onclick = () => {
     const box = document.getElementById(b.dataset.open);
     const open = box.classList.toggle('hidden') === false;
@@ -1057,8 +1072,15 @@ const BC_SENT = new Set();
 const bcDM = iso => { const m = String(iso||'').match(/^\d{4}-(\d{2})-(\d{2})/); return m ? `${m[2]}.${m[1]}` : ''; };
 const bcHasDate = s => /\d{1,2}\.\d{1,2}\.?$/.test(String(s).trim());
 const bcBase = s => orRouteKey(String(s).replace(/\s*\d{1,2}\.\d{1,2}\.?$/, ''));
-function bcLine(r){ const route = String(r.route || '').trim(); return bcHasDate(route) || !r.date ? route : `${route} ${bcDM(r.date)}`; }
-function bcOrigin(route){ return String(route || '').split(/\s[-–—]\s|-/)[0].trim().split(/\s+/)[0]; }
+// Для перевозчиков кириллические названия городов пишем латиницей (словарь можно дополнять)
+const BC_CITIES = { 'атырау':'Atyrau', 'газиантеп':'Gaziantep', 'гебзе':'Gebze', 'стамбул':'Istanbul', 'мерсин':'Mersin',
+  'измир':'Izmir', 'бурса':'Bursa', 'анкара':'Ankara', 'балыкесир':'Balikesir', 'конья':'Konya', 'кайсери':'Kayseri',
+  'адана':'Adana', 'денизли':'Denizli', 'маниса':'Manisa', 'текирдаг':'Tekirdag', 'коджаэли':'Kocaeli', 'измит':'Izmit',
+  'актау':'Aktau', 'актобе':'Aktobe', 'алматы':'Almaty', 'астана':'Astana', 'шымкент':'Shymkent', 'уральск':'Uralsk',
+  'воронеж':'Voronezh', 'новороссийск':'Novorossiysk', 'москва':'Moscow' };
+const bcLatin = s => String(s || '').replace(/[А-Яа-яЁё]+/g, w => BC_CITIES[w.toLowerCase()] || w);
+function bcLine(r){ const route = bcLatin(String(r.route || '').trim()); return bcHasDate(route) || !r.date ? route : `${route} ${bcDM(r.date)}`; }
+function bcOrigin(route){ return bcLatin(route).split(/\s[-–—]\s|-/)[0].trim().split(/\s+/)[0]; }
 function bcLines(kind){
   const rows = (OR_DATA && OR_DATA.rows) || [];
   if (kind === 'all') return rows.map(bcLine);
