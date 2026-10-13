@@ -1,4 +1,4 @@
-<!-- money-build 2026-10-13-1500 -->
+<!-- money-build 2026-10-13-1600 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -407,18 +407,28 @@
   .rv-src b{flex:1;font-weight:600;}
   .rv-src i{font-style:normal;color:var(--muted);font-size:12.5px;}
   .rv-src span{font-weight:700;font-variant-numeric:tabular-nums;}
+  .ar-card{padding:10px 0;border-bottom:1px solid var(--line-soft);}
+  .ar-card:last-child{border-bottom:none;}
+  .ar-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .ar-top b{font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums;word-break:break-word;}
+  .ar-top span{flex:none;font-size:13px;font-weight:700;color:var(--steel-dk);font-variant-numeric:tabular-nums;}
+  .ar-sub{font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:2px;}
+  .ar-sub em{font-style:normal;color:#A23B2C;font-weight:700;}
+  .ar-card.late .ar-top b{color:#A23B2C;}
+  .ar-none{font-weight:600;color:#A23B2C;font-size:14px;}
 </style>
 </head>
 <body>
 <header>
   <div class="head-row"><p class="eyebrow" id="today"></p></div>
   <h1 id="pageTitle">Инвест</h1>
-  <p class="ver">версия 2026-10-13-1500</p>
+  <p class="ver">версия 2026-10-13-1600</p>
 </header>
 
 <nav class="tabs">
   <button type="button" data-tab="invest" class="on">Инвест</button>
   <button type="button" data-tab="loan">Кредит</button>
+  <button type="button" data-tab="arrivals">Не прибыли</button>
 </nav>
 
 <div id="tabInvest">
@@ -429,6 +439,11 @@
 <div id="tabLoan" class="hidden">
   <div id="lState" class="state"><b>Загружаю…</b></div>
   <div id="lMain" class="wrap hidden"></div>
+</div>
+
+<div id="tabArrivals" class="hidden">
+  <div id="aState" class="state"><b>Загружаю…</b></div>
+  <div id="aMain" class="wrap hidden"></div>
 </div>
 
 <div class="sheet-bg hidden" id="sheetBg"><div class="sheet" id="sheet"></div></div>
@@ -457,7 +472,8 @@ document.getElementById('sheetBg').addEventListener('click', e => { if (e.target
 // ============================================================
 const TABS = {
   invest: { el:'tabInvest', title:'Инвест',        load: () => loadInvest() },
-  loan:   { el:'tabLoan',   title:'Машина кредит', load: () => loadLoan() }
+  loan:   { el:'tabLoan',   title:'Машина кредит', load: () => loadLoan() },
+  arrivals: { el:'tabArrivals', title:'Не прибыли', load: () => loadArrivals() }
 };
 function showTab(t){
   if (!TABS[t]) t = 'invest';
@@ -849,6 +865,63 @@ function lnOpenAdd(type, base){
   };
   sheet.querySelector('#lnNo').onclick = closeClient; sheet.querySelector('.sh-x').onclick = closeClient;
   sheet.scrollTop = 0; document.getElementById('sheetBg').classList.remove('hidden');
+}
+
+// ============================================================
+// НЕ ПРИБЫЛИ — машины по заказам, которые ещё не прибыли (таблица перевозок, только чтение)
+// Воркфлоу Money Arrivals API (money-arrivals)
+// ============================================================
+let AR_DATA = null;
+const AR_SHORT = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+function arFmt(iso){ const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${+m[3]} ${AR_SHORT[+m[2]-1]}` : 'без даты'; }
+function arState(title, text){
+  const st = document.getElementById('aState');
+  if (!title){ st.classList.add('hidden'); return; }
+  st.innerHTML = `<b>${title}</b>${text || ''}`; st.classList.remove('hidden');
+  document.getElementById('aMain').classList.add('hidden');
+}
+async function loadArrivals(force){
+  if (!tgUser){ arState('Откройте через бота', 'Раздел работает только внутри Telegram.'); return; }
+  if (!AR_DATA || force) arState('Загружаю…');
+  try{
+    const r = await fetch(`${API}/money-arrivals?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`);
+    const raw = await r.json();
+    const d = Array.isArray(raw) ? raw[0] : raw;
+    if (!d || d.ok === false){ arState('Нет доступа', 'Раздел только для владельца бота.'); return; }
+    AR_DATA = d;
+    arState('');
+    document.getElementById('aMain').classList.remove('hidden');
+    renderArrivals();
+  }catch(e){
+    if (!AR_DATA) arState('Нет связи с сервисом', 'Включите воркфлоу <b style="display:inline;font:inherit;color:inherit">Money Arrivals API</b> в n8n.');
+  }
+}
+function renderArrivals(){
+  const rows = AR_DATA.rows || [], today = AR_DATA.today;
+  const late  = rows.filter(r => r.date && r.date < today);
+  const now   = rows.filter(r => r.date === today);
+  const later = rows.filter(r => !r.date || r.date > today);
+  const card = r => {
+    const days = r.date && r.date < today ? Math.round((Date.parse(today) - Date.parse(r.date)) / 86400000) : 0;
+    return `<div class="ar-card${days ? ' late' : ''}">
+      <div class="ar-top"><b>${r.truck ? esc(r.truck) : '<span class="ar-none">машина не назначена</span>'}</b><span>№ ${esc(r.order)}</span></div>
+      <div class="ar-sub">${esc(r.route || '—')}</div>
+      <div class="ar-sub">погрузка ${esc(arFmt(r.date))}${days ? ` · <em>опаздывает ${days} ${plural(days,'день','дня','дней')}</em>` : ''}${r.status ? ` · ${esc(r.status)}` : ''}</div>
+      ${r.price || r.netto ? `<div class="ar-sub">${r.price ? 'цена ' + esc(r.price) : ''}${r.price && r.netto ? ' · ' : ''}${r.netto ? 'нетто ' + esc(r.netto) : ''}</div>` : ''}
+    </div>`;
+  };
+  const block = (title, list, note) => list.length
+    ? `<div class="sh-block"><h4>${title} · ${list.length}</h4>${list.map(card).join('')}</div>` : (note || '');
+  const noTruck = rows.filter(r => !r.truck).length;
+  document.getElementById('aMain').innerHTML = `
+    <div class="inv-goal"><span>Не прибыли</span><b>${rows.length} ${plural(rows.length,'машина','машины','машин')}</b>
+      <small>${late.length ? `опаздывают: ${late.length}` : 'опозданий нет'}${noTruck ? ` · без номера авто: ${noTruck}` : ''}<br>обновлено ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</small></div>
+    <button type="button" class="ln-wide" id="arRefresh" style="margin:0 0 10px">↻ Обновить</button>
+    ${rows.length ? '' : '<div class="inv-plan">Все машины прибыли ✓</div>'}
+    ${block('Опаздывают', late)}
+    ${block('Погрузка сегодня', now)}
+    ${block('Ближайшие', later)}`;
+  document.getElementById('arRefresh').onclick = () => loadArrivals(true);
 }
 
 
