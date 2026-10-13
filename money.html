@@ -1,4 +1,4 @@
-<!-- money-build 2026-10-13-1600 -->
+<!-- money-build 2026-10-13-1700 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -422,13 +422,14 @@
 <header>
   <div class="head-row"><p class="eyebrow" id="today"></p></div>
   <h1 id="pageTitle">Инвест</h1>
-  <p class="ver">версия 2026-10-13-1600</p>
+  <p class="ver">версия 2026-10-13-1700</p>
 </header>
 
 <nav class="tabs">
   <button type="button" data-tab="invest" class="on">Инвест</button>
   <button type="button" data-tab="loan">Кредит</button>
   <button type="button" data-tab="arrivals">Не прибыли</button>
+  <button type="button" data-tab="orders">Заявки</button>
 </nav>
 
 <div id="tabInvest">
@@ -444,6 +445,11 @@
 <div id="tabArrivals" class="hidden">
   <div id="aState" class="state"><b>Загружаю…</b></div>
   <div id="aMain" class="wrap hidden"></div>
+</div>
+
+<div id="tabOrders" class="hidden">
+  <div id="oState" class="state"><b>Загружаю…</b></div>
+  <div id="oMain" class="wrap hidden"></div>
 </div>
 
 <div class="sheet-bg hidden" id="sheetBg"><div class="sheet" id="sheet"></div></div>
@@ -473,7 +479,8 @@ document.getElementById('sheetBg').addEventListener('click', e => { if (e.target
 const TABS = {
   invest: { el:'tabInvest', title:'Инвест',        load: () => loadInvest() },
   loan:   { el:'tabLoan',   title:'Машина кредит', load: () => loadLoan() },
-  arrivals: { el:'tabArrivals', title:'Не прибыли', load: () => loadArrivals() }
+  arrivals: { el:'tabArrivals', title:'Не прибыли', load: () => loadArrivals() },
+  orders:   { el:'tabOrders',   title:'Заявки',     load: () => loadOrders() }
 };
 function showTab(t){
   if (!TABS[t]) t = 'invest';
@@ -922,6 +929,52 @@ function renderArrivals(){
     ${block('Погрузка сегодня', now)}
     ${block('Ближайшие', later)}`;
   document.getElementById('arRefresh').onclick = () => loadArrivals(true);
+}
+
+// ============================================================
+// ЗАЯВКИ — вторая таблица перевозок (только чтение): строки без статуса в колонке H
+// Воркфлоу Money Orders API (money-orders)
+// ============================================================
+let OR_DATA = null;
+function orState(title, text){
+  const st = document.getElementById('oState');
+  if (!title){ st.classList.add('hidden'); return; }
+  st.innerHTML = `<b>${title}</b>${text || ''}`; st.classList.remove('hidden');
+  document.getElementById('oMain').classList.add('hidden');
+}
+async function loadOrders(force){
+  if (!tgUser){ orState('Откройте через бота', 'Раздел работает только внутри Telegram.'); return; }
+  if (!OR_DATA || force) orState('Загружаю…');
+  try{
+    const r = await fetch(`${API}/money-orders?init_data=${encodeURIComponent(initData)}&user_id=${tgUser.id}`);
+    const raw = await r.json();
+    const d = Array.isArray(raw) ? raw[0] : raw;
+    if (!d || d.ok === false){ orState('Нет доступа', 'Раздел только для владельца бота.'); return; }
+    OR_DATA = d;
+    orState('');
+    document.getElementById('oMain').classList.remove('hidden');
+    renderOrders();
+  }catch(e){
+    if (!OR_DATA) orState('Нет связи с сервисом', 'Включите воркфлоу <b style="display:inline;font:inherit;color:inherit">Money Orders API</b> в n8n.');
+  }
+}
+function renderOrders(){
+  const rows = OR_DATA.rows || [], today = OR_DATA.today;
+  const groups = {};
+  rows.forEach(r => { (groups[r.date || ''] = groups[r.date || ''] || []).push(r); });
+  const keys = Object.keys(groups).sort((a, b) => (a || '9999').localeCompare(b || '9999'));
+  const late = rows.filter(r => r.date && r.date < today).length;
+  const title = k => !k ? 'Без даты' : k === today ? `Сегодня · ${arFmt(k)}` : k < today ? `${arFmt(k)} · прошла` : arFmt(k);
+  document.getElementById('oMain').innerHTML = `
+    <div class="inv-goal"><span>Заявки без статуса</span><b>${rows.length}</b>
+      <small>${late ? `с прошедшей датой погрузки: ${late}` : 'просроченных нет'}<br>обновлено ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</small></div>
+    <button type="button" class="ln-wide" id="orRefresh" style="margin:0 0 10px">↻ Обновить</button>
+    ${rows.length ? '' : '<div class="inv-plan">Все заявки со статусом ✓</div>'}
+    ${keys.map(k => `<div class="sh-block"><h4>${esc(title(k))} · ${groups[k].length}</h4>
+      ${groups[k].map(r => `<div class="ar-card${r.date && r.date < today ? ' late' : ''}">
+        <div class="ar-top"><b>№ ${esc(r.order)}</b><span>${r.price ? esc(r.price) : ''}</span></div>
+        <div class="ar-sub">${esc(r.route || '—')}</div></div>`).join('')}</div>`).join('')}`;
+  document.getElementById('orRefresh').onclick = () => loadOrders(true);
 }
 
 
