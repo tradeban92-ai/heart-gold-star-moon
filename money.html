@@ -1,4 +1,4 @@
-<!-- money-build 2026-10-13-1830 -->
+<!-- money-build 2026-10-13-1930 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -436,13 +436,20 @@
   .or-list{margin-top:6px;padding:4px 0 0 10px;border-left:2px solid var(--line);}
   .or-row{display:flex;justify-content:space-between;font-size:13px;color:var(--ink);padding:3px 0;font-variant-numeric:tabular-nums;}
   .or-row span:last-child{color:var(--muted);}
+  .bc-ta{width:100%;min-height:180px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;font:inherit;font-size:14.5px;line-height:1.45;resize:vertical;}
+  .cr-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-soft);}
+  .cr-row:last-child{border-bottom:none;}
+  .cr-row b{display:block;font-size:15px;color:var(--ink);}
+  .cr-row span{display:block;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .cr-row button{flex:none;min-height:38px;padding:0 12px;border:0;border-radius:10px;background:#25A35A;color:#fff;font:700 13px 'Manrope',sans-serif;}
+  .cr-row.sent button{background:#E6EFE9;color:#2F5A3D;}
 </style>
 </head>
 <body>
 <header>
   <div class="head-row"><p class="eyebrow" id="today"></p></div>
   <h1 id="pageTitle">Инвест</h1>
-  <p class="ver">версия 2026-10-13-1830</p>
+  <p class="ver">версия 2026-10-13-1930</p>
 </header>
 
 <nav class="tabs">
@@ -1028,15 +1035,104 @@ function renderOrders(){
   document.getElementById('oMain').innerHTML = `
     <div class="or-sum"><div><b>Открытые грузы</b><span>${late ? `с прошедшей датой: ${late} · ` : ''}обновлено ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</span></div>
       <strong>${rows.length}</strong><button type="button" id="orRefresh" aria-label="Обновить">↻</button></div>
-    ${rows.length ? '' : '<div class="inv-plan">Открытых грузов нет ✓</div>'}
+    ${rows.length ? '<button type="button" class="ln-wide" id="orBc" style="margin:0 0 10px">📣 Рассылка перевозчикам</button>' : '<div class="inv-plan">Открытых грузов нет ✓</div>'}
     ${html}`;
   const m = document.getElementById('oMain');
   m.querySelector('#orRefresh').onclick = () => loadOrders(true);
+  const bc = m.querySelector('#orBc'); if (bc) bc.onclick = openBroadcast;
   m.querySelectorAll('[data-open]').forEach(b => b.onclick = () => {
     const box = document.getElementById(b.dataset.open);
     const open = box.classList.toggle('hidden') === false;
     b.querySelector('span').textContent = b.querySelector('span').textContent.replace(/[▾▴]$/, open ? '▴' : '▾');
   });
+}
+
+// ============================================================
+// РАССЫЛКА ПЕРЕВОЗЧИКАМ — текст по открытым грузам (EN / TR), отправка в WhatsApp вручную
+// Перевозчики: лист «перевозчики» (Имя, телефон), воркфлоу Money Carriers API (money-carriers)
+// ============================================================
+let CR_LIST = null, BC_VAR = 'all', BC_LANG = 'both';
+const BC_SENT = new Set();
+const bcDM = iso => { const m = String(iso||'').match(/^\d{4}-(\d{2})-(\d{2})/); return m ? `${m[2]}.${m[1]}` : ''; };
+const bcHasDate = s => /\d{1,2}\.\d{1,2}\.?$/.test(String(s).trim());
+const bcBase = s => orRouteKey(String(s).replace(/\s*\d{1,2}\.\d{1,2}\.?$/, ''));
+function bcLine(r){ const route = String(r.route || '').trim(); return bcHasDate(route) || !r.date ? route : `${route} ${bcDM(r.date)}`; }
+function bcOrigin(route){ return String(route || '').split(/\s[-–—]\s|-/)[0].trim().split(/\s+/)[0]; }
+function bcLines(kind){
+  const rows = (OR_DATA && OR_DATA.rows) || [];
+  if (kind === 'all') return rows.map(bcLine);
+  if (kind === 'dirs'){
+    const seen = new Set(), out = [];
+    rows.forEach(r => { const k = bcBase(r.route); if (!seen.has(k)){ seen.add(k); out.push(bcLine(r)); } });
+    return out;
+  }
+  const seen = new Set(), out = [];
+  rows.forEach(r => { const o = bcOrigin(r.route); const k = o.toLowerCase(); if (o && !seen.has(k)){ seen.add(k); out.push(o); } });
+  return out;
+}
+function bcText(){
+  const lines = bcLines(BC_VAR).join('\n');
+  const short = BC_VAR === 'short';
+  const en = short ? `Hello!\n${lines}\nDo you have cars?`
+                   : `Hello! We are looking for trucks, open loads:\n${lines}\nDo you have cars?`;
+  const tr = short ? `Merhaba!\n${lines}\nAracınız var mı?`
+                   : `Merhaba! Araç arıyoruz, açık yükler:\n${lines}\nAracınız var mı?`;
+  return BC_LANG === 'en' ? en : BC_LANG === 'tr' ? tr : `${en}\n\n${tr}`;
+}
+async function bcLoadCarriers(){
+  try{
+    const r = await fetch(`${API}/money-carriers?init_data=${encodeURIComponent(initData)}&user_id=${tgUser?.id}`);
+    const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+    CR_LIST = d && d.ok !== false ? (d.carriers || []) : [];
+  }catch(e){ CR_LIST = null; }
+}
+function bcOpen(url){ try{ if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank'); }catch(e){ window.open(url, '_blank'); } }
+async function openBroadcast(){
+  const sheet = document.getElementById('sheet');
+  const chips = (list, cur, attr) => list.map(([k, l]) => `<button type="button" class="ln-chip ${k === cur ? 'on' : ''}" data-${attr}="${k}">${l}</button>`).join('');
+  const paint = () => {
+    sheet.innerHTML = `
+      <div class="sh-head"><div><div class="sh-name">Рассылка</div>
+        <div class="sh-phone">${(OR_DATA.rows || []).length} открытых грузов</div></div>
+        <button class="sh-x" type="button" aria-label="Закрыть">×</button></div>
+      <label class="f">Что писать</label>
+      <div class="ln-chips">${chips([['all','Все грузы'],['dirs','Направления'],['short','Кратко']], BC_VAR, 'v')}</div>
+      <label class="f">Язык</label>
+      <div class="ln-chips">${chips([['both','EN + TR'],['en','English'],['tr','Türkçe']], BC_LANG, 'l')}</div>
+      <label class="f" for="bcMsg">Текст — можно поправить</label>
+      <textarea class="bc-ta" id="bcMsg" rows="9">${esc(bcText())}</textarea>
+      <div class="bc-actions" style="margin-top:10px">
+        <button type="button" id="bcCopy">Скопировать</button>
+        <button type="button" id="bcAny" class="primary">WhatsApp…</button>
+      </div>
+      <p class="sh-note" style="margin:6px 4px 12px">«WhatsApp…» — откроет WhatsApp, а получателя или группу выберете там.</p>
+      <div class="sh-block"><h4>Перевозчики${CR_LIST && CR_LIST.length ? ` · отправлено ${BC_SENT.size} из ${CR_LIST.length}` : ''}</h4>
+        ${CR_LIST === null ? '<p class="sh-note" style="margin:0">Не удалось загрузить список. Включите воркфлоу <b>Money Carriers API</b>.</p>'
+          : !CR_LIST.length ? '<p class="sh-note" style="margin:0">В листе «перевозчики» пока никого нет.</p>'
+          : CR_LIST.map((c, i) => `<div class="cr-row${BC_SENT.has(c.phone) ? ' sent' : ''}"><div><b>${esc(c.name || 'Без имени')}</b><span>+${esc(c.phone)}</span></div>
+              <button type="button" data-wa="${i}">${BC_SENT.has(c.phone) ? 'отправлено ✓' : 'WhatsApp'}</button></div>`).join('')}
+      </div>`;
+    const ta = sheet.querySelector('#bcMsg');
+    sheet.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { BC_VAR = b.dataset.v; paint(); });
+    sheet.querySelectorAll('[data-l]').forEach(b => b.onclick = () => { BC_LANG = b.dataset.l; paint(); });
+    sheet.querySelector('#bcCopy').onclick = async e => {
+      try{ await navigator.clipboard.writeText(ta.value); }
+      catch(err){ ta.select(); document.execCommand('copy'); }
+      e.target.textContent = 'Скопировано ✓';
+    };
+    sheet.querySelector('#bcAny').onclick = () => bcOpen(`https://wa.me/?text=${encodeURIComponent(ta.value)}`);
+    sheet.querySelectorAll('[data-wa]').forEach(b => b.onclick = () => {
+      const c = CR_LIST[+b.dataset.wa];
+      bcOpen(`https://wa.me/${c.phone}?text=${encodeURIComponent(ta.value)}`);
+      BC_SENT.add(c.phone);
+      const keep = ta.value;                    // правки текста не теряем при перерисовке
+      paint(); sheet.querySelector('#bcMsg').value = keep;
+    });
+    sheet.querySelector('.sh-x').onclick = closeClient;
+  };
+  paint();
+  sheet.scrollTop = 0; document.getElementById('sheetBg').classList.remove('hidden');
+  if (CR_LIST === null || !CR_LIST.length){ await bcLoadCarriers(); const keep = sheet.querySelector('#bcMsg')?.value; paint(); if (keep) sheet.querySelector('#bcMsg').value = keep; }
 }
 
 
