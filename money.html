@@ -1,4 +1,4 @@
-<!-- money-build 2026-10-13-1930 -->
+<!-- money-build 2026-10-13-2000 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -443,13 +443,14 @@
   .cr-row span{display:block;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
   .cr-row button{flex:none;min-height:38px;padding:0 12px;border:0;border-radius:10px;background:#25A35A;color:#fff;font:700 13px 'Manrope',sans-serif;}
   .cr-row.sent button{background:#E6EFE9;color:#2F5A3D;}
+  .cr-row span.cr-last{color:var(--steel-dk);margin-top:2px;}
 </style>
 </head>
 <body>
 <header>
   <div class="head-row"><p class="eyebrow" id="today"></p></div>
   <h1 id="pageTitle">Инвест</h1>
-  <p class="ver">версия 2026-10-13-1930</p>
+  <p class="ver">версия 2026-10-13-2000</p>
 </header>
 
 <nav class="tabs">
@@ -1086,6 +1087,24 @@ async function bcLoadCarriers(){
     CR_LIST = d && d.ok !== false ? (d.carriers || []) : [];
   }catch(e){ CR_LIST = null; }
 }
+function bcLast(v){
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/) || String(v || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if (!m) return v ? esc(v) : '';
+  const [y, mo, d] = m[1].length === 4 ? [m[1], m[2], m[3]] : [m[3], m[2], m[1]];
+  const day = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const today = new Date(Date.now() + 3*3600*1000).toISOString().slice(0, 10);
+  const diff = Math.round((Date.parse(today) - Date.parse(day)) / 86400000);
+  const when = diff === 0 ? 'сегодня' : diff === 1 ? 'вчера' : `${+d} ${AR_SHORT[+mo-1]}`;
+  const ago = diff > 1 ? ` · ${diff} ${plural(diff,'день','дня','дней')} назад` : '';
+  return `${when} в ${String(m[4]).padStart(2,'0')}:${m[5]}${ago}`;
+}
+async function bcMarkSent(c){
+  c.last = new Date(Date.now() + 3*3600*1000).toISOString().replace('T', ' ').slice(0, 16);   // сразу на экране
+  try{
+    await fetch(`${API}/money-carriers-sent`, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, row_number:c.row_number }) });
+  }catch(e){ /* не критично — сообщение уже открыто */ }
+}
 function bcOpen(url){ try{ if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank'); }catch(e){ window.open(url, '_blank'); } }
 async function openBroadcast(){
   const sheet = document.getElementById('sheet');
@@ -1109,7 +1128,8 @@ async function openBroadcast(){
       <div class="sh-block"><h4>Перевозчики${CR_LIST && CR_LIST.length ? ` · отправлено ${BC_SENT.size} из ${CR_LIST.length}` : ''}</h4>
         ${CR_LIST === null ? '<p class="sh-note" style="margin:0">Не удалось загрузить список. Включите воркфлоу <b>Money Carriers API</b>.</p>'
           : !CR_LIST.length ? '<p class="sh-note" style="margin:0">В листе «перевозчики» пока никого нет.</p>'
-          : CR_LIST.map((c, i) => `<div class="cr-row${BC_SENT.has(c.phone) ? ' sent' : ''}"><div><b>${esc(c.name || 'Без имени')}</b><span>+${esc(c.phone)}</span></div>
+          : CR_LIST.map((c, i) => `<div class="cr-row${BC_SENT.has(c.phone) ? ' sent' : ''}"><div><b>${esc(c.name || 'Без имени')}</b><span>+${esc(c.phone)}</span>
+              <span class="cr-last">${c.last ? 'рассылка: ' + bcLast(c.last) : 'рассылку ещё не отправляли'}</span></div>
               <button type="button" data-wa="${i}">${BC_SENT.has(c.phone) ? 'отправлено ✓' : 'WhatsApp'}</button></div>`).join('')}
       </div>`;
     const ta = sheet.querySelector('#bcMsg');
@@ -1125,6 +1145,7 @@ async function openBroadcast(){
       const c = CR_LIST[+b.dataset.wa];
       bcOpen(`https://wa.me/${c.phone}?text=${encodeURIComponent(ta.value)}`);
       BC_SENT.add(c.phone);
+      bcMarkSent(c);
       const keep = ta.value;                    // правки текста не теряем при перерисовке
       paint(); sheet.querySelector('#bcMsg').value = keep;
     });
