@@ -1,4 +1,4 @@
-<!-- money-build 2026-10-13-1700 -->
+<!-- money-build 2026-10-13-1830 -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -416,21 +416,44 @@
   .ar-sub em{font-style:normal;color:#A23B2C;font-weight:700;}
   .ar-card.late .ar-top b{color:#A23B2C;}
   .ar-none{font-weight:600;color:#A23B2C;font-size:14px;}
+  .tab-more{flex:0 0 44px !important;font-size:18px !important;line-height:1;}
+  .more-menu{display:flex;gap:6px;margin:0 16px 8px;justify-content:flex-end;}
+  .more-menu button{height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:#fff;font:600 13px 'Manrope',sans-serif;color:var(--steel-dk);}
+  .more-menu button.on{background:var(--steel-dk);border-color:transparent;color:#fff;}
+  .or-sum{display:flex;align-items:center;gap:12px;background:var(--steel-dk);color:#fff;border-radius:14px;padding:10px 12px 10px 14px;margin:10px 0 8px;}
+  .or-sum div{flex:1;min-width:0;}
+  .or-sum b{display:block;font-size:14px;font-weight:700;}
+  .or-sum span{display:block;font-size:11.5px;opacity:.75;margin-top:1px;}
+  .or-sum strong{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .or-sum button{flex:none;width:36px;height:36px;border-radius:10px;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:17px;}
+  .or-item{padding:9px 0;border-bottom:1px solid var(--line-soft);}
+  .or-item:last-child{border-bottom:none;}
+  .or-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;padding:0;border:0;background:none;text-align:left;font:inherit;color:inherit;}
+  .or-head b{font-size:15.5px;font-weight:700;color:var(--ink);}
+  .or-head span{flex:none;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .or-head[data-open] span{color:var(--steel-dk);font-weight:700;}
+  .or-item.late .or-head b{color:#A23B2C;}
+  .or-list{margin-top:6px;padding:4px 0 0 10px;border-left:2px solid var(--line);}
+  .or-row{display:flex;justify-content:space-between;font-size:13px;color:var(--ink);padding:3px 0;font-variant-numeric:tabular-nums;}
+  .or-row span:last-child{color:var(--muted);}
 </style>
 </head>
 <body>
 <header>
   <div class="head-row"><p class="eyebrow" id="today"></p></div>
   <h1 id="pageTitle">Инвест</h1>
-  <p class="ver">версия 2026-10-13-1700</p>
+  <p class="ver">версия 2026-10-13-1830</p>
 </header>
 
 <nav class="tabs">
-  <button type="button" data-tab="invest" class="on">Инвест</button>
-  <button type="button" data-tab="loan">Кредит</button>
-  <button type="button" data-tab="arrivals">Не прибыли</button>
-  <button type="button" data-tab="orders">Заявки</button>
+  <button type="button" data-tab="arrivals" class="on">Не прибыли</button>
+  <button type="button" data-tab="orders">Открытые</button>
+  <button type="button" class="tab-more" id="moreBtn" aria-label="Ещё разделы" aria-expanded="false">⋯</button>
 </nav>
+<div class="more-menu hidden" id="moreMenu">
+  <button type="button" data-tab="invest">Инвест</button>
+  <button type="button" data-tab="loan">Кредит</button>
+</div>
 
 <div id="tabInvest">
   <div id="iState" class="state"><b>Загружаю…</b></div>
@@ -480,17 +503,26 @@ const TABS = {
   invest: { el:'tabInvest', title:'Инвест',        load: () => loadInvest() },
   loan:   { el:'tabLoan',   title:'Машина кредит', load: () => loadLoan() },
   arrivals: { el:'tabArrivals', title:'Не прибыли', load: () => loadArrivals() },
-  orders:   { el:'tabOrders',   title:'Заявки',     load: () => loadOrders() }
+  orders:   { el:'tabOrders',   title:'Открытые грузы', load: () => loadOrders() }
 };
+const MORE_TABS = ['invest', 'loan'];   // спрятаны за «⋯»
+function setMenu(open){
+  document.getElementById('moreMenu').classList.toggle('hidden', !open);
+  document.getElementById('moreBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
 function showTab(t){
-  if (!TABS[t]) t = 'invest';
-  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  if (!TABS[t]) t = 'arrivals';
+  setMenu(false);
+  document.querySelectorAll('.tabs button[data-tab], .more-menu button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.getElementById('moreBtn').classList.toggle('on', MORE_TABS.includes(t));
   Object.entries(TABS).forEach(([k, v]) => document.getElementById(v.el).classList.toggle('hidden', k !== t));
   document.getElementById('pageTitle').textContent = TABS[t].title;
   TABS[t].load();
   window.scrollTo(0, 0);
 }
-document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+document.querySelectorAll('.tabs button[data-tab], .more-menu button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+document.getElementById('moreBtn').onclick = e => { e.stopPropagation(); setMenu(document.getElementById('moreMenu').classList.contains('hidden')); };
+document.addEventListener('click', e => { if (!e.target.closest('#moreMenu')) setMenu(false); });
 
 // ============================================================
 // ИНВЕСТ — копилка по месяцам: ремонт отдельно, инвестиции с доходом 15% годовых
@@ -958,28 +990,58 @@ async function loadOrders(force){
     if (!OR_DATA) orState('Нет связи с сервисом', 'Включите воркфлоу <b style="display:inline;font:inherit;color:inherit">Money Orders API</b> в n8n.');
   }
 }
+function orRouteKey(r){ return String(r || '').toLowerCase().replace(/\s*[-–—]\s*/g, ' - ').replace(/\s+/g, ' ').trim(); }
+function orPrice(list){
+  const ps = [...new Set(list.map(r => r.price).filter(Boolean))];
+  if (!ps.length) return '';
+  const nums = ps.map(p => parseFloat(String(p).replace(/\s/g,'').replace(',', '.'))).filter(isFinite);
+  if (ps.length === 1) return esc(ps[0]);
+  return nums.length === ps.length ? `${Math.min(...nums)}–${Math.max(...nums)}` : esc(ps.join(' / '));
+}
 function renderOrders(){
   const rows = OR_DATA.rows || [], today = OR_DATA.today;
-  const groups = {};
-  rows.forEach(r => { (groups[r.date || ''] = groups[r.date || ''] || []).push(r); });
-  const keys = Object.keys(groups).sort((a, b) => (a || '9999').localeCompare(b || '9999'));
+  const byDate = {};
+  rows.forEach(r => { (byDate[r.date || ''] = byDate[r.date || ''] || []).push(r); });
+  const dates = Object.keys(byDate).sort((a, b) => (a || '9999').localeCompare(b || '9999'));
+  const title = k => !k ? 'Без даты' : k === today ? `Сегодня · ${arFmt(k)}` : k < today ? `${arFmt(k)} · дата прошла` : arFmt(k);
   const late = rows.filter(r => r.date && r.date < today).length;
-  const title = k => !k ? 'Без даты' : k === today ? `Сегодня · ${arFmt(k)}` : k < today ? `${arFmt(k)} · прошла` : arFmt(k);
+  let gi = 0;
+  const html = dates.map(d => {
+    // одинаковый маршрут в один день — одной строкой с количеством
+    const byRoute = {};
+    byDate[d].forEach(r => { const k = orRouteKey(r.route); (byRoute[k] = byRoute[k] || []).push(r); });
+    const items = Object.values(byRoute).sort((a, b) => b.length - a.length || String(a[0].route).localeCompare(String(b[0].route)));
+    const cnt = byDate[d].length;
+    return `<div class="sh-block"><h4>${esc(title(d))} · ${cnt} ${plural(cnt,'груз','груза','грузов')}</h4>
+      ${items.map(list => {
+        const id = 'org' + (gi++), many = list.length > 1, isLate = d && d < today;
+        return `<div class="or-item${isLate ? ' late' : ''}">
+          <button type="button" class="or-head" ${many ? `data-open="${id}"` : ''}>
+            <b>${esc(list[0].route || '—')}</b>
+            <span>${many ? `${list.length} ${plural(list.length,'груз','груза','грузов')} ▾` : `№ ${esc(list[0].order)}`}</span>
+          </button>
+          ${orPrice(list) ? `<div class="ar-sub">цена ${orPrice(list)}</div>` : ''}
+          ${many ? `<div class="or-list hidden" id="${id}">${list.map(r => `<div class="or-row"><span>№ ${esc(r.order)}</span><span>${r.price ? esc(r.price) : ''}</span></div>`).join('')}</div>` : ''}
+        </div>`;
+      }).join('')}</div>`;
+  }).join('');
   document.getElementById('oMain').innerHTML = `
-    <div class="inv-goal"><span>Заявки без статуса</span><b>${rows.length}</b>
-      <small>${late ? `с прошедшей датой погрузки: ${late}` : 'просроченных нет'}<br>обновлено ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</small></div>
-    <button type="button" class="ln-wide" id="orRefresh" style="margin:0 0 10px">↻ Обновить</button>
-    ${rows.length ? '' : '<div class="inv-plan">Все заявки со статусом ✓</div>'}
-    ${keys.map(k => `<div class="sh-block"><h4>${esc(title(k))} · ${groups[k].length}</h4>
-      ${groups[k].map(r => `<div class="ar-card${r.date && r.date < today ? ' late' : ''}">
-        <div class="ar-top"><b>№ ${esc(r.order)}</b><span>${r.price ? esc(r.price) : ''}</span></div>
-        <div class="ar-sub">${esc(r.route || '—')}</div></div>`).join('')}</div>`).join('')}`;
-  document.getElementById('orRefresh').onclick = () => loadOrders(true);
+    <div class="or-sum"><div><b>Открытые грузы</b><span>${late ? `с прошедшей датой: ${late} · ` : ''}обновлено ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</span></div>
+      <strong>${rows.length}</strong><button type="button" id="orRefresh" aria-label="Обновить">↻</button></div>
+    ${rows.length ? '' : '<div class="inv-plan">Открытых грузов нет ✓</div>'}
+    ${html}`;
+  const m = document.getElementById('oMain');
+  m.querySelector('#orRefresh').onclick = () => loadOrders(true);
+  m.querySelectorAll('[data-open]').forEach(b => b.onclick = () => {
+    const box = document.getElementById(b.dataset.open);
+    const open = box.classList.toggle('hidden') === false;
+    b.querySelector('span').textContent = b.querySelector('span').textContent.replace(/[▾▴]$/, open ? '▴' : '▾');
+  });
 }
 
 
 // Открыть сразу нужную вкладку: money.html?tab=loan
-showTab(new URLSearchParams(location.search).get('tab') || 'invest');
+showTab(new URLSearchParams(location.search).get('tab') || 'arrivals');
 </script>
 </body>
 </html>
