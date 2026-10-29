@@ -424,6 +424,7 @@
   <button type="button" data-tab="visits" class="on">Сегодня</button>
   <button type="button" data-tab="clients">Клиенты</button>
   <button type="button" data-tab="revenue">Выручка</button>
+  <button type="button" data-tab="expenses">Расходы</button>
   <button type="button" data-tab="chats">TG</button>
 </nav>
 
@@ -476,6 +477,11 @@
 <div id="tabRevenue" class="hidden">
   <div id="rState" class="state"><b>Загружаю…</b></div>
   <div id="rMain" class="wrap hidden"></div>
+</div>
+
+<div id="tabExpenses" class="hidden">
+  <div id="eState" class="state"><b>Загружаю…</b></div>
+  <div id="eMain" class="wrap hidden"></div>
 </div>
 
 <div id="tabChats" class="hidden">
@@ -1099,11 +1105,13 @@ function showTab(t){
   document.getElementById('tabVisits').classList.toggle('hidden', t !== 'visits');
   document.getElementById('tabClients').classList.toggle('hidden', t !== 'clients');
   document.getElementById('tabRevenue').classList.toggle('hidden', t !== 'revenue');
+  document.getElementById('tabExpenses').classList.toggle('hidden', t !== 'expenses');
   document.getElementById('tabChats').classList.toggle('hidden', t !== 'chats');
-  document.getElementById('pageTitle').textContent = { visits:'Сегодня', clients:'Клиенты', revenue:'Выручка', chats:'TG' }[t];
+  document.getElementById('pageTitle').textContent = { visits:'Сегодня', clients:'Клиенты', revenue:'Выручка', expenses:'Расходы', chats:'TG' }[t];
   if (t === 'visits' && Date.now() - _clientsAt > 60000) { CLIENTS = null; _clientsPromise = null; fetchClientsData().then(renderTodayActivity); }  // не чаще раза в минуту — не грузим Google Sheets лишний раз
   if (t === 'clients') loadClients();   // сама решит: показать готовое или загрузить
   if (t === 'revenue') loadRevenue();
+  if (t === 'expenses') loadExpenses();
   if (t === 'chats') loadChats();
   window.scrollTo(0, 0);
 }
@@ -2789,6 +2797,135 @@ function renderRevenue(){
   const clr = document.getElementById('rvAll'); if (clr) clr.onclick = () => { REV_CAT = null; renderRevenue(); };
   document.querySelectorAll('.rv-visit[data-i]').forEach(b => b.onclick = () => openVisitEdit(inM[+b.dataset.i]));
 }
+
+// ============================================================
+// РАСХОДЫ — расходники (иглы и т.п.), аренда кабинета, налоги
+// ============================================================
+const EXP_CATS = ['Расходники','Аренда','Налоги','Другое'];
+let EXPENSES = null, EXP_OFFSET = 0;
+
+async function fetchExpenses(){
+  try{
+    const r = await fetch(`${API}/admin-expenses?init_data=${encodeURIComponent(initData)}&user_id=${tgUser?.id}`);
+    const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+    if (!d || d.ok === false) return null;
+    EXPENSES = d.expenses || [];
+    return EXPENSES;
+  }catch(e){ return null; }
+}
+function eState(title, text){
+  const s = document.getElementById('eState'); s.innerHTML = `<b>${title}</b>${text||''}`;
+  s.classList.remove('hidden'); document.getElementById('eMain').classList.add('hidden');
+}
+async function loadExpenses(){
+  if (!tgUser){ eState('Откройте через бота','Раздел работает только внутри Telegram.'); return; }
+  if (!EXPENSES){ eState('Загружаю…'); await fetchExpenses(); }
+  if (!EXPENSES){ eState('Не загрузилось','Проверьте, что воркфлоу Admin Expenses API включён.'); return; }
+  document.getElementById('eState').classList.add('hidden');
+  document.getElementById('eMain').classList.remove('hidden');
+  renderExpenses();
+}
+function renderExpenses(){
+  const cur = ymShift(EXP_OFFSET), prev = ymShift(EXP_OFFSET + 1);
+  const inM = EXPENSES.filter(e => String(e.date||'').slice(0,7) === cur.ym);
+  const inP = EXPENSES.filter(e => String(e.date||'').slice(0,7) === prev.ym);
+  const sum = a => a.reduce((s,e) => s + (+e.amount||0), 0);
+  const total = sum(inM), totalP = sum(inP);
+  let delta = '';
+  if (totalP > 0){
+    const d = Math.round((total - totalP) / totalP * 100);
+    delta = `<span class="rv-delta ${d <= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : ''}${d}% к ${MONTHS_DAT[prev.m]}</span>`;
+  }
+  const byCat = {};
+  inM.forEach(e => { const c = e.category || 'Другое'; byCat[c] = (byCat[c]||0) + (+e.amount||0); });
+  const cats = EXP_CATS.map(c => [c, byCat[c]||0]).filter(([,s]) => s > 0);
+  const shown = inM.slice().sort((a,b) => String(b.date).localeCompare(String(a.date)) || (+b.row||0)-(+a.row||0));
+
+  document.getElementById('eMain').innerHTML = `
+    <div class="rv-nav">
+      <button type="button" id="evPrev" aria-label="Предыдущий месяц">‹</button>
+      <b>${MONTHS_NOM[cur.m]} ${cur.y}</b>
+      <button type="button" id="evNext" aria-label="Следующий месяц" ${EXP_OFFSET === 0 ? 'disabled' : ''}>›</button>
+    </div>
+    <div class="rv-hero"><span>Расходы за месяц</span><b>${rub(total)}</b>${delta}</div>
+    ${cats.length ? `<div class="sh-block"><h4>По категориям</h4>${cats.map(([k,s]) => `
+      <div class="rv-src"><b>${esc(k)}</b><span>${rub(s)}</span></div>`).join('')}</div>` : ''}
+    <button type="button" class="add" id="addExpBtn" style="margin-bottom:10px">+ Добавить расход</button>
+    <div id="expForm"></div>
+    <div class="sh-block">
+      <h4>Все расходы · ${shown.length}</h4>
+      ${shown.length ? shown.map(e => `
+        <div class="inv-row" data-row="${esc(e.row)}">
+          <div><span>${esc(e.category||'Другое')} · ${fmtShort(e.date)}${e.note ? ' · ' + esc(e.note) : ''}</span><b>${rub(+e.amount||0)}</b></div>
+          <button type="button" class="expDel" data-row="${esc(e.row)}">Удалить</button>
+        </div>`).join('') : '<p class="sh-note" style="margin:0">Расходов пока нет</p>'}
+    </div>`;
+
+  document.getElementById('evPrev').onclick = () => { EXP_OFFSET++; renderExpenses(); };
+  document.getElementById('evNext').onclick = () => { if (EXP_OFFSET > 0) { EXP_OFFSET--; renderExpenses(); } };
+  document.getElementById('addExpBtn').onclick = () => openExpenseForm();
+  document.querySelectorAll('.expDel').forEach(b => b.onclick = () => deleteExpense(b.dataset.row));
+}
+function openExpenseForm(){
+  const host = document.getElementById('expForm');
+  host.innerHTML = `<div class="sh-block">
+    <label class="f">Категория</label>
+    <div class="src-chips">${EXP_CATS.map((c,i) => `<button type="button" class="src-chip${i===0?' on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+    <label class="f">Сумма, ₽</label>
+    <input class="inv-in" id="expAmount" type="number" inputmode="numeric" placeholder="например, 350">
+    <label class="f">Дата</label>
+    <input class="inv-in" id="expDate" type="date" value="${todayISO()}">
+    <label class="f">Комментарий (необязательно)</label>
+    <input class="inv-in" id="expNote" type="text" placeholder="например, иглы для мезотерапии">
+    <div class="bc-actions">
+      <button type="button" id="expCancel">Отмена</button>
+      <button type="button" id="expSave" class="primary">Сохранить</button>
+    </div>
+  </div>`;
+  host.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  host.querySelectorAll('.src-chip').forEach(b => b.onclick = () => {
+    host.querySelectorAll('.src-chip').forEach(x => x.classList.remove('on')); b.classList.add('on');
+  });
+  host.querySelector('#expCancel').onclick = () => { host.innerHTML = ''; };
+  host.querySelector('#expSave').onclick = async () => {
+    const amountEl = document.getElementById('expAmount');
+    const amount = +amountEl.value || 0;
+    if (!amount){ amountEl.classList.add('invalid'); return; }
+    amountEl.classList.remove('invalid');
+    const cat = host.querySelector('.src-chip.on')?.dataset.cat || 'Другое';
+    const date = document.getElementById('expDate').value || todayISO();
+    const note = document.getElementById('expNote').value.trim();
+    const btn = host.querySelector('#expSave'); btn.disabled = true; btn.textContent = 'Сохраняю…';
+    try{
+      const r = await fetch(`${API}/admin-expense-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, category:cat, amount, date, note }) });
+      const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+      if (!d || d.ok === false) throw new Error();
+      EXPENSES = null; await fetchExpenses();
+      host.innerHTML = '';
+      renderExpenses();
+      try{ tg?.HapticFeedback?.notificationOccurred('success'); }catch(e){}
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Сохранить';
+      host.insertAdjacentHTML('beforeend', '<p class="bc-res bad">Не удалось сохранить. Проверьте, что воркфлоу Admin Expenses API включён.</p>');
+    }
+  };
+}
+async function deleteExpense(row){
+  if (!row) return;
+  if (!await confirmBox('Удалить эту запись о расходе?')) return;
+  try{
+    const r = await fetch(`${API}/admin-expense-save`, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ init_data:initData, user_id:tgUser?.id, row_number:row, delete:true }) });
+    const raw = await r.json(); const d = Array.isArray(raw) ? raw[0] : raw;
+    if (!d || d.ok === false) throw new Error();
+    EXPENSES = null; await fetchExpenses();
+    renderExpenses();
+  }catch(e){
+    toast('bad','Не удалось удалить.');
+  }
+}
+
 document.getElementById('sheetBg').addEventListener('click', e => { if (e.target.id === 'sheetBg') closeClient(); });
 
 // Открыть сразу нужную вкладку: admin.html?tab=clients
