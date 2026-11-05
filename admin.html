@@ -1,4 +1,4 @@
-<!-- admin-build 2026-11-05-1750 revenue-extra-expense -->
+<!-- admin-build 2026-11-05-1800 revenue-extra-saved -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -416,7 +416,7 @@
     <a class="as-client" href="index.html">Как видит клиент →</a>
   </div>
   <h1 id="pageTitle">Отметка визитов</h1>
-  <p class="ver">версия 2026-11-05-1750</p>
+  <p class="ver">версия 2026-11-05-1800</p>
 
 </header>
 
@@ -2680,8 +2680,23 @@ async function loadRevenue(){
   renderRevenue();
 }
 
-// Прочие расходы за месяц — только на экране (нигде не сохраняются): закрыли приложение — сбросились
+// Прочие расходы за месяц: помнятся в телефоне (и в облаке Telegram, если оно доступно) — на сервер не уходят
 const REV_EXTRA = {};
+const REV_EXTRA_KEY = 'revExtra';
+function saveRevExtra(){
+  const s = JSON.stringify(REV_EXTRA);
+  try{ localStorage.setItem(REV_EXTRA_KEY, s); }catch(e){}
+  try{ tg?.CloudStorage?.setItem(REV_EXTRA_KEY, s, () => {}); }catch(e){}
+}
+function mergeRevExtra(s){
+  try{ const o = JSON.parse(s || '{}'); Object.keys(o).forEach(k => { const v = Number(o[k]); if (isFinite(v) && v > 0 && !(k in REV_EXTRA)) REV_EXTRA[k] = v; }); }catch(e){}
+}
+try{ mergeRevExtra(localStorage.getItem(REV_EXTRA_KEY)); }catch(e){}
+try{ tg?.CloudStorage?.getItem(REV_EXTRA_KEY, (err, val) => {
+  if (err || !val) return;
+  const before = JSON.stringify(REV_EXTRA); mergeRevExtra(val);
+  if (JSON.stringify(REV_EXTRA) !== before){ try{ localStorage.setItem(REV_EXTRA_KEY, JSON.stringify(REV_EXTRA)); }catch(e){} if (typeof renderRevenue === 'function' && !document.getElementById('tabRevenue').classList.contains('hidden') && CLIENTS) renderRevenue(); }
+}); }catch(e){}
 function openExtraExpense(ym, after){
   const sheet = document.getElementById('sheet');
   sheet.innerHTML = `
@@ -2701,9 +2716,9 @@ function openExtraExpense(ym, after){
   sheet.querySelector('#exOk').onclick = () => {
     const v = parseFloat(String(inp.value).replace(',', '.'));
     if (!isFinite(v) || v <= 0){ inp.focus(); return; }
-    REV_EXTRA[ym] = (REV_EXTRA[ym] || 0) + v; done();
+    REV_EXTRA[ym] = (REV_EXTRA[ym] || 0) + v; saveRevExtra(); done();
   };
-  const rs = sheet.querySelector('#exReset'); if (rs) rs.onclick = () => { delete REV_EXTRA[ym]; done(); };
+  const rs = sheet.querySelector('#exReset'); if (rs) rs.onclick = () => { delete REV_EXTRA[ym]; saveRevExtra(); done(); };
   sheet.querySelector('#exNo').onclick = closeClient;
   sheet.querySelector('.sh-x').onclick = closeClient;
   sheet.scrollTop = 0; document.getElementById('sheetBg').classList.remove('hidden');
